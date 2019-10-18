@@ -1,0 +1,256 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace MaviSoftServerV1._0
+{
+    public enum TASKSTATUS
+    {
+        TASK_NEW = 1,
+        TASK_COMPLETED = 2,
+        TASK_ERROR = 3,
+        TASK_TIMEOUT = 4
+    }
+
+    //TASK STATES
+    public enum CTaskStates
+    {
+        TASK_NEW = 1,
+        TASK_COMPLETED = 2,
+        TASK_ERROR = 3,
+        TASK_TIMOUT = 4
+    }
+
+    public struct S_ANSWER
+    {
+        public int Size;
+        public ushort CmdNum;
+        public ushort CmdType;
+        public ushort RetCode;
+        public ushort PortNo;
+        public int Param1;
+    }
+
+    public enum TCONST
+    {
+        MAX_RODASOFT_CLIENT = 49,
+        MAX_PANEL = 99,
+        MAX_TASK_CNT = 15,
+        RODASOFT_KEY = 1592,
+        PORT_TCP = 0,
+        PORT_COM = 1,
+        MAX_READER = 15,
+        MAX_LOCALZONE = 7
+
+    }
+
+    public enum PANELMODELS
+    {
+        MW_305 = 0,
+        MW_305_OP = 1,
+        MW_301_V3 = 4,
+        MW_301_V4 = 5,
+        MW_304_V4 = 6,
+        MW_302_V4 = 7
+    }
+
+    //COMMAND CONSTANTS
+    public enum CommandConstants
+    {
+        CMD_BASE = 2560,
+
+        //Process Commands
+        CMD_ZERO = 0,
+        CMD_NONE = CMD_BASE + 1,
+        CMD_PORT_INIT = CMD_BASE + 2,
+        CMD_PORT_LISTEN = CMD_BASE + 3,
+        CMD_PORT_CONNECT = CMD_BASE + 4,
+        CMD_PORT_CLOSE = CMD_BASE + 5,
+        CMD_PORT_TEST = CMD_BASE + 6,
+        CMD_TASK_LIST = CMD_BASE + 7,
+        CMD_OUT_TIME = CMD_BASE + 10,
+        CMD_PORT_WATCH = CMD_BASE + 15,
+
+        //DB Task Commands
+        CMD_SND_TIMEGROUP = CMD_BASE + 40,
+        CMD_SNDALL_TIMEGROUP = CMD_BASE + 41,
+        CMD_RCV_TIMEGROUP = CMD_BASE + 42,
+        CMD_RCVALL_TIMEGROUP = CMD_BASE + 43,
+        CMD_ERS_TIMEGROUP = CMD_BASE + 44,
+        CMD_ERSALL_TIMEGROUP = CMD_BASE + 45,
+
+        CMD_SND_ACCESSGROUP = CMD_BASE + 50,
+        CMD_SNDALL_ACCESSGROUP = CMD_BASE + 51,
+        CMD_RCV_ACCESSGROUP = CMD_BASE + 52,
+        CMD_RCVALL_ACCESSGROUP = CMD_BASE + 53,
+        CMD_ERS_ACCESSGROUP = CMD_BASE + 54,
+        CMD_ERSALL_ACCESSGROUP = CMD_BASE + 55,
+
+        CMD_SND_USER = CMD_BASE + 60,
+        CMD_SND_USER_LU = CMD_BASE + 61,
+        CMD_SNDALL_USER = CMD_BASE + 62,
+        CMD_SNDALL_USER_LU = CMD_BASE + 63,
+        CMD_RCV_USER = CMD_BASE + 64,
+        CMD_RCV_USER_LU = CMD_BASE + 65,
+        CMD_RCVALL_USER = CMD_BASE + 66,
+        CMD_RCVALL_USER_LU = CMD_BASE + 67,
+        CMD_ERS_USER = CMD_BASE + 68,
+        CMD_ERSALL_USER = CMD_BASE + 69,
+        CMD_SND_MAXUSERID = CMD_BASE + 70,
+
+        CMD_SND_LIFTGROUP = CMD_BASE + 80,
+        CMD_SNDALL_LIFTGROUP = CMD_BASE + 81,
+        CMD_RCV_LIFTGROUP = CMD_BASE + 82,
+        CMD_RCVALL_LIFTGROUP = CMD_BASE + 83,
+        CMD_ERS_LIFTGROUP = CMD_BASE + 84,
+        CMD_ERSALL_LIFTGROUP = CMD_BASE + 85,
+
+        CMD_SND_USERALARM = CMD_BASE + 90,
+        CMD_SNDALL_USERALARM = CMD_BASE + 91,
+        CMD_RCV_USERALARM = CMD_BASE + 92,
+        CMD_RCVALL_USERALARM = CMD_BASE + 93,
+        CMD_ERS_USERALARM = CMD_BASE + 94,
+        CMD_ERSALL_USERALARM = CMD_BASE + 95,
+        CMD_ERS_ALARMFIRE_STATUS = CMD_BASE + 96,
+        CMD_ERS_DOORALARM_STATUS = CMD_BASE + 97,
+
+        CMD_SND_GROUPCALENDAR = CMD_BASE + 100,
+        CMD_SNDALL_GROUPCALENDAR = CMD_BASE + 101,
+        CMD_RCV_GROUPCALENDAR = CMD_BASE + 102,
+        CMD_RCVALL_GROUPCALENDAR = CMD_BASE + 103,
+        CMD_ERS_GROUPCALENDAR = CMD_BASE + 104,
+        CMD_ERSALL_GROUPCALENDAR = CMD_BASE + 105,
+
+        CMD_SND_LOCALCAPACITYCOUNTERS = CMD_BASE + 110,
+        CMD_SNDALL_LOCALCAPACITYCOUNTERS = CMD_BASE + 111,
+        CMD_RCV_LOCALCAPACITYCOUNTERS = CMD_BASE + 112,
+        CMD_RCVALL_LOCALCAPACITYCOUNTERS = CMD_BASE + 113,
+
+        CMD_RCV_MAXINCOUNTERS = CMD_BASE + 120,
+        CMD_ERS_MAXINCOUNTERS = CMD_BASE + 121,
+        CMD_ERSALL_MAXINCOUNTERS = CMD_BASE + 122,
+
+        CMD_RCV_SAMETAGCOUNTERS = CMD_BASE + 130,
+        CMD_ERS_SAMETAGCOUNTERS = CMD_BASE + 131,
+        CMD_ERSALL_SAMETAGCOUNTERS = CMD_BASE + 132,
+
+        CMD_RCV_ACCESSCOUNTERS = CMD_BASE + 140,
+        CMD_ERS_ACCESSCOUNTERS = CMD_BASE + 141,
+        CMD_ERSALL_ACCESSCOUNTERS = CMD_BASE + 142,
+
+        CMD_ERS_APBCOUNTERS = CMD_BASE + 150,
+        CMD_ERSALL_APBCOUNTERS = CMD_BASE + 151,
+
+        CMD_SND_RELAYPROGRAM = CMD_BASE + 160,
+        CMD_RCV_RELAYPROGRAM = CMD_BASE + 161,
+        CMD_ERS_RELAYPROGRAM = CMD_BASE + 162,
+
+        CMD_SND_RTC = CMD_BASE + 170,
+        CMD_RCV_RTC = CMD_BASE + 171,
+
+        CMD_RCV_LOGCOUNT = CMD_BASE + 180,
+        CMD_ERS_LOGCOUNT = CMD_BASE + 181,
+        CMD_RCV_LOGS = CMD_BASE + 182,
+        CMD_SND_LOGSETTINGS = CMD_BASE + 183,
+        CMD_RCV_LOGSETTINGS = CMD_BASE + 184,
+
+        CMD_RCV_NEWACCESS = CMD_BASE + 190,
+        CMD_SND_AUTH = CMD_BASE + 191,
+
+        CMD_SND_GENERALSETTINGS = CMD_BASE + 200,
+        CMD_RCV_GENERALSETTINGS = CMD_BASE + 201,
+        CMD_RCV_FIRMWAREVERSION = CMD_BASE + 202,
+
+        CMD_SND_DOORTRIGGER = CMD_BASE + 210,
+        CMD_SND_DOORFORCEOPEN = CMD_BASE + 211,
+        CMD_SND_DOORFORCECLOSE = CMD_BASE + 212,
+        CMD_SND_DOORFREE = CMD_BASE + 213,
+        CMD_RCV_LOCALINTERLOCK = CMD_BASE + 214,
+        CMD_SND_LOCALINTERLOCK = CMD_BASE + 215,
+
+        //Answer Commands
+        CMD_OK = CMD_BASE + 401,
+        CMD_CANCEL = CMD_BASE + 402,
+        CMD_CSERVER_BUSY = CMD_BASE + 403,
+        CMD_PORT_DISABLED = CMD_BASE + 404,
+        CMD_BAD = CMD_BASE + 405,
+        CMD_UNDEFINED_COMMAND = CMD_BASE + 405,
+        CMD_NOTFOUND = CMD_BASE + 406,
+        CMD_NO_DATA_YET = CMD_BASE + 407,
+        CMD_NO_DATA_PICK = CMD_BASE + 408,
+        CMD_NOTPROCESSED = CMD_BASE + 409,
+        CMD_ACCESS_DENIED = CMD_BASE + 401
+    }
+
+    //SIZE CONSTANTS
+    public enum SizeConstants
+    {
+        SIZE_TASK = 60,
+        SIZE_CONFIG_DATA = 52,
+        SIZE_ONLINE_DATA = 68 + 4,
+        SIZE_ALARM_DATA = 68,
+        SIZE_DT_DATA = 56,
+        SIZE_ANSWER_DATA = 12,
+
+        SIZE_CONFIGTASK = 5086,
+        SIZE_JUNCS = 34836,
+        SIZE_JCTIME = 16,
+        SIZE_J_DATABASE = 2816,
+        SIZE_TEST = 20,
+        SIZE_J_PLCSTATUS = 16,
+
+        // Size Of TCP/UDP Command Buffer
+        SIZE_STANDART_ANSWER = 14,
+        SIZE_SEND_LOG_DATAS = 33,
+        SIZE_LOGMEM_ACCESS_DATA = 37,
+        SIZE_SEND_LOG_COUNTER = 19,
+        SIZE_SEND_FIRMWARE_VERSION = 19,
+        SIZE_SEND_RTC = 28,
+        SIZE_SEND_RING_CALENDAR = 43,
+        SIZE_READ_ACCESS_COUNTER_SINGLE = 19,
+        SIZE_SEND_USER_INFO = 14,
+        SIZE_SEND_USER_INFO_LT = 64,
+        SIZE_SEND_DEVICE_SETTINGS = 859,
+        SIZE_DOWNLOAD_DEVICE_SETTINGS = 14,
+        SIZE_STATUS_DATA = 67,
+        SIZE_CURRENT_ACCESS_DATA = 67,
+        SIZE_SEND_ACCESSGROUP_INFO = 127,
+        SIZE_SEND_ACCESSGROUP_CALENDAR = 50,
+        SIZE_SEND_TIMEGROUP_INFO = 80,
+        SIZE_READ_MAXIN_COUNTER_SINGLE = 19,
+        SIZE_READ_SAMETAG_COUNTER_SINGLE = 19,
+        SIZE_LOCAL_CAPACITY_COUNTER = 19,
+        SIZE_ALL_LOCAL_CAPACITY_COUNTER = 54,
+        SIZE_LOG_SETTINGS = 19,
+        SIZE_LIFT_GROUP = 50,
+        SIZE_ALARM_INFO = 42,
+        SIZE_RECEIVE_ACCESS_PERM = 188,
+        SIZE_CHECK_NEW_ACCESS = 286,
+        SIZE_RCV_USER = 64,
+        SIZE_RCV_ACCESSGROUP = 127,
+        SIZE_ERSALL_USER = 13,
+        SIZE_RCV_LOCALINTERLOCK = 29
+    }
+
+
+    public struct S_TASKLIST
+    {
+        public ushort CmdNum;
+        public ushort CmdID;
+        public ushort PortNo;
+
+
+
+        public int[] IntParam;
+        public byte[] ByteParam;
+        public ushort RODASOFTClientID;
+        public TcpClient SenderClient;
+    }
+
+
+
+
+}
