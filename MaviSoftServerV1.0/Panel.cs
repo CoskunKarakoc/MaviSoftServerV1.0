@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
 namespace MaviSoftServerV1._0
 {
     public class Panel
@@ -314,7 +313,7 @@ namespace MaviSoftServerV1._0
 
                     case CommandConstants.CMD_TASK_LIST:
                         {
-                            if (mPanelClient.Connected == false /*&& mPanelClientLog.Connected == false*/)
+                            if (mPanelClient.Connected == false)
                             {
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
@@ -325,20 +324,32 @@ namespace MaviSoftServerV1._0
                             Thread.Sleep(250);
 
                             mTaskSource = SyncGetNewTask();
-                            if (mTaskSource == IP_TASK)
-                            {
-                                TProc = TaskList[mMemIX, TaskPIX[mMemIX]].CmdID;
-                            }
-                            else if (mTaskSource == DB_TASK)
+                            //if (mTaskSource == IP_TASK)
+                            //{
+                            //    TProc = TaskList[mMemIX, TaskPIX[mMemIX]].CmdID;
+                            //}
+                            if (mTaskSource == DB_TASK)
                             {
                                 TProc = (ushort)mTaskType;
+                                if (TProc > 0)
+                                {
+                                    mPanelProc = (CommandConstants)TProc;
+                                }
+                                else
+                                {
+                                    mPanelProc = CommandConstants.CMD_TASK_LIST;
+                                }
                             }
-
-
-                            if (TProc != (ushort)mPanelProc && TProc != 0)
+                            else
                             {
-                                mPanelProc = (CommandConstants)TProc;
+                                mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
+
+
+                            //if (TProc != (ushort)mPanelProc && TProc != 0)
+                            //{
+                            //    mPanelProc = (CommandConstants)TProc;
+                            //}
 
                         }
                         break;
@@ -451,7 +462,7 @@ namespace MaviSoftServerV1._0
                             }
                         }
                         break;
-
+                    case CommandConstants.CMD_SNDALL_USER:
                     case CommandConstants.CMD_SND_USER:
                     case CommandConstants.CMD_SND_ACCESSGROUP:
                     case CommandConstants.CMD_SND_TIMEGROUP:
@@ -476,6 +487,12 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_SND_LOCALINTERLOCK:
                     case CommandConstants.CMD_ERS_ACCESSCOUNTERS:
                     case CommandConstants.CMD_ERSALL_ACCESSCOUNTERS:
+                    case CommandConstants.CMD_SND_DOORTRIGGER:
+                    case CommandConstants.CMD_SND_DOORFORCEOPEN:
+                    case CommandConstants.CMD_SND_DOORFORCECLOSE:
+                    case CommandConstants.CMD_SND_DOORFREE:
+                    case CommandConstants.CMD_SND_USERALARM:
+                    case CommandConstants.CMD_SND_LIFTGROUP:
                         {
                             if (!mPanelClient.Client.Connected)
                             {
@@ -685,13 +702,13 @@ namespace MaviSoftServerV1._0
                 //DB TASK
 
                 //mDBSQLStr = "Select * from TaskList where [Panel No]=" + mPanelNo + " And [Durum Kodu]=0 Order By [Grup No]";
-                mDBSQLStr = "Select * from TaskList where [Panel No]=" + mPanelNo + " AND [Durum Kodu]=" + 1 + " Order By [Grup No]";
+                mDBSQLStr = "Select * from TaskList where [Panel No]=" + mPanelNo + " AND [Durum Kodu]=" + 1 + " Order By [Kayit No]";
                 mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
                 mDBReader = mDBCmd.ExecuteReader();
 
                 while (mDBReader.Read())
                 {
-                    if ((mDBReader["Grup No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) > 0)
+                    if ((mDBReader["Kayit No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) > 0)
                     {
                         TTaskOk = 1;
                         break;
@@ -700,7 +717,7 @@ namespace MaviSoftServerV1._0
 
                 if (TTaskOk > 0)
                 {
-                    mTaskNo = (int)mDBReader["Grup No"];
+                    mTaskNo = (int)mDBReader["Kayit No"];
                     mTaskType = (int)mDBReader["Gorev Kodu"];
                     mTaskIntParam1 = mDBReader["IntParam 1"] as int? ?? default(int);
                     mTaskIntParam2 = mDBReader["IntParam 2"] as int? ?? default(int);
@@ -715,7 +732,10 @@ namespace MaviSoftServerV1._0
                 }
                 else
                 {
+                    mTaskNo = 0;
+                    mTaskType = 0;
                     return NO_TASK;
+
                 }
 
             }
@@ -820,7 +840,7 @@ namespace MaviSoftServerV1._0
                         {
                             if (IsDate(tDBReader["Baslangic Saati"].ToString()) == true)
                             {
-                                TSndStr.Append(ConvertToTypeDatetime(tDBReader["Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                                TSndStr.Append(ConvertToTypeTimeWithSecond(tDBReader["Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
                             }
                             else
                             {
@@ -828,7 +848,7 @@ namespace MaviSoftServerV1._0
                             }
                             if (IsDate(tDBReader["Bitis Saati"].ToString()) == true)
                             {
-                                TSndStr.Append(ConvertToTypeDatetime(tDBReader["Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+                                TSndStr.Append(ConvertToTypeTimeWithSecond(tDBReader["Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
                             }
                             else
                             {
@@ -854,11 +874,11 @@ namespace MaviSoftServerV1._0
                             if ((bool)tDBReader["Pazar"] == true)
                                 TDataInt += 64;
                             TSndStr.Append(TDataInt.ToString("X2"));
-                            if (IsDate(tDBReader["Ilave Saat Kontrolu"].ToString()) == true)
+                            if ((tDBReader["Ilave Saat Kontrolu"] as bool? ?? default(bool)))
                             {
                                 TSndStr.Append("01");
                                 TSndStr.Append(ConvertToTypeTime(tDBReader["Ilave Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                                TSndStr.Append(ConvertToTypeTime(tDBReader["Ilave Bitis Saatis"] as DateTime? ?? default(DateTime), "D2"));
+                                TSndStr.Append(ConvertToTypeTime(tDBReader["Ilave Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
                             }
                             else
                             {
@@ -1223,63 +1243,77 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append(mPanelSerialNo.ToString("X4"));
                         TSndStr.Append(mPanelNo.ToString("D3"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No"] as int? ?? default(int), "D4"));
-                        tDBSQLStr2 = "SELECT * FROM GroupsDetail WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " ORDER BY [Kayit No]";
-                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
-                        tDBReader2 = tDBCmd2.ExecuteReader();
-                        if (tDBReader2.Read())
+                        for (int i = 1; i < 9; i++)
                         {
-                            //Time Groups For Each Readers
-                            for (int i = 1; i <= 16; i++)
+                            tDBSQLStr2 = "SELECT * FROM GroupsDetailNew WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " AND [Kapi No]=" + i + " ORDER BY [Kayit No]";
+                            tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                            tDBReader2 = tDBCmd2.ExecuteReader();
+                            if (tDBReader2.Read())
                             {
-                                if (IsNumeric(tDBReader2["Kapi" + i.ToString() + " Zaman Grup No"].ToString()) == true)
+                                //Time Groups For Each Readers
+                                if ((int)tDBReader2["Kapi Zaman Grup No"] != 0)
                                 {
-                                    TSndStr.Append(ConvertToTypeInt((int)tDBReader2["Kapi" + i.ToString() + " Zaman Grup No"], "D3"));
+                                    TSndStr.Append(((int)tDBReader2["Kapi Zaman Grup No"]).ToString("D3"));
                                 }
                                 else
                                 {
                                     TSndStr.Append("001");
                                 }
+
                             }
-                            //Access Counter
-                            if ((int)tDBReader["Grup Gecis Sayisi"] <= 255)
+                        }
+                        if (tDBReader["Gece Antipassback Sil"] as bool? ?? default(bool))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append("00000000000000000000000");
+                        if ((int)tDBReader["Grup Gecis Sayisi"] <= 255)
+                        {
+                            TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Gecis Sayisi"], "D5"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("00000");
+                        }
+                        if ((int)tDBReader["Grup Gecis Sayisi Global Bolge No"] > 0 && (int)tDBReader["Grup Gecis Sayisi Global Bolge No"] < 1000)
+                        {
+                            TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Gecis Sayisi Global Bolge No"], "D3"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("001");
+                        }
+                        //Access Counter Periode (Daily Or Monthly)
+                        TSndStr.Append(ConvertToTypeInt((int)tDBReader["Gunluk Aylik"], "D1"));
+                        if ((int)tDBReader["Grup Icerdeki Kisi Sayisi"] <= 10000)
+                        {
+                            TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Icerdeki Kisi Sayisi"], "D5"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("00000");
+                        }
+                        if ((int)tDBReader["Grup Icerdeki Kisi Sayisi Global Bolge No"] > 0 && (int)tDBReader["Grup Icerdeki Kisi Sayisi Global Bolge No"] < 1000)
+                        {
+                            TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Icerdeki Kisi Sayisi Global Bolge No"], "D3"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("001");
+                        }
+                        for (int i = 1; i < 17; i++)
+                        {
+                            tDBSQLStr2 = "SELECT * FROM GroupsDetailNew WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " AND [Kapi No]=" + i + " ORDER BY [Kayit No]";
+                            tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                            tDBReader2 = tDBCmd2.ExecuteReader();
+                            if (tDBReader2.Read())
                             {
-                                TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Gecis Sayisi"], "D5"));
-                            }
-                            else
-                            {
-                                TSndStr.Append("00000");
-                            }
-                            if ((int)tDBReader["Grup Gecis Sayisi Global Bolge No"] > 0 && (int)tDBReader["Grup Gecis Sayisi Global Bolge No"] < 1000)
-                            {
-                                TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Gecis Sayisi Global Bolge No"], "D3"));
-                            }
-                            else
-                            {
-                                TSndStr.Append("001");
-                            }
-                            //Access Counter Periode (Daily Or Monthly)
-                            TSndStr.Append(ConvertToTypeInt((int)tDBReader["Gunluk Aylik"], "D1"));
-                            //Max In Counter
-                            if ((int)tDBReader["Grup Icerdeki Kisi Sayisi"] <= 10000)
-                            {
-                                TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Icerdeki Kisi Sayisi"], "D5"));
-                            }
-                            else
-                            {
-                                TSndStr.Append("00000");
-                            }
-                            if ((int)tDBReader["Grup Icerdeki Kisi Sayisi Global Bolge No"] > 0 && (int)tDBReader["Grup Icerdeki Kisi Sayisi Global Bolge No"] < 1000)
-                            {
-                                TSndStr.Append(ConvertToTypeInt((int)tDBReader["Grup Icerdeki Kisi Sayisi Global Bolge No"], "D3"));
-                            }
-                            else
-                            {
-                                TSndStr.Append("001");
-                            }
-                            //WIEGAND Readers Permissions
-                            for (int i = 1; i <= 16; i++)
-                            {
-                                if ((bool)tDBReader2["Kapi" + i.ToString()] == true)
+                                //Time Groups For Each Readers
+                                if (tDBReader2["Kapi Aktif"] as bool? ?? default(bool))
                                 {
                                     TSndStr.Append("1");
                                 }
@@ -1287,62 +1321,64 @@ namespace MaviSoftServerV1._0
                                 {
                                     TSndStr.Append("0");
                                 }
+
                             }
-                            //Same Tag Block Invalid
-                            if ((bool)tDBReader["Mukerrer Engelleme Gecersiz"] == true)
+                        }
+                        if (tDBReader["Mukerrer Engelleme Gecersiz"] as bool? ?? default(bool))
+                        {
+                            TSndStr.Append("0");
+                        }
+                        else
+                        {
+                            TSndStr.Append("1");
+                        }
+                        if (tDBReader["Lokal Kapasite Gecersiz"] as bool? ?? default(bool))
+                        {
+                            TSndStr.Append("0");
+                        }
+                        else
+                        {
+                            TSndStr.Append("1");
+                        }
+                        if (tDBReader["Gece Icerdeki Kisi Sayisini Sil"] as bool? ?? default(bool))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if (tDBReader["Antipassback Gecersiz"] as bool? ?? default(bool))
+                        {
+                            TSndStr.Append("0");
+                        }
+                        else
+                        {
+                            TSndStr.Append("1");
+                        }
+                        for (int i = 1; i < 9; i++)
+                        {
+                            tDBSQLStr2 = "SELECT * FROM GroupsDetailNew WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " AND [Kapi No]=" + i + " ORDER BY [Kayit No]";
+                            tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                            tDBReader2 = tDBCmd2.ExecuteReader();
+                            if (tDBReader2.Read())
                             {
-                                TSndStr.Append("1");
-                            }
-                            else
-                            {
-                                TSndStr.Append("0");
-                            }
-                            //Local Capacity Control Invalid
-                            if ((bool)tDBReader["Lokal Kapasite Gecersiz"] == true)
-                            {
-                                TSndStr.Append("1");
-                            }
-                            else
-                            {
-                                TSndStr.Append("0");
-                            }
-                            //Clear Max In Counters At Night
-                            if ((bool)tDBReader["Gece Icerdeki Kisi Sayisini Sil"] == true)
-                            {
-                                TSndStr.Append("1");
-                            }
-                            else
-                            {
-                                TSndStr.Append("0");
-                            }
-                            //Antipassback Invalid
-                            if ((bool)tDBReader["Antipassback Gecersiz"] == true)
-                            {
-                                TSndStr.Append("1");
-                            }
-                            else
-                            {
-                                TSndStr.Append("0");
-                            }
-                            //Lift Groups For First 8 Readers
-                            for (int i = 1; i <= 8; i++)
-                            {
-                                if (IsNumeric(tDBReader2["Kapi" + i.ToString() + " Asansor Bolge No"].ToString()) == true)
+                                //Time Groups For Each Readers
+                                if ((tDBReader2["Kapi Asansor Bolge No"] as int? ?? default(int)) > 0 && (tDBReader2["Kapi Asansor Bolge No"] as int? ?? default(int)) < 256)
                                 {
-                                    TSndStr.Append(ConvertToTypeInt((int)tDBReader2["Kapi" + i.ToString() + " Asansor Bolge No"], "D3"));
+                                    TSndStr.Append(ConvertToTypeInt((tDBReader2["Kapi Asansor Bolge No"] as int? ?? default(int)), "D3"));
                                 }
                                 else
                                 {
                                     TSndStr.Append("001");
                                 }
+
                             }
-                            TSndStr.Append("**\r");
                         }
-                        else
-                        {
-                            TSndStr.Remove(1, TSndStr.Length);
-                            TSndStr.Append("ERR");
-                        }
+
+
+
+                        TSndStr.Append("**\r");
                     }
                     else
                     {
@@ -1527,7 +1563,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
-                TSndStr.Append("*****\r");
+                TSndStr.Append("******\r");
 
             }
             /*15*/
@@ -1761,6 +1797,45 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
             }
+            /*40*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LIFTGROUP)
+            {
+                lock (TLockObj)
+                {
+                    tDBSQLStr = "SELECT * FROM LiftGroups WHERE [Asansor Grup No] = " + DBIntParam1;
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                        TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                        TSndStr.Append(mPanelNo.ToString("D3"));
+                        if ((tDBReader["Asansor Grup No"] as int? ?? default(int)) > 1 && (tDBReader["Asansor Grup No"] as int? ?? default(int)) <= 255)
+                        {
+                            TSndStr.Append(((int)tDBReader["Asansor Grup No"]).ToString("D4"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("0001");
+                        }
+
+                        for (int i = 1; i < 65; i++)
+                        {
+                            string column = "Kat " + i;
+                            if ((tDBReader[column] as bool? ?? default(bool)))
+                            {
+                                TSndStr.Append("1");
+                            }
+                            else
+                            {
+                                TSndStr.Append("0");
+                            }
+                        }
+                        TSndStr.Append("0000000000000000");
+                        TSndStr.Append("**\r");
+                    }
+                }
+            }
             /*41*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LIFTGROUP)
             {
@@ -1777,6 +1852,89 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+            }
+            /*43*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_USERALARM)
+            {
+                lock (TLockObj)
+                {
+                    tDBSQLStr = "SELECT * FROM Alarmlar WHERE [Alarm No] = " + DBIntParam1;
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                        TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                        TSndStr.Append(mPanelNo.ToString("D3"));
+                        if ((tDBReader["Alarm No"] as int? ?? default(int)) > 0 && (tDBReader["Alarm No"] as int? ?? default(int)) <= 2000)
+                        {
+                            TSndStr.Append(((int)tDBReader["Alarm No"]).ToString("D4"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("0001");
+                        }
+                        if ((tDBReader["Alarm Tipi"] as int? ?? default(int)) > 0 && (tDBReader["Alarm Tipi"] as int? ?? default(int)) <= 2)
+                        {
+                            TSndStr.Append(((int)tDBReader["Alarm Tipi"]).ToString("D2"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("01");
+                        }
+                        if ((tDBReader["Panel No"] as int? ?? default(int)) >= 0 && (tDBReader["Panel No"] as int? ?? default(int)) <= 255)
+                        {
+                            TSndStr.Append(((int)tDBReader["Panel No"]).ToString("D3"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("000");
+                        }
+                        if ((tDBReader["Kapi No"] as int? ?? default(int)) >= 0 && (tDBReader["Kapi No"] as int? ?? default(int)) <= 16)
+                        {
+                            TSndStr.Append(((int)tDBReader["Kapi No"]).ToString("D2"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("00");
+                        }
+                        TSndStr.Append("0000000");
+                        if ((tDBReader["Alarm Rolesi"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Kapi Rolesi"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Kapi Role No"] as int? ?? default(int)) >= 0 && (tDBReader["Kapi Role No"] as int? ?? default(int)) <= 16)
+                        {
+                            TSndStr.Append(((int)tDBReader["Kapi Role No"]).ToString("D2"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("00");
+                        }
+                        if ((tDBReader["User ID"] as int? ?? default(int)) >= 1 && (tDBReader["User ID"] as int? ?? default(int)) <= 100000)
+                        {
+                            TSndStr.Append(((int)tDBReader["User ID"]).ToString("D6"));
+                        }
+                        else
+                        {
+                            TSndStr.Append("000001");
+                        }
+                        TSndStr.Append("**\r");
+                    }
+                }
+
             }
             /*44*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_USERALARM)
@@ -1903,6 +2061,568 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
             }
+            /*DOOR TRIGGER*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORTRIGGER)
+            {
+                if (DBIntParam1 == 1)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("10000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 2)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("01000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 3)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00100000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 4)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00010000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 5)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00001000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 6)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000100000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 7)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000010000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 8)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000001000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 9)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000100000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 10)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000010000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 11)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 12)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 13)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000010000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 14)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000001000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 15)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000100");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 16)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("0000000000000010");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 17)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000001");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+
+            }
+            /*DOOR OPEN*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCEOPEN)
+            {
+                if (DBIntParam1 == 1)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("10000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 2)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("01000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 3)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00100000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 4)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00010000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 5)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00001000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 6)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000100000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 7)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000010000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 8)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000001000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 9)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000100000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 10)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000010000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 11)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 12)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 13)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000010000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 14)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000001000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 15)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000100");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 16)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("0000000000000010");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 17)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000001");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+            }
+            /*DOOR CLOSE*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCECLOSE)
+            {
+                if (DBIntParam1 == 1)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("10000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 2)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("01000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 3)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00100000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 4)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00010000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 5)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00001000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 6)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000100000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 7)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000010000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 8)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000001000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 9)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000100000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 10)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000010000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 11)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 12)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 13)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000010000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 14)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000001000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 15)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000100");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 16)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("0000000000000010");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 17)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000001");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+            }
+            /*DOOR FREE*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFREE)
+            {
+                if (DBIntParam1 == 1)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("10000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 2)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("01000000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 3)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00100000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 4)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00010000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 5)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00001000000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 6)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000100000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 7)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000010000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 8)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000001000000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 9)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000100000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 10)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000010000000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 11)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 12)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000100000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 13)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000010000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 14)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000001000");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 15)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000100");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 16)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("0000000000000010");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+                if (DBIntParam1 == 17)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append("00000000000000001");
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                }
+            }
+
             return TSndStr;
         }
 
@@ -1988,7 +2708,7 @@ namespace MaviSoftServerV1._0
                 //mDBConn = new SqlConnection();
                 //mDBConn.ConnectionString = @"data source = ARGE-2\SQLEXPRESS; initial catalog = MW301_DB25; integrated security = True; MultipleActiveResultSets = True;";
                 //mDBConn.Open();
-                mDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + tTaskStatus + " WHERE [Grup No]=" + tTaskNo;
+                mDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + tTaskStatus + " WHERE [Kayit No]=" + tTaskNo;
                 mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
                 TRetInt = mDBCmd.ExecuteNonQuery();
                 var status = mDBConn.State;
@@ -3842,6 +4562,17 @@ namespace MaviSoftServerV1._0
                     return "IR";
                 case (ushort)CommandConstants.CMD_SND_LOCALINTERLOCK:
                     return "IW";
+                case (ushort)CommandConstants.CMD_SND_DOORTRIGGER:
+                case (ushort)CommandConstants.CMD_SND_DOORFREE:
+                    return "DT";
+                case (ushort)CommandConstants.CMD_SND_DOORFORCEOPEN:
+                    return "FO";
+                case (ushort)CommandConstants.CMD_SND_DOORFORCECLOSE:
+                    return "FC";
+                case (ushort)CommandConstants.CMD_SND_USERALARM:
+                    return "AU";
+                case (ushort)CommandConstants.CMD_SND_LIFTGROUP:
+                    return "LG";
                 default:
                     return "ERR";
             }
@@ -3924,6 +4655,15 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_RCV_LOCALINTERLOCK:
                     return (int)SizeConstants.SIZE_RCV_LOCALINTERLOCK;
                 case CommandConstants.CMD_SND_LOCALINTERLOCK:
+                    return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_SND_DOORTRIGGER:
+                case CommandConstants.CMD_SND_DOORFORCEOPEN:
+                case CommandConstants.CMD_SND_DOORFORCECLOSE:
+                case CommandConstants.CMD_SND_DOORFREE:
+                    return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_SND_USERALARM:
+                    return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_SND_LIFTGROUP:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 default:
                     return 0;
@@ -4149,6 +4889,15 @@ namespace MaviSoftServerV1._0
             if (date != null)
             {
                 return date.Hour.ToString(Type) + date.Minute.ToString(Type);
+            }
+            return "";
+        }
+
+        public string ConvertToTypeTimeWithSecond(DateTime date, string Type)
+        {
+            if (date != null)
+            {
+                return date.Hour.ToString(Type) + date.Minute.ToString(Type) + date.Second.ToString(Type);
             }
             return "";
         }

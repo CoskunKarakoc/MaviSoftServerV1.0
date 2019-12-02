@@ -182,7 +182,10 @@ namespace MaviSoftServerV1._0
         CMD_NO_DATA_YET = CMD_BASE + 407,
         CMD_NO_DATA_PICK = CMD_BASE + 408,
         CMD_NOTPROCESSED = CMD_BASE + 409,
-        CMD_ACCESS_DENIED = CMD_BASE + 401
+        CMD_ACCESS_DENIED = CMD_BASE + 401,
+
+    
+
     }
 
     //SIZE CONSTANTS
