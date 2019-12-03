@@ -493,6 +493,8 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_SND_DOORFREE:
                     case CommandConstants.CMD_SND_USERALARM:
                     case CommandConstants.CMD_SND_LIFTGROUP:
+                    case CommandConstants.CMD_SND_GENERALSETTINGS:
+                    case CommandConstants.CMD_SND_RELAYPROGRAM:
                         {
                             if (!mPanelClient.Client.Connected)
                             {
@@ -794,6 +796,566 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
             }
+            /*3*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_GENERALSETTINGS)
+            {
+                lock (TLockObj)
+                {
+                    tDBSQLStr = "SELECT * FROM PanelSettings " +
+                        "WHERE [Panel ID] = " + DBIntParam1.ToString();
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                        TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                        TSndStr.Append(mPanelNo.ToString("D3"));
+                        if ((tDBReader["Kontrol Modu"] as int? ?? default(int)) == 0)
+                        {
+                            TSndStr.Append("0");
+                        }
+                        else
+                        {
+                            TSndStr.Append("1");
+                        }
+                        TSndStr.Append("000000");
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M1 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M2 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M3 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M4 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M5 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M6 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M7 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M8 Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Alarm Role"] as int? ?? default(int), "D2"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel GW1"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel GW2"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel GW3"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel GW4"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel IP1"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel IP2"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel IP3"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel IP4"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel TCP Port"] as int? ?? default(int), "D5"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Subnet1"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Subnet2"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Subnet3"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Subnet4"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Remote IP1"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Remote IP2"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Remote IP3"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Remote IP4"] as int? ?? default(int), "D3"));
+                        TSndStr.Append("00");
+                        if ((tDBReader["Global Zone Interlock Active"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Same Door Multiple Reader"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Interlock Active"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Lift Capacity"] as int? ?? default(int), "D1"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Expansion"] as int? ?? default(int), "D1"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Expansion 2"] as int? ?? default(int), "D1"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Model"] as int? ?? default(int), "D1"));
+                        if ((tDBReader["Status Data Update Time"] as int? ?? default(int)) == 0)
+                        {
+                            TSndStr.Append("0");//Değişimde
+                        }
+                        else
+                        {
+                            TSndStr.Append("1");//Her Saniye
+                        }
+                        if ((tDBReader["Status Data Update"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");//Gönder
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");//Gönder
+                        }
+                        if ((tDBReader["Status Data Update Type"] as int? ?? default(int)) == 0)
+                        {
+                            TSndStr.Append("0");//Remote IP
+                        }
+                        else
+                        {
+                            TSndStr.Append("1");//Yayın
+                        }
+                        if ((tDBReader["Lokal APB1"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Lokal APB2"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Lokal APB3"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Lokal APB4"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Lokal APB5"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Lokal APB6"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Lokal APB7"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Lokal APB8"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Global APB"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Global MaxIn Count Control"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Global Access Count Control"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Global Capacity Control"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Global Sequental Access Control"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Same Tag Block"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Same Tag Block Type"] as int? ?? default(int), "D1"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Same Tag Block HourMinSec"] as int? ?? default(int), "D1"));
+                        if ((tDBReader["Panel Alarm Mode Role Ok"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Alarm Mode"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Fire Mode Role Ok"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Fire Mode"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Door Alarm Role Ok"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Alarm Broadcast Ok"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Fire Broadcast Ok"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Door Alarm Broadcast Ok"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge1"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge2"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge3"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge4"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge5"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge6"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge7"] as int? ?? default(int), "D3"));
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge8"] as int? ?? default(int), "D3"));
+                        if ((tDBReader["Panel Local Capacity1"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear1"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value1"] as int? ?? default(int), "D6"));
+                        if ((tDBReader["Panel Local Capacity2"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear2"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value2"] as int? ?? default(int), "D6"));
+                        if ((tDBReader["Panel Local Capacity3"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear3"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value3"] as int? ?? default(int), "D6"));
+                        if ((tDBReader["Panel Local Capacity4"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear4"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value4"] as int? ?? default(int), "D6"));
+                        if ((tDBReader["Panel Local Capacity5"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear5"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value5"] as int? ?? default(int), "D6"));
+                        if ((tDBReader["Panel Local Capacity6"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear6"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value6"] as int? ?? default(int), "D6"));
+                        if ((tDBReader["Panel Local Capacity7"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear7"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value7"] as int? ?? default(int), "D6"));
+                        if ((tDBReader["Panel Local Capacity8"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        if ((tDBReader["Panel Local Capacity Clear8"] as bool? ?? default(bool)))
+                        {
+                            TSndStr.Append("1");
+                        }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value8"] as int? ?? default(int), "D6"));
+                        if (tDBReader["Panel Name"].ToString().Length < 16)
+                        {
+                            string space = "";
+                            for (int i = 0; i < 16 - tDBReader["Panel Name"].ToString().Length; i++)
+                            {
+                                space += " ";
+                            }
+                            TSndStr.Append(tDBReader["Panel Name"].ToString() + space);
+                        }
+                        else
+                        {
+                            TSndStr.Append(tDBReader["Panel Name"].ToString().Substring(0, 16));
+                        }
+
+                        for (int i = 1; i < 17; i++)
+                        {
+                            tDBSQLStr2 = "SELECT * FROM ReaderSettingsNew " +
+                                "WHERE [Panel ID] = " + DBIntParam1 + " AND [WKapi ID] = " + i;
+                            tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                            tDBReader2 = tDBCmd2.ExecuteReader();
+                            if (tDBReader2.Read())
+                            {
+                                if ((tDBReader2["WKapi Aktif"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Acik Sure"] as int? ?? default(int), "D2"));
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Kapi Tipi"] as int? ?? default(int), "D1"));
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi WIGType"] as int? ?? default(int), "D1"));
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Lokal Bolge"] as int? ?? default(int), "D1"));
+                                if ((tDBReader2["WKapi Sirali Gecis Ana Kapi"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                if ((tDBReader2["WKapi Coklu Onay"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                if ((tDBReader2["WKapi Alarm Modu"] as int? ?? default(int)) == 0)
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                if ((tDBReader2["WKapi Yangin Modu"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                if ((tDBReader2["WKapi Pin Dogrulama"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                if ((tDBReader2["WKapi Lift Aktif"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Acik Sure"] as int? ?? default(int), "D3"));
+                                if ((tDBReader2["WKapi Acik Sure Alarmi"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                if ((tDBReader2["WKapi Zorlama Alarmi"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                if ((tDBReader2["WKapi Acilma Alarmi"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                if ((tDBReader2["WKapi Panik Buton Alarmi"] as bool? ?? default(bool)))
+                                {
+                                    TSndStr.Append("0");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Role No"] as int? ?? default(int), "D2"));
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Itme Gecikmesi"] as int? ?? default(int), "D1"));
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi User Count"] as int? ?? default(int), "D1"));
+                                if (tDBReader2["WKapi Adi"].ToString().Length < 16)
+                                {
+                                    string space = "";
+                                    for (int j = 0; j < 16 - tDBReader2["WKapi Adi"].ToString().Length; j++)
+                                    {
+                                        space += " ";
+                                    }
+                                    TSndStr.Append(tDBReader2["WKapi Adi"].ToString() + space);
+                                }
+                                else
+                                {
+                                    TSndStr.Append(tDBReader2["WKapi Adi"].ToString().Substring(0, 16));
+                                }
+
+                            }
+                        }
+                        TSndStr.Append("**\r");
+                    }
+                    else
+                    {
+                        TSndStr.Remove(1, TSndStr.Length);
+                        TSndStr.Append("ERR");
+                    }
+                }
+            }
             /*4*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_TIMEGROUP)
             {
@@ -811,7 +1373,7 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append(mPanelNo.ToString("D3"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["Zaman Grup No"] as int? ?? default(int), "D4"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int), "D2"));
-                        if ((int)tDBReader["Gecis Sinirlama Tipi"] == 0)
+                        if ((int)tDBReader["Gecis Sinirlama Tipi"] == 0 || (int)tDBReader["Gecis Sinirlama Tipi"] == 7)
                         {
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000" + "000000000000");
                         }
@@ -885,49 +1447,6 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("0000000000");
                             }
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000");
-                        }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 13)
-                        {
-                            TDataInt = 0;
-                            if ((bool)tDBReader["Pazartesi"] == true)
-                                TDataInt = 1;
-                            if ((bool)tDBReader["Sali"] == true)
-                                TDataInt += 2;
-                            if ((bool)tDBReader["Carsamba"] == true)
-                                TDataInt += 4;
-                            if ((bool)tDBReader["Persembe"] == true)
-                                TDataInt += 8;
-                            if ((bool)tDBReader["Cuma"] == true)
-                                TDataInt += 16;
-                            if ((bool)tDBReader["Cumartesi"] == true)
-                                TDataInt += 32;
-                            if ((bool)tDBReader["Pazar"] == true)
-                                TDataInt += 64;
-                            TSndStr.Append(TDataInt.ToString("X2"));
-
-                            //Pazartesi Two Hour Block
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Sali Two Hour Block
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Carsamba Two Hour Block
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Persembe Two Hour Block
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Cuma Two Hour Block
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Cumartesi Two Hour Block
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Pazar Two Hour Block
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            TSndStr.Append("00");
                         }
                         else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 6)
                         {
@@ -1039,63 +1558,6 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000");
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 14 || (int)tDBReader["Gecis Sinirlama Tipi"] == 15)
-                        {
-                            //Twin Access + Each Day Different
-                            TDataInt = 0;
-                            if ((bool)tDBReader["Pazartesi"] == true)
-                                TDataInt = 1;
-                            if ((bool)tDBReader["Sali"] == true)
-                                TDataInt += 2;
-                            if ((bool)tDBReader["Carsamba"] == true)
-                                TDataInt += 4;
-                            if ((bool)tDBReader["Persembe"] == true)
-                                TDataInt += 8;
-                            if ((bool)tDBReader["Cuma"] == true)
-                                TDataInt += 16;
-                            if ((bool)tDBReader["Cumartesi"] == true)
-                                TDataInt += 32;
-                            if ((bool)tDBReader["Pazar"] == true)
-                                TDataInt += 64;
-                            TSndStr.Append(TDataInt.ToString("X2"));
-
-                            //Pazartesi Start Time 1
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Pazartesi Start Time 2
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            //Sali Start Time 1
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Sali Start Time 2
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            //Carsamba Start Time 1
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Carsamba Start Time 2
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            //Persembe Start Time 1
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Persembe Start Time 2
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            //Cuma Start Time 1
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Cuma Start Time 2
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            //Cumartesi Start Time 1
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Cumartesi Start Time 2
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            //Pazar Start Time 1
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
-                            //Pazar Start Time 2
-                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
-
-                            TSndStr.Append("00");
-                        }
                         else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 11 || (int)tDBReader["Gecis Sinirlama Tipi"] == 12)
                         {
                             //Six Hour Allow Or Block
@@ -1202,6 +1664,106 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("0000");
                             }
                             TSndStr.Append("000000000000");
+                        }
+                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 13)
+                        {
+                            TDataInt = 0;
+                            if ((bool)tDBReader["Pazartesi"] == true)
+                                TDataInt = 1;
+                            if ((bool)tDBReader["Sali"] == true)
+                                TDataInt += 2;
+                            if ((bool)tDBReader["Carsamba"] == true)
+                                TDataInt += 4;
+                            if ((bool)tDBReader["Persembe"] == true)
+                                TDataInt += 8;
+                            if ((bool)tDBReader["Cuma"] == true)
+                                TDataInt += 16;
+                            if ((bool)tDBReader["Cumartesi"] == true)
+                                TDataInt += 32;
+                            if ((bool)tDBReader["Pazar"] == true)
+                                TDataInt += 64;
+                            TSndStr.Append(TDataInt.ToString("X2"));
+
+                            //Pazartesi Two Hour Block
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Sali Two Hour Block
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Carsamba Two Hour Block
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Persembe Two Hour Block
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Cuma Two Hour Block
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Cumartesi Two Hour Block
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Pazar Two Hour Block
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            TSndStr.Append("00");
+                        }
+                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 14 || (int)tDBReader["Gecis Sinirlama Tipi"] == 15)
+                        {
+                            //Twin Access + Each Day Different
+                            TDataInt = 0;
+                            if ((bool)tDBReader["Pazartesi"] == true)
+                                TDataInt = 1;
+                            if ((bool)tDBReader["Sali"] == true)
+                                TDataInt += 2;
+                            if ((bool)tDBReader["Carsamba"] == true)
+                                TDataInt += 4;
+                            if ((bool)tDBReader["Persembe"] == true)
+                                TDataInt += 8;
+                            if ((bool)tDBReader["Cuma"] == true)
+                                TDataInt += 16;
+                            if ((bool)tDBReader["Cumartesi"] == true)
+                                TDataInt += 32;
+                            if ((bool)tDBReader["Pazar"] == true)
+                                TDataInt += 64;
+                            TSndStr.Append(TDataInt.ToString("X2"));
+
+                            //Pazartesi Start Time 1
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Pazartesi Start Time 2
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            //Sali Start Time 1
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Sali Start Time 2
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Sali Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            //Carsamba Start Time 1
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Carsamba Start Time 2
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Carsamba Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            //Persembe Start Time 1
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Persembe Start Time 2
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Persembe Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            //Cuma Start Time 1
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Cuma Start Time 2
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cuma Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            //Cumartesi Start Time 1
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Cumartesi Start Time 2
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Cumartesi Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            //Pazar Start Time 1
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Baslangic Saati"] as DateTime? ?? default(DateTime), "D2"));
+                            //Pazar Start Time 2
+                            TSndStr.Append(ConvertToTypeTime(tDBReader["Pazar Bitis Saati"] as DateTime? ?? default(DateTime), "D2"));
+
+                            TSndStr.Append("00");
                         }
                         else
                         {
@@ -1563,8 +2125,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
-                TSndStr.Append("******\r");
-
+                TSndStr.Append("***\r");
             }
             /*15*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOGCOUNT)
@@ -1674,6 +2235,67 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+            }
+            /*31*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_RELAYPROGRAM)
+            {
+                lock (TLockObj)
+                {
+                    tDBSQLStr = "SELECT * FROM ProgRelay2 " +
+                        "WHERE [Panel No] = " + DBIntParam1.ToString() +
+                        " AND [Haftanin Gunu] = " + DBIntParam2.ToString() +
+                        " AND [Zaman Dilimi] = " + DBIntParam3.ToString();
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                        TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                        TSndStr.Append(mPanelNo.ToString("D3"));
+                        TSndStr.Append(ConvertToTypeInt((int)tDBReader["Haftanin Gunu"], "D2"));
+                        TSndStr.Append(ConvertToTypeInt((int)tDBReader["Zaman Dilimi"], "D2"));
+                        if (tDBReader["Aktif"] as bool? ?? default(bool))
+                        {
+                            TSndStr.Append("0");
+                        }
+                        else
+                        {
+                            TSndStr.Append("1");
+                        }
+                        TSndStr.Append(ConvertToTypeTime(tDBReader["Saat 1"] as DateTime? ?? default(DateTime), "D2"));
+                        TSndStr.Append(ConvertToTypeTime(tDBReader["Saat 2"] as DateTime? ?? default(DateTime), "D2"));
+                        for (int i = 1; i < 17; i++)
+                        {
+                            var durum = "Durum " + i;
+                            var role = "Role " + i;
+                            if (tDBReader[durum] as bool? ?? default(bool))
+                            {
+                                if (tDBReader[role] as bool? ?? default(bool))
+                                {
+                                    TSndStr.Append("1");
+                                }
+                                else
+                                {
+                                    TSndStr.Append("2");
+                                }
+                            }
+                            else
+                            {
+                                TSndStr.Append("0");
+                            }
+                        }
+
+
+
+                        TSndStr.Append("**\r");
+
+                    }
+                    else
+                    {
+                        TSndStr.Remove(1, TSndStr.Length);
+                        TSndStr.Append("ERR");
+                    }
+                }
             }
             /*32*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_RELAYPROGRAM)
@@ -4573,6 +5195,10 @@ namespace MaviSoftServerV1._0
                     return "AU";
                 case (ushort)CommandConstants.CMD_SND_LIFTGROUP:
                     return "LG";
+                case (ushort)CommandConstants.CMD_SND_GENERALSETTINGS:
+                    return "DS";
+                case (ushort)CommandConstants.CMD_SND_RELAYPROGRAM:
+                    return "ZW";
                 default:
                     return "ERR";
             }
@@ -4665,6 +5291,11 @@ namespace MaviSoftServerV1._0
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 case CommandConstants.CMD_SND_LIFTGROUP:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_SND_GENERALSETTINGS:
+                    return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_SND_RELAYPROGRAM:
+                    return (int)SizeConstants.SIZE_STANDART_ANSWER;
+
                 default:
                     return 0;
             }
