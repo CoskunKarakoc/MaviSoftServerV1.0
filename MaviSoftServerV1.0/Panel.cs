@@ -886,9 +886,6 @@ namespace MaviSoftServerV1._0
                         else
                             TSndStr.Append("1");//Yayın
 
-
-
-
                         for (int i = 1; i < 9; i++)
                         {
                             if ((tDBReader["Lokal APB" + i] as bool? ?? default(bool)))
@@ -897,45 +894,30 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("0");
                         }
 
-
-
                         if ((tDBReader["Global APB"] as bool? ?? default(bool)))
                             TSndStr.Append("1");
                         else
                             TSndStr.Append("0");
-
-
-
 
                         if ((tDBReader["Global MaxIn Count Control"] as bool? ?? default(bool)))
                             TSndStr.Append("1");
                         else
                             TSndStr.Append("0");
 
-
-
-
-
                         if ((tDBReader["Global Access Count Control"] as bool? ?? default(bool)))
                             TSndStr.Append("1");
                         else
                             TSndStr.Append("0");
-
-
-
 
                         if ((tDBReader["Global Capacity Control"] as bool? ?? default(bool)))
                             TSndStr.Append("1");
                         else
                             TSndStr.Append("0");
 
-
-
                         if ((tDBReader["Global Sequental Access Control"] as bool? ?? default(bool)))
                             TSndStr.Append("1");
                         else
                             TSndStr.Append("0");
-
 
                         TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Same Tag Block"] as int? ?? default(int), "D3"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Same Tag Block Type"] as int? ?? default(int), "D1"));
@@ -981,7 +963,6 @@ namespace MaviSoftServerV1._0
                         else
                             TSndStr.Append("0");
 
-
                         for (int i = 1; i < 9; i++)
                         {
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Global Bolge" + i] as int? ?? default(int), "D3"));
@@ -1001,7 +982,6 @@ namespace MaviSoftServerV1._0
 
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Local Capacity Value" + i] as int? ?? default(int), "D6"));
                         }
-
 
                         if (tDBReader["Panel Name"].ToString().Length < 16)
                         {
@@ -1053,14 +1033,14 @@ namespace MaviSoftServerV1._0
                                     TSndStr.Append("1");
 
                                 if ((tDBReader2["WKapi Yangin Modu"] as bool? ?? default(bool)))
-                                    TSndStr.Append("0");
-                                else
                                     TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
 
                                 if ((tDBReader2["WKapi Pin Dogrulama"] as bool? ?? default(bool)))
-                                    TSndStr.Append("0");
-                                else
                                     TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
 
                                 TSndStr.Append("0");//Parking Gate
 
@@ -1068,26 +1048,26 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Acik Sure"] as int? ?? default(int), "D3"));
 
                                 if ((tDBReader2["WKapi Acik Sure Alarmi"] as bool? ?? default(bool)))
-                                    TSndStr.Append("0");
-                                else
                                     TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
 
 
                                 if ((tDBReader2["WKapi Zorlama Alarmi"] as bool? ?? default(bool)))
-                                    TSndStr.Append("0");
-                                else
                                     TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
 
 
                                 if ((tDBReader2["WKapi Acilma Alarmi"] as bool? ?? default(bool)))
-                                    TSndStr.Append("0");
-                                else
                                     TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
 
                                 if ((tDBReader2["WKapi Panik Buton Alarmi"] as bool? ?? default(bool)))
-                                    TSndStr.Append("0");
-                                else
                                     TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
 
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Harici Alarm Rolesi"] as int? ?? default(int), "D2"));
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Itme Gecikmesi"] as int? ?? default(int), "D1"));
@@ -1137,11 +1117,11 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append(mPanelNo.ToString("D3"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["Zaman Grup No"] as int? ?? default(int), "D4"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int), "D2"));
-                        if ((int)tDBReader["Gecis Sinirlama Tipi"] == 0 || (int)tDBReader["Gecis Sinirlama Tipi"] == 7)
+                        if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 0 || (tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 7)
                         {
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000" + "000000000000");
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 1 || (int)tDBReader["Gecis Sinirlama Tipi"] == 2)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 1 || (tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 2)
                         {
                             if (IsDate(tDBReader["Baslangic Tarihi"].ToString()) == true)
                             {
@@ -1162,7 +1142,7 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000");
 
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 3 || (int)tDBReader["Gecis Sinirlama Tipi"] == 4)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 3 || (tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 4)
                         {
                             if (IsDate(tDBReader["Baslangic Saati"].ToString()) == true)
                             {
@@ -1182,7 +1162,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000");
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 5)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 5)
                         {
                             TDataInt = 0;
                             if ((bool)tDBReader["Pazartesi"] == true)
@@ -1212,7 +1192,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000");
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 6)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 6)
                         {
                             //Monthly
                             TDataInt = 0;
@@ -1294,7 +1274,7 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000");
 
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 8 || (int)tDBReader["Gecis Sinirlama Tipi"] == 9 || (int)tDBReader["Gecis Sinirlama Tipi"] == 10)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 8 || (tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 9 || (tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 10)
                         {
                             if (IsDate(tDBReader["Baslangic Saati 1"].ToString()) == true)
                             {
@@ -1322,7 +1302,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("000000000000" + "000000000000" + "000000000000" + "000000000000");
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 11 || (int)tDBReader["Gecis Sinirlama Tipi"] == 12)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 11 || (tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 12)
                         {
                             //Six Hour Allow Or Block
                             //Time 1
@@ -1429,7 +1409,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("000000000000");
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 13)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 13)
                         {
                             TDataInt = 0;
                             if ((bool)tDBReader["Pazartesi"] == true)
@@ -1472,7 +1452,7 @@ namespace MaviSoftServerV1._0
 
                             TSndStr.Append("00");
                         }
-                        else if ((int)tDBReader["Gecis Sinirlama Tipi"] == 14 || (int)tDBReader["Gecis Sinirlama Tipi"] == 15)
+                        else if ((tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 14 || (tDBReader["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 15)
                         {
                             //Twin Access + Each Day Different
                             TDataInt = 0;
@@ -1577,9 +1557,9 @@ namespace MaviSoftServerV1._0
                             if (tDBReader2.Read())
                             {
                                 //Time Groups For Each Readers
-                                if ((int)tDBReader2["Kapi Zaman Grup No"] != 0)
+                                if ((tDBReader2["Kapi Zaman Grup No"] as int? ?? default(int)) != 0)
                                 {
-                                    TSndStr.Append(((int)tDBReader2["Kapi Zaman Grup No"]).ToString("D3"));
+                                    TSndStr.Append((tDBReader2["Kapi Zaman Grup No"] as int? ?? default(int)).ToString("D3"));
                                 }
                                 else
                                 {
@@ -2016,8 +1996,8 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                         TSndStr.Append(mPanelSerialNo.ToString("X4"));
                         TSndStr.Append(mPanelNo.ToString("D3"));
-                        TSndStr.Append(ConvertToTypeInt((int)tDBReader["Haftanin Gunu"], "D2"));
-                        TSndStr.Append(ConvertToTypeInt((int)tDBReader["Zaman Dilimi"], "D2"));
+                        TSndStr.Append(ConvertToTypeInt((tDBReader["Haftanin Gunu"] as int? ?? default(int)), "D2"));
+                        TSndStr.Append(ConvertToTypeInt((tDBReader["Zaman Dilimi"] as int? ?? default(int)), "D2"));
                         if (tDBReader["Aktif"] as bool? ?? default(bool))
                         {
                             TSndStr.Append("0");
@@ -2115,7 +2095,7 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                         TSndStr.Append(mPanelSerialNo.ToString("X4"));
                         TSndStr.Append(mPanelNo.ToString("D3"));
-                        if ((bool)tDBReader["Offline Antipassback"])
+                        if ((tDBReader["Offline Antipassback"] as bool? ?? default(bool)))
                         {
                             TSndStr.Append("1");
                         }
@@ -2131,7 +2111,7 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0");
                         }
-                        if ((bool)tDBReader["Offline Undefined Transition"])
+                        if ((tDBReader["Offline Undefined Transition"] as bool? ?? default(bool)))
                         {
                             TSndStr.Append("1");
                         }
@@ -2139,7 +2119,7 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0");
                         }
-                        if ((bool)tDBReader["Offline Manuel Operations"])
+                        if ((tDBReader["Offline Manuel Operations"] as bool? ?? default(bool)))
                         {
                             TSndStr.Append("1");
                         }
@@ -2147,7 +2127,7 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0");
                         }
-                        if ((bool)tDBReader["Offline Button Triggering"])
+                        if ((tDBReader["Offline Button Triggering"] as bool? ?? default(bool)))
                         {
                             TSndStr.Append("1");
                         }
@@ -2155,7 +2135,7 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0");
                         }
-                        if ((bool)tDBReader["Offline Scheduled Transactions"])
+                        if ((tDBReader["Offline Scheduled Transactions"] as bool? ?? default(bool)))
                         {
                             TSndStr.Append("1");
                         }
@@ -2198,7 +2178,7 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append(mPanelNo.ToString("D3"));
                         if ((tDBReader["Asansor Grup No"] as int? ?? default(int)) > 1 && (tDBReader["Asansor Grup No"] as int? ?? default(int)) <= 255)
                         {
-                            TSndStr.Append(((int)tDBReader["Asansor Grup No"]).ToString("D4"));
+                            TSndStr.Append(((tDBReader["Asansor Grup No"] as int? ?? default(int))).ToString("D4"));
                         }
                         else
                         {
@@ -2254,7 +2234,7 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append(mPanelNo.ToString("D3"));
                         if ((tDBReader["Alarm No"] as int? ?? default(int)) > 0 && (tDBReader["Alarm No"] as int? ?? default(int)) <= 2000)
                         {
-                            TSndStr.Append(((int)tDBReader["Alarm No"]).ToString("D4"));
+                            TSndStr.Append(((tDBReader["Alarm No"] as int? ?? default(int))).ToString("D4"));
                         }
                         else
                         {
@@ -2262,7 +2242,7 @@ namespace MaviSoftServerV1._0
                         }
                         if ((tDBReader["Alarm Tipi"] as int? ?? default(int)) > 0 && (tDBReader["Alarm Tipi"] as int? ?? default(int)) <= 2)
                         {
-                            TSndStr.Append(((int)tDBReader["Alarm Tipi"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["Alarm Tipi"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
@@ -2270,7 +2250,7 @@ namespace MaviSoftServerV1._0
                         }
                         if ((tDBReader["Panel No"] as int? ?? default(int)) >= 0 && (tDBReader["Panel No"] as int? ?? default(int)) <= 255)
                         {
-                            TSndStr.Append(((int)tDBReader["Panel No"]).ToString("D3"));
+                            TSndStr.Append(((tDBReader["Panel No"] as int? ?? default(int))).ToString("D3"));
                         }
                         else
                         {
@@ -2278,7 +2258,7 @@ namespace MaviSoftServerV1._0
                         }
                         if ((tDBReader["Kapi No"] as int? ?? default(int)) >= 0 && (tDBReader["Kapi No"] as int? ?? default(int)) <= 16)
                         {
-                            TSndStr.Append(((int)tDBReader["Kapi No"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["Kapi No"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
@@ -2303,7 +2283,7 @@ namespace MaviSoftServerV1._0
                         }
                         if ((tDBReader["Kapi Role No"] as int? ?? default(int)) >= 0 && (tDBReader["Kapi Role No"] as int? ?? default(int)) <= 16)
                         {
-                            TSndStr.Append(((int)tDBReader["Kapi Role No"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["Kapi Role No"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
@@ -2311,7 +2291,7 @@ namespace MaviSoftServerV1._0
                         }
                         if ((tDBReader["User ID"] as int? ?? default(int)) >= 1 && (tDBReader["User ID"] as int? ?? default(int)) <= 100000)
                         {
-                            TSndStr.Append(((int)tDBReader["User ID"]).ToString("D6"));
+                            TSndStr.Append(((tDBReader["User ID"] as int? ?? default(int))).ToString("D6"));
                         }
                         else
                         {
@@ -2371,7 +2351,7 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                         TSndStr.Append(mPanelSerialNo.ToString("X4"));
                         TSndStr.Append(mPanelNo.ToString("D3"));
-                        if ((int)tDBReader["LocalInterlock G1-1"] >= 0)
+                        if ((tDBReader["LocalInterlock G1-1"] as int? ?? default(int)) >= 0)
                         {
                             TSndStr.Append(((int)tDBReader["LocalInterlock G1-1"]).ToString("D2"));
                         }
@@ -2379,7 +2359,7 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("00");
                         }
-                        if ((int)tDBReader["LocalInterlock G1-2"] >= 0)
+                        if ((tDBReader["LocalInterlock G1-2"] as int? ?? default(int)) >= 0)
                         {
                             TSndStr.Append(((int)tDBReader["LocalInterlock G1-2"]).ToString("D2"));
                         }
@@ -2387,49 +2367,49 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("00");
                         }
-                        if ((int)tDBReader["LocalInterlock G2-1"] >= 0)
+                        if ((tDBReader["LocalInterlock G2-1"] as int? ?? default(int)) >= 0)
                         {
-                            TSndStr.Append(((int)tDBReader["LocalInterlock G2-1"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["LocalInterlock G2-1"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
                             TSndStr.Append("00");
                         }
-                        if ((int)tDBReader["LocalInterlock G2-2"] >= 0)
+                        if ((tDBReader["LocalInterlock G2-2"] as int? ?? default(int)) >= 0)
                         {
-                            TSndStr.Append(((int)tDBReader["LocalInterlock G2-2"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["LocalInterlock G2-2"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
                             TSndStr.Append("00");
                         }
-                        if ((int)tDBReader["LocalInterlock G3-1"] >= 0)
+                        if ((tDBReader["LocalInterlock G3-1"] as int? ?? default(int)) >= 0)
                         {
-                            TSndStr.Append(((int)tDBReader["LocalInterlock G3-1"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["LocalInterlock G3-1"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
                             TSndStr.Append("00");
                         }
-                        if ((int)tDBReader["LocalInterlock G3-2"] >= 0)
+                        if ((tDBReader["LocalInterlock G3-2"] as int? ?? default(int)) >= 0)
                         {
-                            TSndStr.Append(((int)tDBReader["LocalInterlock G3-2"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["LocalInterlock G3-2"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
                             TSndStr.Append("00");
                         }
-                        if ((int)tDBReader["LocalInterlock G4-1"] >= 0)
+                        if ((tDBReader["LocalInterlock G4-1"] as int? ?? default(int)) >= 0)
                         {
-                            TSndStr.Append(((int)tDBReader["LocalInterlock G4-1"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["LocalInterlock G4-1"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
                             TSndStr.Append("00");
                         }
-                        if ((int)tDBReader["LocalInterlock G4-2"] >= 0)
+                        if ((tDBReader["LocalInterlock G4-2"] as int? ?? default(int)) >= 0)
                         {
-                            TSndStr.Append(((int)tDBReader["LocalInterlock G4-2"]).ToString("D2"));
+                            TSndStr.Append(((tDBReader["LocalInterlock G4-2"] as int? ?? default(int))).ToString("D2"));
                         }
                         else
                         {
@@ -4572,53 +4552,58 @@ namespace MaviSoftServerV1._0
 
                             lock (TLockObj)
                             {
-                                StringBuilder tVeriable = new StringBuilder();
-                                tDBSQLStr = "SELECT * FROM ReaderSettings " +
-                                    "WHERE [Seri No] = " + mPanelSerialNo.ToString();
-
-                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                tDBReader = tDBCmd.ExecuteReader();
-                                if (!tDBReader.Read())
+                                bool Result = false;
+                                for (int i = 0; i < 16; i++)
                                 {
-                                    tVeriable.Append("INSERT INTO ReaderSettings ");
-                                    tVeriable.Append("(");
-                                    tVeriable.Append("[Seri No],");
-                                    tVeriable.Append("[Panel ID],");
-                                    tVeriable.Append("[Panel Name],");
-                                    for (int i = 1; i < 17; i++)
+                                    tDBSQLStr = "";
+                                    StringBuilder tVeriable = new StringBuilder();
+                                    tDBSQLStr = "SELECT * FROM ReaderSettingsNew " +
+                                        "WHERE [Seri No] = " + mPanelSerialNo.ToString();
+                                    tDBSQLStr += " AND [WKapi ID] =" + (i + 1).ToString();
+                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                    tDBReader = tDBCmd.ExecuteReader();
+                                    if (!tDBReader.Read())
                                     {
-                                        tVeriable.Append("[WKapi" + i + " Aktif],");
-                                        tVeriable.Append("[WKapi" + i + " Adi],");
-                                        tVeriable.Append("[WKapi" + i + " Kapi Tipi],");
-                                        tVeriable.Append("[WKapi" + i + " Role No],");
-                                        tVeriable.Append("[WKapi" + i + " WIGType],");
-                                        tVeriable.Append("[WKapi" + i + " Lokal Bolge],");
-                                        tVeriable.Append("[WKapi" + i + " Gecis Modu],");
-                                        tVeriable.Append("[WKapi" + i + " Sirali Gecis Ana Kapi],");
-                                        tVeriable.Append("[WKapi" + i + " Coklu Onay],");
-                                        tVeriable.Append("[WKapi" + i + " Alarm Modu],");
-                                        tVeriable.Append("[WKapi" + i + " Yangin Modu],");
-                                        tVeriable.Append("[WKapi" + i + " Pin Dogrulama],");
-                                        tVeriable.Append("[WKapi" + i + " Lift Aktif],");
-                                        tVeriable.Append("[WKapi" + i + " Acik Sure],");
-                                        tVeriable.Append("[WKapi" + i + " Acik Sure Alarmi],");
-                                        tVeriable.Append("[WKapi" + i + " Zorlama Alarmi],");
-                                        tVeriable.Append("[WKapi" + i + " Acilma Alarmi],");
-                                        tVeriable.Append("[WKapi" + i + " Panik Buton Alarmi],");
-                                        tVeriable.Append("[WKapi" + i + " Harici Alarm Rolesi],");
-                                        tVeriable.Append("[WKapi" + i + " Ana Alarm Rolesi],");
-                                        tVeriable.Append("[WKapi" + i + " Itme Gecikmesi],");
-                                        tVeriable.Append("[WKapi" + i + " User Count],");
-                                    }
-                                    tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
-                                    tDBSQLStr2 += ")";
-                                    tDBSQLStr2 += "VALUES ";
-                                    tDBSQLStr2 += "(";
-                                    tDBSQLStr2 += mPanelSerialNo.ToString() + ",";
-                                    tDBSQLStr2 += ID.ToString() + ",";
-                                    tDBSQLStr2 += "'" + PanelName + "',";
-                                    for (int i = 0; i < 16; i++)
-                                    {
+                                        tVeriable.Append("INSERT INTO ReaderSettingsNew ");
+                                        tVeriable.Append("(");
+                                        tVeriable.Append("[Seri No],");
+                                        tVeriable.Append("[Sira No],");
+                                        tVeriable.Append("[Panel ID],");
+                                        tVeriable.Append("[Panel Name],");
+                                        tVeriable.Append("[WKapi ID],");
+                                        tVeriable.Append("[WKapi Aktif],");
+                                        tVeriable.Append("[WKapi Lift Aktif],");
+                                        tVeriable.Append("[WKapi Role No],");
+                                        tVeriable.Append("[WKapi Adi],");
+                                        tVeriable.Append("[WKapi Kapi Tipi],");
+                                        tVeriable.Append("[WKapi WIGType],");
+                                        tVeriable.Append("[WKapi Lokal Bolge],");
+                                        tVeriable.Append("[WKapi Gecis Modu],");
+                                        tVeriable.Append("[WKapi Alarm Modu],");
+                                        tVeriable.Append("[WKapi Yangin Modu],");
+                                        tVeriable.Append("[WKapi Pin Dogrulama],");
+                                        tVeriable.Append("[WKapi Ana Alarm Rolesi],");
+                                        tVeriable.Append("[WKapi Sirali Gecis Ana Kapi],");
+                                        tVeriable.Append("[WKapi Coklu Onay],");
+                                        tVeriable.Append("[WKapi Acik Sure],");
+                                        tVeriable.Append("[WKapi Acik Sure Alarmi],");
+                                        tVeriable.Append("[WKapi Zorlama Alarmi],");
+                                        tVeriable.Append("[WKapi Acilma Alarmi],");
+                                        tVeriable.Append("[WKapi Harici Alarm Rolesi],");
+                                        tVeriable.Append("[WKapi Panik Buton Alarmi],");
+                                        tVeriable.Append("[WKapi Itme Gecikmesi],");
+                                        tVeriable.Append("[WKapi User Count],");
+
+                                        tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
+                                        tDBSQLStr2 += ")";
+                                        tDBSQLStr2 += "VALUES ";
+                                        tDBSQLStr2 += "(";
+                                        tDBSQLStr2 += mPanelSerialNo.ToString() + ",";
+                                        tDBSQLStr2 += ID.ToString() + ",";
+                                        tDBSQLStr2 += ID.ToString() + ",";
+                                        tDBSQLStr2 += "'" + PanelName + "',";
+                                        tDBSQLStr2 += (i + 1).ToString() + ",";
+
                                         if (WIGReaderActive[i] == 1)
                                         {
                                             tDBSQLStr2 += "1,";
@@ -4627,36 +4612,6 @@ namespace MaviSoftServerV1._0
                                         {
                                             tDBSQLStr2 += "0,";
                                         }
-
-                                        tDBSQLStr2 += "'" + WIGReaderName[i] + "',";
-                                        tDBSQLStr2 += WIGReaderDoorType[i].ToString() + ",";
-                                        tDBSQLStr2 += WIGReaderRelayNo[i].ToString() + ",";
-                                        tDBSQLStr2 += WIGReaderWIGType[i].ToString() + ",";
-                                        tDBSQLStr2 += WIGReaderLocalGroup[i].ToString() + ",";
-                                        tDBSQLStr2 += WIGReaderAccessControlMode[i].ToString() + ",";
-
-                                        if (WIGReaderSeqAccessMain[i] == 1)
-                                        {
-                                            tDBSQLStr2 += "1,";
-                                        }
-                                        else
-                                        {
-                                            tDBSQLStr2 += "0,";
-                                        }
-
-                                        if (WIGReaderMultipleAuthorization[i] == 1)
-                                        {
-                                            tDBSQLStr2 += "1,";
-                                        }
-                                        else
-                                        {
-                                            tDBSQLStr2 += "0,";
-                                        }
-
-                                        tDBSQLStr2 += WIGReaderAlarmLock[i] + ",";
-                                        tDBSQLStr2 += WIGReaderFireUnlock[i] + ",";
-                                        tDBSQLStr2 += WIGReaderPINVerify[i] + ",";
-
                                         if (WIGReaderParkingGate[i] == 1)
                                         {
                                             tDBSQLStr2 += "1,";
@@ -4665,9 +4620,40 @@ namespace MaviSoftServerV1._0
                                         {
                                             tDBSQLStr2 += "0,";
                                         }
-
+                                        tDBSQLStr2 += WIGReaderRelayNo[i].ToString() + ",";
+                                        tDBSQLStr2 += "'" + WIGReaderName[i] + "',";
+                                        tDBSQLStr2 += WIGReaderDoorType[i].ToString() + ",";
+                                        tDBSQLStr2 += WIGReaderWIGType[i].ToString() + ",";
+                                        tDBSQLStr2 += WIGReaderLocalGroup[i].ToString() + ",";
+                                        tDBSQLStr2 += WIGReaderAccessControlMode[i].ToString() + ",";
+                                        tDBSQLStr2 += WIGReaderAlarmLock[i] + ",";
+                                        tDBSQLStr2 += WIGReaderFireUnlock[i] + ",";
+                                        tDBSQLStr2 += WIGReaderPINVerify[i] + ",";
+                                        if (WIGReaderButtonDetectorFunction[i] == 1)//Ana Alarm Rolesi Yerine
+                                        {
+                                            tDBSQLStr2 += "1,";
+                                        }
+                                        else
+                                        {
+                                            tDBSQLStr2 += "0,";
+                                        }
+                                        if (WIGReaderSeqAccessMain[i] == 1)
+                                        {
+                                            tDBSQLStr2 += "1,";
+                                        }
+                                        else
+                                        {
+                                            tDBSQLStr2 += "0,";
+                                        }
+                                        if (WIGReaderMultipleAuthorization[i] == 1)
+                                        {
+                                            tDBSQLStr2 += "1,";
+                                        }
+                                        else
+                                        {
+                                            tDBSQLStr2 += "0,";
+                                        }
                                         tDBSQLStr2 += WIGReaderDoorOpenTime[i] + ",";
-
                                         if (WIGReaderDoorOpenTimeAlarm[i] == 1)
                                         {
                                             tDBSQLStr2 += "1,";
@@ -4676,7 +4662,6 @@ namespace MaviSoftServerV1._0
                                         {
                                             tDBSQLStr2 += "0,";
                                         }
-
                                         if (WIGReaderDoorForcingAlarm[i] == 1)
                                         {
                                             tDBSQLStr2 += "1,";
@@ -4685,7 +4670,6 @@ namespace MaviSoftServerV1._0
                                         {
                                             tDBSQLStr2 += "0,";
                                         }
-
                                         if (WIGReaderDoorOpenAlarm[i] == 1)
                                         {
                                             tDBSQLStr2 += "1,";
@@ -4694,7 +4678,7 @@ namespace MaviSoftServerV1._0
                                         {
                                             tDBSQLStr2 += "0,";
                                         }
-
+                                        tDBSQLStr2 += WIGReaderDoorExternalAlarmRelay[i].ToString() + ",";
                                         if (WIGReaderDoorPanicButtonAlarm[i] == 1)
                                         {
                                             tDBSQLStr2 += "1,";
@@ -4703,64 +4687,84 @@ namespace MaviSoftServerV1._0
                                         {
                                             tDBSQLStr2 += "0,";
                                         }
-
-                                        tDBSQLStr2 += WIGReaderDoorExternalAlarmRelay[i].ToString() + ",";
-
-                                        if (WIGReaderButtonDetectorFunction[i] == 1)
-                                        {
-                                            tDBSQLStr2 += "1,";
-                                        }
-                                        else
-                                        {
-                                            tDBSQLStr2 += "0,";
-                                        }
-
                                         tDBSQLStr2 += WIGReaderDoorPushDelay[i].ToString() + ",";
                                         tDBSQLStr2 += WIGReaderUserCount[i].ToString() + ",";
 
+
+
+
+
+
+
+
+
+
+
+                                        tDBSQLStr2 = tDBSQLStr2.Substring(0, tDBSQLStr2.Length - 1);
+                                        tDBSQLStr2 += ")";
+                                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                        TRetInt = tDBCmd2.ExecuteNonQuery();
+                                        if (TRetInt > 0)
+                                        {
+                                            Result = true;
+                                            tVeriable = new StringBuilder();
+                                            tDBSQLStr2 = "";
+                                        }
+                                        else
+                                        {
+                                            Result = false;
+                                            tVeriable = new StringBuilder();
+                                            tDBSQLStr2 = "";
+                                        }
+
                                     }
-
-                                    tDBSQLStr2 = tDBSQLStr2.Substring(0, tDBSQLStr2.Length - 1);
-                                    tDBSQLStr2 += ")";
-
-                                }
-                                else
-                                {
-                                    tVeriable.Append("UPDATE ReaderSettings ");
-                                    tVeriable.Append("SET ");
-                                    for (int i = 0; i < 16; i++)
+                                    else
                                     {
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Aktif] = " + WIGReaderActive[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Adi] = '" + WIGReaderName[i] + "',");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Kapi Tipi] = " + WIGReaderDoorType[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Role No] = " + WIGReaderRelayNo[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " WIGType] = " + WIGReaderWIGType[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Lokal Bolge] = " + WIGReaderLocalGroup[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Gecis Modu] = " + WIGReaderAccessControlMode[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Sirali Gecis Ana Kapi] = " + WIGReaderSeqAccessMain[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Coklu Onay] = " + WIGReaderMultipleAuthorization[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Alarm Modu] = " + WIGReaderAlarmLock[i] + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Yangin Modu] = " + WIGReaderFireUnlock[i] + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Pin Dogrulama] = " + WIGReaderPINVerify[i] + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Lift Aktif] = " + WIGReaderParkingGate[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Acik Sure] = " + WIGReaderDoorOpenTime[i] + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Acik Sure Alarmi] = " + WIGReaderDoorOpenTimeAlarm[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Zorlama Alarmi] = " + WIGReaderDoorForcingAlarm[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Acilma Alarmi] = " + WIGReaderDoorOpenAlarm[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Panik Buton Alarmi] = " + WIGReaderDoorPanicButtonAlarm[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Harici Alarm Rolesi] = " + WIGReaderDoorExternalAlarmRelay[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Ana Alarm Rolesi] = " + WIGReaderButtonDetectorFunction[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " Itme Gecikmesi] = " + WIGReaderDoorPushDelay[i].ToString() + ",");
-                                        tVeriable.Append("[WKapi" + (i + 1) + " User Count] = " + WIGReaderUserCount[i].ToString() + ",");
+                                        tVeriable.Append(" UPDATE ReaderSettingsNew ");
+                                        tVeriable.Append("SET ");
+                                        tVeriable.Append("[WKapi Aktif] = " + WIGReaderActive[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Adi] = '" + WIGReaderName[i] + "',");
+                                        tVeriable.Append("[WKapi Kapi Tipi] = " + WIGReaderDoorType[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Role No] = " + WIGReaderRelayNo[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi WIGType] = " + WIGReaderWIGType[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Lokal Bolge] = " + WIGReaderLocalGroup[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Gecis Modu] = " + WIGReaderAccessControlMode[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Sirali Gecis Ana Kapi] = " + WIGReaderSeqAccessMain[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Coklu Onay] = " + WIGReaderMultipleAuthorization[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Alarm Modu] = " + WIGReaderAlarmLock[i] + ",");
+                                        tVeriable.Append("[WKapi Yangin Modu] = " + WIGReaderFireUnlock[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Pin Dogrulama] = " + WIGReaderPINVerify[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Lift Aktif] = " + WIGReaderParkingGate[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Acik Sure] = " + WIGReaderDoorOpenTime[i] + ",");
+                                        tVeriable.Append("[WKapi Acik Sure Alarmi] = " + WIGReaderDoorOpenTimeAlarm[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Zorlama Alarmi] = " + WIGReaderDoorForcingAlarm[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Acilma Alarmi] = " + WIGReaderDoorOpenAlarm[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Panik Buton Alarmi] = " + WIGReaderDoorPanicButtonAlarm[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Harici Alarm Rolesi] = " + WIGReaderDoorExternalAlarmRelay[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Ana Alarm Rolesi] = " + WIGReaderButtonDetectorFunction[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi Itme Gecikmesi] = " + WIGReaderDoorPushDelay[i].ToString() + ",");
+                                        tVeriable.Append("[WKapi User Count] = " + WIGReaderUserCount[i].ToString() + ",");
+                                        tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
+                                        tDBSQLStr2 += " WHERE [Seri No] = " + mPanelSerialNo.ToString();
+                                        tDBSQLStr2 += " AND [Panel ID] = " + ID.ToString();
+                                        tDBSQLStr2 += " AND [WKapi ID] = " + (i + 1).ToString();
+                                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                        TRetInt = tDBCmd2.ExecuteNonQuery();
+                                        if (TRetInt > 0)
+                                        {
+                                            Result = true;
+                                            tVeriable = new StringBuilder();
+                                            tDBSQLStr2 = "";
+                                        }
+                                        else
+                                        {
+                                            Result = false;
+                                            tVeriable = new StringBuilder();
+                                            tDBSQLStr2 = "";
+                                        }
                                     }
-                                    tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
-                                    tDBSQLStr2 += " WHERE [Seri No] = " + mPanelSerialNo.ToString();
-                                    tDBSQLStr2 += " AND [Panel ID] = " + ID.ToString();
-
                                 }
-                                tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
-                                TRetInt = tDBCmd2.ExecuteNonQuery();
-                                if (TRetInt > 0)
+                                if (Result)
                                 {
                                     return true;
                                 }
@@ -4768,8 +4772,6 @@ namespace MaviSoftServerV1._0
                                 {
                                     return false;
                                 }
-
-
                             }
 
                         }
@@ -5059,7 +5061,6 @@ namespace MaviSoftServerV1._0
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 case CommandConstants.CMD_SND_RELAYPROGRAM:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
-
                 default:
                     return 0;
             }

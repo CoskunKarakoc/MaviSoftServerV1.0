@@ -37,7 +37,7 @@ namespace MaviSoftServerV1._0
     public enum TCONST
     {
         MAX_RODASOFT_CLIENT = 49,
-        MAX_PANEL = 99,
+        MAX_PANEL = 200,
         MAX_TASK_CNT = 15,
         RODASOFT_KEY = 1592,
         PORT_TCP = 0,

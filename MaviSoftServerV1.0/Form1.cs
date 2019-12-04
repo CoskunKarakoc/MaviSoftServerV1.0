@@ -38,15 +38,16 @@ namespace MaviSoftServerV1._0
             public ushort SndRcvTimeout;
             public int PanelNo;
         }
-        public Label[] lblMsj = new Label[100];
+        public Label[] lblIP = new Label[201];
+        public Label[] lblMsj = new Label[201];
 
         public Label lbl;
 
         public Label denemeLab;
 
-        public S_PORTS[] SPorts = new S_PORTS[100];
+        public S_PORTS[] SPorts = new S_PORTS[201];
 
-        public Panel[] Panels = new Panel[100];
+        public Panel[] Panels = new Panel[201];
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -56,13 +57,27 @@ namespace MaviSoftServerV1._0
             {
                 TLC = (i % 50);
                 TTC = (i / 50);
+
+                // PANEL IPs
+                lblIP[i] = new Label();
+                lblIP[i].AutoSize = false;
+                lblIP[i].BorderStyle = BorderStyle.FixedSingle;
+                lblIP[i].Location = new Point((10 + (TTC * 385)), (18 + (TLC * 15)));
+                lblIP[i].Size = new Size(165, 16);
+                lblIP[i].Font = new Font("Arial Narrow TUR", 7.0F);
+                lblIP[i].Text = "";// "Mesaj";
+                lblIP[i].TextAlign = ContentAlignment.MiddleCenter;
+                lblIP[i].Visible = true;
+                Controls.Add(lblIP[i]);
+
+                // MESSAGES
                 lblMsj[i] = new Label();
                 lblMsj[i].AutoSize = false;
                 lblMsj[i].BorderStyle = BorderStyle.FixedSingle;
-                lblMsj[i].Location = new Point(10, (TLC + (i * 20)));
-                lblMsj[i].Size = new Size(210, 16);
+                lblMsj[i].Location = new Point((174 + (TTC * 385)), (18 + (TLC * 15)));
+                lblMsj[i].Size = new Size(165, 16);
                 lblMsj[i].Font = new Font("Arial Narrow TUR", 7.0F);
-                lblMsj[i].Text = "Mesaj";
+                lblMsj[i].Text = "";// "Mesaj";
                 lblMsj[i].TextAlign = ContentAlignment.MiddleCenter;
                 lblMsj[i].Visible = true;
                 Controls.Add(lblMsj[i]);
@@ -91,6 +106,8 @@ namespace MaviSoftServerV1._0
                             SPorts[i].MACAddress = MReader["Seri No"] as int? ?? default(int);
                             SPorts[i].ConnTimeout = 3;
                             SPorts[i].SndRcvTimeout = 3;
+
+                            lblIP[i].Text = i.ToString() + " :: " + SPorts[i].IPAdress;
                         }
                         else
                         {
@@ -112,7 +129,7 @@ namespace MaviSoftServerV1._0
             }
             catch (Exception)
             {
-                MessageBox.Show("SQL Server'a bağlantı kurulamadı!, Program kapatılacak - RODASOFT ACCESS SERVER V1.0");
+                MessageBox.Show("SQL Server'a bağlantı kurulamadı!, Program kapatılacak - MAVİSOFT SERVER V1.0");
             }
         }
     }
