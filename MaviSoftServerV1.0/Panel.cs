@@ -710,7 +710,7 @@ namespace MaviSoftServerV1._0
 
                 while (mDBReader.Read())
                 {
-                    if ((mDBReader["Kayit No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) > 0)
+                    if ((mDBReader["Kayit No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) >= 0)
                     {
                         TTaskOk = 1;
                         break;
@@ -1869,7 +1869,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
-                TSndStr.Append("***\r");
+                TSndStr.Append("**\r");
             }
             /*15*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOGCOUNT)

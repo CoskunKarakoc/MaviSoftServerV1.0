@@ -107,7 +107,7 @@ namespace MaviSoftServerV1._0
                             SPorts[i].ConnTimeout = 3;
                             SPorts[i].SndRcvTimeout = 3;
 
-                            lblIP[i].Text = i.ToString() + " :: " + SPorts[i].IPAdress;
+                            lblIP[i].Text = SPorts[i].PanelNo.ToString() + " :: " + SPorts[i].IPAdress;
                         }
                         else
                         {
