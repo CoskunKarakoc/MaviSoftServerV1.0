@@ -192,16 +192,16 @@ namespace MaviSoftServerV1._0
                             mPanelClient.ReceiveTimeout = mTimeOut;
                             mPanelClient.SendTimeout = mTimeOut;
 
-                            //mPanelClientLog = new TcpClient();
-                            //mPanelClientLog.ReceiveBufferSize = 1024;
-                            //mPanelClientLog.SendBufferSize = 1024;
-                            //mPanelClientLog.ReceiveTimeout = mTimeOut;
-                            //mPanelClientLog.SendTimeout = mTimeOut;
+                            mPanelClientLog = new TcpClient();
+                            mPanelClientLog.ReceiveBufferSize = 1024;
+                            mPanelClientLog.SendBufferSize = 1024;
+                            mPanelClientLog.ReceiveTimeout = mTimeOut;
+                            mPanelClientLog.SendTimeout = mTimeOut;
 
                             try
                             {
                                 mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
-                                //  mPanelClientLog.Connect(mPanelIPAddress, mPanelTCPPortLog);
+                               // mPanelClientLog.Connect(mPanelIPAddress, mPanelTCPPortLog);
                                 mPanelProc = CommandConstants.CMD_PORT_CONNECT;
 
                                 mStartTime = DateTime.Now;
@@ -244,10 +244,10 @@ namespace MaviSoftServerV1._0
                             if (mPanelClient.Connected == true)
                             {
                                 mPanelClient.Close();
-                                //if (mPanelClientLog.Connected == true)
-                                //{
-                                //    mPanelClientLog.Close();
-                                //}
+                                if (mPanelClientLog.Connected == true)
+                                {
+                                    mPanelClientLog.Close();
+                                }
                             }
                             mPanelProc = CommandConstants.CMD_PORT_INIT;
                             Thread.Sleep(500);
@@ -324,10 +324,11 @@ namespace MaviSoftServerV1._0
                             Thread.Sleep(250);
 
                             mTaskSource = SyncGetNewTask();
-                            //if (mTaskSource == IP_TASK)
-                            //{
-                            //    TProc = TaskList[mMemIX, TaskPIX[mMemIX]].CmdID;
-                            //}
+                            if (mTaskSource == IP_TASK)
+                            {
+                                TProc = TaskList[mMemIX, TaskPIX[mMemIX]].CmdID;
+                                mPanelProc = (CommandConstants)TProc;
+                            }
                             if (mTaskSource == DB_TASK)
                             {
                                 TProc = (ushort)mTaskType;
@@ -675,35 +676,33 @@ namespace MaviSoftServerV1._0
             ushort TTaskOk = 0;
 
 
-            //lock (TLockObj)
-            //{
-            //    for (int i = 0; i < (int)TCONST.MAX_TASK_CNT; i++)
-            //    {
-            //        if (TaskPIX[mMemIX] < (int)TCONST.MAX_TASK_CNT-1)
-            //        {
-            //            TaskPIX[mMemIX] += 1;
-            //        }
-            //        else
-            //        {
-            //            TaskPIX[mMemIX] = 0;
-            //        }
-            //        if (TaskList[mMemIX, TaskPIX[mMemIX]].CmdID != 0)
-            //        {
-            //            break;
-            //        }
-            //    }
+            lock (TLockObj)
+            {
+                for (int i = 0; i < (int)TCONST.MAX_TASK_CNT; i++)
+                {
+                    if (TaskPIX[mMemIX] < (int)TCONST.MAX_TASK_CNT - 1)
+                    {
+                        TaskPIX[mMemIX] += 1;
+                    }
+                    else
+                    {
+                        TaskPIX[mMemIX] = 0;
+                    }
+                    if (TaskList[mMemIX, TaskPIX[mMemIX]].CmdID != 0)
+                    {
+                        break;
+                    }
+                }
 
-            //    if (TaskList[mMemIX, TaskPIX[mMemIX]].CmdID > 0)
-            //    {
-            //        return IP_TASK;
-            //    }
-            //}
+                if (TaskList[mMemIX, TaskPIX[mMemIX]].CmdID > 0)
+                {
+                    return IP_TASK;
+                }
+            }
 
             lock (TLockObj)
             {
                 //DB TASK
-
-                //mDBSQLStr = "Select * from TaskList where [Panel No]=" + mPanelNo + " And [Durum Kodu]=0 Order By [Grup No]";
                 mDBSQLStr = "Select * from TaskList where [Panel No]=" + mPanelNo + " AND [Durum Kodu]=" + 1 + " Order By [Kayit No]";
                 mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
                 mDBReader = mDBCmd.ExecuteReader();
@@ -1585,13 +1584,13 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("00000");
                         }
-                        if ((tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) > 0 && (tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) < 1000)
+                        if ((tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) >= 0 && (tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) < 1000)
                         {
                             TSndStr.Append(ConvertToTypeInt((tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)), "D3"));
                         }
                         else
                         {
-                            TSndStr.Append("001");
+                            TSndStr.Append("000");
                         }
                         //Access Counter Periode (Daily Or Monthly)
                         TSndStr.Append(ConvertToTypeInt((tDBReader["Gunluk Aylik"] as int? ?? default(int)), "D1"));
@@ -1609,7 +1608,7 @@ namespace MaviSoftServerV1._0
                         }
                         else
                         {
-                            TSndStr.Append("001");
+                            TSndStr.Append("000");
                         }
                         for (int i = 1; i < 17; i++)
                         {
@@ -1632,20 +1631,22 @@ namespace MaviSoftServerV1._0
                         }
                         if (tDBReader["Mukerrer Engelleme Gecersiz"] as bool? ?? default(bool))
                         {
-                            TSndStr.Append("0");
+                            TSndStr.Append("1");
                         }
                         else
                         {
-                            TSndStr.Append("1");
+                            TSndStr.Append("0");
                         }
+
                         if (tDBReader["Lokal Kapasite Gecersiz"] as bool? ?? default(bool))
                         {
-                            TSndStr.Append("0");
+                            TSndStr.Append("1");
                         }
                         else
                         {
-                            TSndStr.Append("1");
+                            TSndStr.Append("0");
                         }
+
                         if (tDBReader["Gece Icerdeki Kisi Sayisini Sil"] as bool? ?? default(bool))
                         {
                             TSndStr.Append("1");
@@ -1654,14 +1655,16 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0");
                         }
+
                         if (tDBReader["Antipassback Gecersiz"] as bool? ?? default(bool))
-                        {
-                            TSndStr.Append("0");
-                        }
-                        else
                         {
                             TSndStr.Append("1");
                         }
+                        else
+                        {
+                            TSndStr.Append("0");
+                        }
+
                         for (int i = 1; i < 9; i++)
                         {
                             tDBSQLStr2 = "SELECT * FROM GroupsDetailNew WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " AND [Kapi No]=" + i + " ORDER BY [Kayit No]";
