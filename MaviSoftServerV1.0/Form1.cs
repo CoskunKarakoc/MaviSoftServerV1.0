@@ -125,7 +125,6 @@ namespace MaviSoftServerV1._0
                         Panels[j].StartPanel();
                     }
                 }
-
             }
             catch (Exception)
             {

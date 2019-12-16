@@ -201,7 +201,7 @@ namespace MaviSoftServerV1._0
                             try
                             {
                                 mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
-                               // mPanelClientLog.Connect(mPanelIPAddress, mPanelTCPPortLog);
+                                // mPanelClientLog.Connect(mPanelIPAddress, mPanelTCPPortLog);
                                 mPanelProc = CommandConstants.CMD_PORT_CONNECT;
 
                                 mStartTime = DateTime.Now;
@@ -496,6 +496,7 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_SND_LIFTGROUP:
                     case CommandConstants.CMD_SND_GENERALSETTINGS:
                     case CommandConstants.CMD_SND_RELAYPROGRAM:
+                    case CommandConstants.CMD_ERSALL_TIMEGROUP:
                         {
                             if (!mPanelClient.Client.Connected)
                             {
@@ -1525,6 +1526,14 @@ namespace MaviSoftServerV1._0
                 }
 
             }
+            /*Zaman Gruplarının Silinmesi*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_TIMEGROUP)
+            {
+                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append("**\r");
+            }
             /*5*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_TIMEGROUP)
             {
@@ -1705,6 +1714,14 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("***\r");
             }
+            /*Geçiş Gruplarının Silinmesi*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP)
+            {
+                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append("**\r");
+            }
             /*8-9*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_USER || DBTaskType == (ushort)CommandConstants.CMD_SNDALL_USER)
             {
@@ -1720,13 +1737,13 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append(mPanelNo.ToString("D3"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["ID"] as int? ?? default(int), "D6"));
                         TSndStr.Append(ConvertToTypeInt(Convert.ToInt32(tDBReader["Kart ID"]), "D10"));
-                        if (tDBReader["Sifre"].ToString() != null)
+                        if (tDBReader["Sifre"].ToString() != null && tDBReader["Sifre"].ToString() != "")
                         {
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Sifre"] as int? ?? default(int), "D4"));
                         }
                         else
                         {
-                            TSndStr.Append("0000");
+                            TSndStr.Append("0001");
                         }
                         if (tDBReader["Grup No"].ToString() != null)
                         {
@@ -1744,15 +1761,15 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0");
                         }
-                        if (tDBReader["Grup Takvimi No"].ToString() != null)
+                        if (tDBReader["Grup Takvimi No"].ToString() != null && tDBReader["Grup Takvimi No"].ToString() != "")
                         {
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup Takvimi No"] as int? ?? default(int), "D4"));
                         }
                         else
                         {
-                            TSndStr.Append("0000");
+                            TSndStr.Append("0001");
                         }
-                        if (tDBReader["Visitor Grup No"].ToString() != null)
+                        if (tDBReader["Visitor Grup No"].ToString() != null && tDBReader["Visitor Grup No"].ToString() != "")
                         {
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Visitor Grup No"] as int? ?? default(int), "D4"));
                         }
@@ -1778,7 +1795,7 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0");
                         }
-                        if (tDBReader["Grup No 2"].ToString() != null)
+                        if (tDBReader["Grup No 2"].ToString() != null && tDBReader["Grup No 2"].ToString() != "")
                         {
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 2"] as int? ?? default(int), "D4"));
                         }
@@ -1786,7 +1803,7 @@ namespace MaviSoftServerV1._0
                         {
                             TSndStr.Append("0001");
                         }
-                        if (tDBReader["Grup No 3"].ToString() != null)
+                        if (tDBReader["Grup No 3"].ToString() != null && tDBReader["Grup No 3"].ToString() != "")
                         {
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 3"] as int? ?? default(int), "D4"));
                         }
@@ -4899,8 +4916,8 @@ namespace MaviSoftServerV1._0
                     return "EC";
                 case (ushort)CommandConstants.CMD_ERS_ACCESSGROUP:
                     return "MS";
-                case (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP:
-                    return "ES";
+                //case (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP:
+                //    return "ES";
                 case (ushort)CommandConstants.CMD_ERS_ACCESSCOUNTERS:
                     return "EP";
                 case (ushort)CommandConstants.CMD_ERSALL_ACCESSCOUNTERS:
@@ -4969,6 +4986,11 @@ namespace MaviSoftServerV1._0
                     return "DS";
                 case (ushort)CommandConstants.CMD_SND_RELAYPROGRAM:
                     return "ZW";
+                case (ushort)CommandConstants.CMD_ERSALL_TIMEGROUP:
+                    return "EG";
+                case (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP:
+                    return "TE";
+
                 default:
                     return "ERR";
             }
@@ -5064,6 +5086,8 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_SND_GENERALSETTINGS:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 case CommandConstants.CMD_SND_RELAYPROGRAM:
+                    return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_ERSALL_TIMEGROUP:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 default:
                     return 0;
