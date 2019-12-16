@@ -12,24 +12,6 @@ namespace MaviSoftServerV1._0
 {
     public class Panel
     {
-        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, Form1 parentForm)
-        {
-            mMemIX = MemIX;
-            mActive = TActive;
-            mTimeOut = JTimeOut;
-            mPanelTCPPort = TCPPortOne;
-            mPanelTCPPortLog = TCPPortTwo;
-            mPanelIPAddress = TIPAdress;
-            mPanelSerialNo = TMACAdress;
-            mPanelNo = TPanelNo;
-            mParentForm = parentForm;
-            mPanelTCPPortLog = (int)(mPanelTCPPortLog + Convert.ToUInt32(100));
-            if (mTimeOut < 3 && mTimeOut > 60)
-            {
-                mTimeOut = 3;
-            }
-        }
-
         public const ushort NO_TASK = 0;
 
         public const ushort DB_TASK = 1;
@@ -134,6 +116,29 @@ namespace MaviSoftServerV1._0
 
         public SqlCommand mDBCmd { get; set; }
 
+
+
+
+
+        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, Form1 parentForm)
+        {
+            mMemIX = MemIX;
+            mActive = TActive;
+            mTimeOut = JTimeOut;
+            mPanelTCPPort = TCPPortOne;
+            mPanelTCPPortLog = TCPPortTwo;
+            mPanelIPAddress = TIPAdress;
+            mPanelSerialNo = TMACAdress;
+            mPanelNo = TPanelNo;
+            mParentForm = parentForm;
+            mPanelTCPPortLog = (int)(mPanelTCPPortLog + Convert.ToUInt32(100));
+            if (mTimeOut < 3 && mTimeOut > 60)
+            {
+                mTimeOut = 3;
+            }
+        }
+
+   
 
         public bool StartPanel()
         {

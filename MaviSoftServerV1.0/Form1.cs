@@ -125,6 +125,9 @@ namespace MaviSoftServerV1._0
                         Panels[j].StartPanel();
                     }
                 }
+
+                //GeneralOperations generalOperations = new GeneralOperations();
+                //generalOperations.StartOperations();
             }
             catch (Exception)
             {
