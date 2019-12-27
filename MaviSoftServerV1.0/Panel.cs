@@ -28,27 +28,49 @@ namespace MaviSoftServerV1._0
 
         private int mTaskIntParam1;
 
+        private int mLogTaskIntParam1;
+
         private int mTaskIntParam2;
+
+        private int mLogTaskIntParam2;
 
         private int mTaskIntParam3;
 
+        private int mLogTaskIntParam3;
+
         private int mTaskIntParam4;
+
+        private int mLogTaskIntParam4;
 
         private int mTaskIntParam5;
 
+        private int mLogTaskIntParam5;
+
         private string mTaskStrParam1;
+
+        private string mLogTaskStrParam1;
 
         private string mTaskStrParam2;
 
+        private string mLogTaskStrParam2;
+
         private string mTaskUserName;
+
+        private string mLogTaskUserName;
 
         private bool mTaskUpdateTable;
 
+        private bool mLogTaskUpdateTable;
+
         private ushort mTaskSource;
+
+        private ushort mLogTaskSource;
 
         private S_ANSWER mSAnswer;
 
         public bool mTransferCompleted { get; set; }
+
+        public bool mLogTransferCompleted { get; set; }
 
         public ushort mReadStep { get; set; }
 
@@ -60,11 +82,15 @@ namespace MaviSoftServerV1._0
 
         public string mReturnStr;
 
+        public string mLogReturnStr;
+
         public Form1 mParentForm { get; set; }
 
         public Label lblMesaj;
 
         public Thread PanelThread { get; set; }
+
+        public Thread LogThread { get; set; }
 
         public TcpClient mPanelClient { get; set; }
 
@@ -75,6 +101,8 @@ namespace MaviSoftServerV1._0
         public ushort mPanelIdleInterval { get; set; }
 
         public CommandConstants mPanelProc { get; set; }
+
+        public CommandConstants mLogProc { get; set; }
 
         public ushort mPanelConState { get; set; }
 
@@ -131,14 +159,13 @@ namespace MaviSoftServerV1._0
             mPanelSerialNo = TMACAdress;
             mPanelNo = TPanelNo;
             mParentForm = parentForm;
-            mPanelTCPPortLog = (int)(mPanelTCPPortLog + Convert.ToUInt32(100));
             if (mTimeOut < 3 && mTimeOut > 60)
             {
                 mTimeOut = 3;
             }
         }
 
-   
+
 
         public bool StartPanel()
         {
@@ -153,8 +180,12 @@ namespace MaviSoftServerV1._0
                 mDBConn.Open();
 
                 PanelThread = new Thread(ProcessPanel);
+                PanelThread.Priority = ThreadPriority.Normal;
                 PanelThread.IsBackground = true;
                 PanelThread.Start();
+
+
+
                 return true;
             }
             catch (Exception)
@@ -162,10 +193,6 @@ namespace MaviSoftServerV1._0
                 return false;
             }
         }
-
-
-
-
         public void ProcessPanel()
         {
             ushort TProc = 0;
@@ -197,16 +224,9 @@ namespace MaviSoftServerV1._0
                             mPanelClient.ReceiveTimeout = mTimeOut;
                             mPanelClient.SendTimeout = mTimeOut;
 
-                            mPanelClientLog = new TcpClient();
-                            mPanelClientLog.ReceiveBufferSize = 1024;
-                            mPanelClientLog.SendBufferSize = 1024;
-                            mPanelClientLog.ReceiveTimeout = mTimeOut;
-                            mPanelClientLog.SendTimeout = mTimeOut;
-
                             try
                             {
                                 mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
-                                // mPanelClientLog.Connect(mPanelIPAddress, mPanelTCPPortLog);
                                 mPanelProc = CommandConstants.CMD_PORT_CONNECT;
 
                                 mStartTime = DateTime.Now;
@@ -249,10 +269,6 @@ namespace MaviSoftServerV1._0
                             if (mPanelClient.Connected == true)
                             {
                                 mPanelClient.Close();
-                                if (mPanelClientLog.Connected == true)
-                                {
-                                    mPanelClientLog.Close();
-                                }
                             }
                             mPanelProc = CommandConstants.CMD_PORT_INIT;
                             Thread.Sleep(500);
@@ -397,7 +413,7 @@ namespace MaviSoftServerV1._0
                                     ClearSocketBuffers(mPanelClient);
 
                                     //ReciveGenericDBData(mPanelClient, mTaskIntParam1, 0, 0, (CommandConstants)mTaskType);
-                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (ushort)mTaskType);
+                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
                                     mStartTime = DateTime.Now;
                                     mEndTime = mStartTime.AddSeconds(mTimeOut);
                                     do
@@ -522,7 +538,7 @@ namespace MaviSoftServerV1._0
 
                                     ClearSocketBuffers(mPanelClient);
 
-                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (ushort)mTaskType);
+                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
 
                                     mStartTime = DateTime.Now;
                                     mEndTime = mStartTime.AddSeconds(mTimeOut);
@@ -550,6 +566,7 @@ namespace MaviSoftServerV1._0
                                         else
                                         {
                                             mTransferCompleted = true;
+
                                         }
                                     }
                                 }
@@ -568,7 +585,12 @@ namespace MaviSoftServerV1._0
                                     //DB Task
                                     SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED);
                                 }
-                                mPanelProc = CommandConstants.CMD_TASK_LIST;
+
+                                if ((CommandConstants)mTaskType == CommandConstants.CMD_SND_GENERALSETTINGS)
+                                    mPanelProc = CommandConstants.CMD_PORT_CLOSE;
+                                else
+                                    mPanelProc = CommandConstants.CMD_TASK_LIST;
+
                             }
                             else
                             {
@@ -609,7 +631,7 @@ namespace MaviSoftServerV1._0
                                 {
 
                                     ClearSocketBuffers(mPanelClient);
-                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (ushort)mTaskType);
+                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
                                     //SendIPTaskCommand(mPanelClient, 0, 0, 0, (ushort)mTaskType);
 
                                     mStartTime = DateTime.Now;
@@ -731,7 +753,7 @@ namespace MaviSoftServerV1._0
                     mTaskIntParam3 = mDBReader["IntParam 3"] as int? ?? default(int);
                     mTaskIntParam4 = mDBReader["IntParam 4"] as int? ?? default(int);
                     mTaskIntParam5 = mDBReader["IntParam 5"] as int? ?? default(int);
-                    //mTaskStrParam1 = mDBReader["StrParam 1"].ToString();
+                    mTaskStrParam1 = mDBReader["StrParam 1"].ToString();
                     //mTaskStrParam2 = mDBReader["StrParam 2"].ToString();
                     mTaskUserName = mDBReader["Kullanici Adi"].ToString();
                     mTaskUpdateTable = (bool)mDBReader["Tablo Guncelle"];
@@ -749,12 +771,12 @@ namespace MaviSoftServerV1._0
         }
 
         //TODO:Veritabanından Gelen Görevi Panele Gönderme
-        public bool SendGenericDBData(TcpClient TClient, int TmpIntParam1, int TmpIntParam2, int TmpIntParam3, ushort TmpTaskType)
+        public bool SendGenericDBData(TcpClient TClient, int TmpIntParam1, int TmpIntParam2, int TmpIntParam3, string TmpStrParam1, ushort TmpTaskType)
         {
             StringBuilder TSndStr = new StringBuilder();
             byte[] TSndBytes;
 
-            TSndStr = BuiltDBCommandString(TmpIntParam1, TmpIntParam2, TmpIntParam3, TmpTaskType);
+            TSndStr = BuiltDBCommandString(TmpIntParam1, TmpIntParam2, TmpIntParam3, TmpStrParam1, TmpTaskType);
 
             try
             {
@@ -778,7 +800,7 @@ namespace MaviSoftServerV1._0
         }
 
         //TODO:Gelen Görev Tipine Göre Panele Gönderilecek Olan Komutu Oluşturma
-        public StringBuilder BuiltDBCommandString(int DBIntParam1, int DBIntParam2, int DBIntParam3, ushort DBTaskType)
+        public StringBuilder BuiltDBCommandString(int DBIntParam1, int DBIntParam2, int DBIntParam3, string DBStrParam1, ushort DBTaskType)
         {
 
             StringBuilder TSndStr = new StringBuilder();
@@ -1016,8 +1038,14 @@ namespace MaviSoftServerV1._0
                                     TSndStr.Append("1");
                                 else
                                     TSndStr.Append("0");
-
-                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Role No"] as int? ?? default(int), "D2"));
+                                if (i > 8)
+                                {
+                                    TSndStr.Append(ConvertToTypeInt(1, "D2"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M" + i + " Role"] as int? ?? default(int), "D2"));
+                                }
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Kapi Tipi"] as int? ?? default(int), "D1"));
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi WIGType"] as int? ?? default(int), "D1"));
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Lokal Bolge"] as int? ?? default(int), "D1"));
@@ -1032,10 +1060,10 @@ namespace MaviSoftServerV1._0
                                 else
                                     TSndStr.Append("0");
 
-                                if ((tDBReader2["WKapi Alarm Modu"] as int? ?? default(int)) == 0)
-                                    TSndStr.Append("0");
-                                else
+                                if ((tDBReader2["WKapi Alarm Modu"] as bool? ?? default(bool)))
                                     TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
 
                                 if ((tDBReader2["WKapi Yangin Modu"] as bool? ?? default(bool)))
                                     TSndStr.Append("1");
@@ -1097,6 +1125,8 @@ namespace MaviSoftServerV1._0
                             }
                         }
                         TSndStr.Append("**\r");
+                        mTimeOut = 5;
+
                     }
                     else
                     {
@@ -1538,6 +1568,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTimeOut = 5;
             }
             /*5*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_TIMEGROUP)
@@ -1726,6 +1757,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTimeOut = 5;
             }
             /*8-9*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_USER || DBTaskType == (ushort)CommandConstants.CMD_SNDALL_USER)
@@ -2456,563 +2488,38 @@ namespace MaviSoftServerV1._0
             /*DOOR TRIGGER*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORTRIGGER)
             {
-                if (DBIntParam1 == 1)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("10000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 2)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("01000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 3)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00100000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 4)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00010000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 5)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00001000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 6)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000100000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 7)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000010000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 8)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000001000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 9)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000100000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 10)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000010000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 11)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 12)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 13)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000010000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 14)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000001000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 15)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000100");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 16)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("0000000000000010");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 17)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000001");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-
+                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                TSndStr.Append(mTaskStrParam1.ToString());
+                TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append("**\r");
             }
             /*DOOR OPEN*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCEOPEN)
             {
-                if (DBIntParam1 == 1)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("10000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 2)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("01000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 3)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00100000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 4)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00010000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 5)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00001000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 6)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000100000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 7)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000010000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 8)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000001000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 9)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000100000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 10)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000010000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 11)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 12)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 13)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000010000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 14)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000001000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 15)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000100");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 16)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("0000000000000010");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 17)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000001");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
+                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                TSndStr.Append(mTaskStrParam1.ToString());
+                TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append("**\r");
             }
             /*DOOR CLOSE*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCECLOSE)
             {
-                if (DBIntParam1 == 1)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("10000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 2)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("01000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 3)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00100000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 4)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00010000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 5)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00001000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 6)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000100000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 7)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000010000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 8)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000001000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 9)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000100000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 10)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000010000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 11)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 12)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 13)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000010000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 14)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000001000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 15)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000100");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 16)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("0000000000000010");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 17)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000001");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
+                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                TSndStr.Append(mTaskStrParam1.ToString());
+                TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append("**\r");
             }
             /*DOOR FREE*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFREE)
             {
-                if (DBIntParam1 == 1)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("10000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 2)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("01000000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 3)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00100000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 4)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00010000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 5)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00001000000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 6)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000100000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 7)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000010000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 8)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000001000000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 9)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000100000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 10)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000010000000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 11)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 12)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000100000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 13)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000010000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 14)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000001000");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 15)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000100");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 16)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("0000000000000010");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
-                if (DBIntParam1 == 17)
-                {
-                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                    TSndStr.Append("00000000000000001");
-                    TSndStr.Append(mPanelNo.ToString("D3"));
-                    TSndStr.Append("**\r");
-                }
+                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                TSndStr.Append(mTaskStrParam1.ToString());
+                TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append("**\r");
             }
 
             return TSndStr;
@@ -3154,6 +2661,41 @@ namespace MaviSoftServerV1._0
             }
 
         }
+
+        public bool ReveiveLogData(TcpClient TClient, ref string TReturnLogStr, CommandConstants TmpLogTaskType)
+        {
+            int TSize = GetAnswerSize(TmpLogTaskType);
+            byte[] RcvBuffer = new byte[TSize];
+            string TRcvData = null;
+            int TPos;
+            try
+            {
+                if (TClient.Available > 0)
+                {
+                    TClient.GetStream().Read(RcvBuffer, 0, TSize);
+                    TRcvData = Encoding.UTF8.GetString(RcvBuffer);
+                }
+                else
+                {
+                    return false;
+                }
+                TPos = TRcvData.IndexOf("$" + GetCommandPrefix((ushort)TmpLogTaskType));
+                if (TPos > -1)
+                {
+                    TReturnLogStr = TRcvData;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
 
         //TODO:Değişkendeki dönen verinin veritabanına kayıt işlemlerini gerçekleştiriyor
         public bool ProcessReceivedData(int DBIntParam1, int DBIntParam2, int DBIntParam3, CommandConstants TmpTaskType, ushort TmpTaskSoruce, bool TmpTaskUpdateTable, string TmpReturnStr)
@@ -4886,6 +4428,11 @@ namespace MaviSoftServerV1._0
                         }
                     }
                     break;
+                case CommandConstants.CMD_RCV_LOGS:
+                    {
+
+                    }
+                    break;
                 default:
                     break;
             }
@@ -4995,7 +4542,8 @@ namespace MaviSoftServerV1._0
                     return "EG";
                 case (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP:
                     return "TE";
-
+                case (ushort)CommandConstants.CMD_RCV_LOGS:
+                    return "CD";
                 default:
                     return "ERR";
             }
@@ -5094,6 +4642,8 @@ namespace MaviSoftServerV1._0
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 case CommandConstants.CMD_ERSALL_TIMEGROUP:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_RCV_LOGS:
+                    return (int)SizeConstants.SIZE_STATUS_DATA;
                 default:
                     return 0;
             }
@@ -5576,10 +5126,9 @@ namespace MaviSoftServerV1._0
 
         }
 
-
-
-
-
-
+        public static implicit operator Panel(PanelLog v)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

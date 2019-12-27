@@ -170,6 +170,9 @@ namespace MaviSoftServerV1._0
         CMD_SND_DOORFREE = CMD_BASE + 213,
         CMD_RCV_LOCALINTERLOCK = CMD_BASE + 214,
         CMD_SND_LOCALINTERLOCK = CMD_BASE + 215,
+        CMD_RCV_DOORSTATUS = CMD_BASE + 216,
+        CMD_SND_MAIL = CMD_BASE + 217,
+
 
         //Answer Commands
         CMD_OK = CMD_BASE + 401,
@@ -184,7 +187,7 @@ namespace MaviSoftServerV1._0
         CMD_NOTPROCESSED = CMD_BASE + 409,
         CMD_ACCESS_DENIED = CMD_BASE + 401,
 
-    
+
 
     }
 

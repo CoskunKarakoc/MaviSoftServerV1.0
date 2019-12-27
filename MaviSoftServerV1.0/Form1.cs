@@ -48,6 +48,7 @@ namespace MaviSoftServerV1._0
         public S_PORTS[] SPorts = new S_PORTS[201];
 
         public Panel[] Panels = new Panel[201];
+        public PanelLog[] LogPanels = new PanelLog[201];
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -121,13 +122,13 @@ namespace MaviSoftServerV1._0
                 {
                     if (SPorts[j].Active == 1)
                     {
-                        Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, SPorts[j].TCPPortNo, this);
+                        Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, this);
                         Panels[j].StartPanel();
+                        LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, this);
+                        LogPanels[j].StartPanel();
                     }
                 }
 
-                //GeneralOperations generalOperations = new GeneralOperations();
-                //generalOperations.StartOperations();
             }
             catch (Exception)
             {
