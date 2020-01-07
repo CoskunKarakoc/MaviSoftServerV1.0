@@ -146,7 +146,7 @@ namespace MaviSoftServerV1._0
 
         public SqlCommand mDBCmd { get; set; }
 
-        int mailSayac = 0;
+        int mMailRetryCount = 0;
 
 
 
@@ -208,8 +208,12 @@ namespace MaviSoftServerV1._0
                 {
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
-
-                            //SyncUpdateScreen("IPTAL");
+                            if (mMailRetryCount == 0)
+                            {
+                                SendMail("Panel Bağlantısı Yok", "<b>" + mPanelNo + " <i>Nolu Panel ile bağlantı sağlanamıyor!</i></b>", true);
+                                mMailRetryCount++;
+                            }
+                            mLogProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
                     case CommandConstants.CMD_PORT_INIT:
@@ -276,7 +280,7 @@ namespace MaviSoftServerV1._0
                                     break;
                                 }
 
-                                if ((CheckMailTime() == true && mailSayac == 0))
+                                if ((CheckMailTime() == true && mMailRetryCount == 0))
                                 {
                                     mLogProc = CommandConstants.CMD_SND_MAIL;
                                     break;
@@ -312,9 +316,18 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_SND_MAIL:
                         {
+                            mStartTime = DateTime.Now;
                             if (SendMail("Fora Teknoloji", null, true))
                             {
+                                mEndTime = mStartTime.AddSeconds(2);
                                 mLogProc = CommandConstants.CMD_TASK_LIST;
+                            }
+                            else
+                            {
+                                if (mStartTime > mEndTime)
+                                {
+                                    mLogProc = CommandConstants.CMD_TASK_LIST;
+                                }
                             }
                         }
                         break;
@@ -827,26 +840,26 @@ namespace MaviSoftServerV1._0
                 var message = new MailMessage();
                 if (mailSettings.EMail_Adres != null)
                 {
-                    message.From = new MailAddress(mailSettings.EMail_Adres, (mailSettings.Kullanici_Adi + " Geçiş Kontrol Sistemi "));
+                    message.From = new MailAddress(mailSettings.EMail_Adres.Trim(), (mailSettings.Kullanici_Adi + " Geçiş Kontrol Sistemi "));
                     if (mailSettings.Alici_1_EmailGonder == true && mailSettings.Alici_1_EmailAdress != null)
                     {
-                        message.To.Add(new MailAddress(mailSettings.Alici_1_EmailAdress));
+                        message.To.Add(new MailAddress(mailSettings.Alici_1_EmailAdress.Trim()));
                     }
                     if (mailSettings.Alici_2_EmailGonder == true && mailSettings.Alici_2_EmailAdress != null)
                     {
-                        message.To.Add(new MailAddress(mailSettings.Alici_2_EmailAdress));
+                        message.To.Add(new MailAddress(mailSettings.Alici_2_EmailAdress.Trim()));
                     }
                     if (mailSettings.Alici_3_EmailGonder == true && mailSettings.Alici_3_EmailAdress != null)
                     {
-                        message.To.Add(new MailAddress(mailSettings.Alici_3_EmailAdress));
+                        message.To.Add(new MailAddress(mailSettings.Alici_3_EmailAdress.Trim()));
                     }
                     message.Subject = subject;
                     message.Body = body;
                     message.IsBodyHtml = isHtml;
-                    using (var smtp = new SmtpClient(mailSettings.MailHost, mailSettings.MailPort))
+                    using (var smtp = new SmtpClient(mailSettings.MailHost.Trim(), mailSettings.MailPort))
                     {
                         smtp.EnableSsl = mailSettings.SSL;
-                        smtp.Credentials = new NetworkCredential(mailSettings.EMail_Adres, mailSettings.Password);
+                        smtp.Credentials = new NetworkCredential(mailSettings.EMail_Adres.Trim(), mailSettings.Password.Trim());
                         smtp.Send(message);
                         result = true;
                     }
@@ -854,7 +867,6 @@ namespace MaviSoftServerV1._0
             }
             catch (Exception e)
             {
-                string message = e.Message;
                 result = false;
             }
 
@@ -922,6 +934,8 @@ namespace MaviSoftServerV1._0
                     Alici2 = tDBReader[2] as bool? ?? default(bool);
                     Alici3 = tDBReader[3] as bool? ?? default(bool);
                 }
+                else
+                    return false;
 
                 if ((time.ToShortTimeString() == sendTime.ToShortTimeString() && time.Second == 0) && (Alici1 == true || Alici2 == true || Alici3 == true))
                     return true;
@@ -929,8 +943,6 @@ namespace MaviSoftServerV1._0
                     return false;
             }
         }
-
-
 
         public bool CheckPanel(int PanelID, int Mac)
         {
@@ -1050,7 +1062,7 @@ namespace MaviSoftServerV1._0
             StringBuilder builder = new StringBuilder();
             lock (TLockObj)
             {
-                tDBSQLStr = @" SELECT Users.ID, Users.[Kart ID], Users.Adi, 
+                tDBSQLStr = @"SELECT Users.ID, Users.[Kart ID], Users.Adi, 
                                          Users.Soyadi,Users.TCKimlik, Sirketler.Adi AS Şirket,
                                          Departmanlar.Adi AS Departman,AltDepartman.Adi AS [Alt Departman],Bolum.Adi AS [Bolum Adi],Unvan.Adi AS [Unvan Adi], Users.Plaka, Bloklar.Adi AS Blok, 
                                          Users.Daire,GroupsMaster.[Grup Adi] AS [Geçiş Grubu], Users.Tmp AS [Global Bolge Adi],
@@ -1061,17 +1073,17 @@ namespace MaviSoftServerV1._0
                                          LEFT JOIN Unvan ON Users.[Unvan No] = Unvan.[Unvan No])
                                          LEFT JOIN GroupsMaster ON Users.[Grup No] = GroupsMaster.[Grup No])
                                          LEFT JOIN Bloklar ON Users.[Blok No] = Bloklar.[Blok No])
-                                         LEFT JOIN Sirketler ON Users.[Sirket No] = Sirketler.[Sirket No]
-										 WHERE Users.ID > 0 
-										 AND Users.[Kart ID] <> ALL (SELECT DISTINCT AccessDatas.[Kart ID] FROM AccessDatas WHERE AccessDatas.[Kullanici Tipi] = 0 AND AccessDatas.Kod = 1" +
-                                         " AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddSeconds(1).ToString("dd/MM/yyyy HH:mm:ss") + "',103)  AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddHours(23).AddMinutes(59).AddSeconds(59).ToString("dd/MM/yyyy HH:mm:ss") + "',103) ) AND Users.[Kart ID] <> ALL (SELECT DISTINCT AccessDatas.[Kart ID] FROM AccessDatas WHERE AccessDatas.[Kullanici Tipi] = 0 AND AccessDatas.Kod = 1 AND AccessDatas.[Gecis Tipi] = 0)";
+                                         LEFT JOIN Sirketler ON Users.[Sirket No] = Sirketler.[Sirket No] WHERE Users.ID > 0 AND Sirketler.[Sirket No] IN(1000,1) AND Departmanlar.[Departman No] IN(1000,1)AND Users.[Kart ID] <> ALL (SELECT DISTINCT AccessDatas.[Kart ID] 
+                FROM AccessDatas 
+                WHERE AccessDatas.[Kullanici Tipi] = 0 
+                AND AccessDatas.Kod = 1 AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddSeconds(1).ToString("dd/MM/yyyy HH:mm:ss") + "',103)  AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddHours(23).AddMinutes(59).AddSeconds(59).ToString("dd/MM/yyyy HH:mm:ss") + "',103) AND AccessDatas.[Gecis Tipi] = 0)";
                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                 tDBReader = tDBCmd.ExecuteReader();
 
-                builder.Append("<!DOCTYPE html><html><head><style>table {  font-family: arial, sans-serif;  border-collapse: collapse;  width: 100%;}td, th {  border: 1px solid #dddddd;  text-align: left;  padding: 8px;}tr:nth-child(even) {  background-color: #dddddd;}</style><title>Gelmeyenler Raporu</title></head><body><h4>Gelmeyenler Raporu-Geçiş Kontrol Sistemleri</h4></br><h6>" + DateTime.Now.ToLongDateString() + "</h6>");
-                builder.Append("<table><thead><tr><th>ID</th><th>Kart ID</th><th>Adı</th><th>Soyadı</th><th>TC Kimlik</th><th>Şirket</th><th>Departman</th><th>Alt Departman</th><th>Bölüm Adı</th><th>Ünvan</th><th>Plaka</th><th>Blok</th><th>Daire</th><th>Geçiş Grubu</th><th>Global Bölge Adı</th></tr></thead><tbody>");
+                builder.Append("<!DOCTYPE html><html><head><style>.base-table { border: solid 1px #DDEEEE;border-collapse: collapse;border-spacing: 0;font: normal 13px Arial, sans-serif;}.base-table thead th {background-color: #DDEFEF;border: solid 1px #DDEEEE;color: #336B6B;padding: 10px;text-align: left;text-shadow: 1px 1px 1px #fff;}.base-table tbody td {border: solid 1px #DDEEEE;color: #333;padding: 10px;text-shadow: 1px 1px 1px #fff;}</style><title>Gelmeyenler Raporu</title></head><body><h4>Gelmeyenler Raporu-Geçiş Kontrol Sistemleri</h4></br><h6>" + DateTime.Now.ToLongDateString() + "</h6>");
+                builder.Append("<table class='base-table'><thead><tr><th>ID</th><th>Kart ID</th><th>Adı</th><th>Soyadı</th><th>TC Kimlik</th><th>Şirket</th><th>Departman</th><th>Alt Departman</th><th>Bölüm Adı</th><th>Ünvan</th><th>Plaka</th><th>Blok</th><th>Daire</th><th>Geçiş Grubu</th><th>Global Bölge Adı</th></tr></thead><tbody>");
                 bool result = false;
-                if (tDBReader.Read())
+                while (tDBReader.Read())
                 {
                     result = true;
                     builder.Append("<tr><td>" + (tDBReader[0] as int? ?? default(int)) + "</td><td>" + (tDBReader[1].ToString()) + "</td><td>" + (tDBReader[2].ToString()) + "</td><td>" + (tDBReader[3].ToString()) + "</td><td>" + (tDBReader[4].ToString()) + "</td><td>" + (tDBReader[5].ToString()) + "</td><td>" + (tDBReader[6].ToString()) + "</td><td>" + (tDBReader[7].ToString()) + "</td><td>" + (tDBReader[8].ToString()) + "</td><td>" + (tDBReader[9].ToString()) + "</td><td>" + (tDBReader[10].ToString()) + "</td><td>" + (tDBReader[11].ToString()) + "</td><td>" + (tDBReader[12] as int? ?? default(int)) + "</td><td>" + (tDBReader[13].ToString()) + "</td><td>" + (tDBReader[14].ToString()) + "</td></tr>");
@@ -1089,13 +1101,6 @@ namespace MaviSoftServerV1._0
 
             }
         }
-
-
-
-
-
-
-
 
         //TODO:Görev Tipine Göre Komut Prefixini Getiriyor
         public string GetCommandPrefix(ushort DBTaskType)

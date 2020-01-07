@@ -843,7 +843,12 @@ namespace MaviSoftServerV1._0
                         else
                             TSndStr.Append("1");
 
-                        TSndStr.Append("000000");
+                        if ((tDBReader["DHCP Enabled"] as bool? ?? default(bool)))
+                            TSndStr.Append("1");
+                        else
+                            TSndStr.Append("0");
+
+                        TSndStr.Append("00000");
 
                         for (int i = 1; i < 9; i++)
                         {
@@ -1038,14 +1043,7 @@ namespace MaviSoftServerV1._0
                                     TSndStr.Append("1");
                                 else
                                     TSndStr.Append("0");
-                                if (i > 8)
-                                {
-                                    TSndStr.Append(ConvertToTypeInt(1, "D2"));
-                                }
-                                else
-                                {
-                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M" + i + " Role"] as int? ?? default(int), "D2"));
-                                }
+                                TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Role No"] as int? ?? default(int), "D2"));
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Kapi Tipi"] as int? ?? default(int), "D1"));
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi WIGType"] as int? ?? default(int), "D1"));
                                 TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Lokal Bolge"] as int? ?? default(int), "D1"));
@@ -1773,7 +1771,7 @@ namespace MaviSoftServerV1._0
                         TSndStr.Append(mPanelSerialNo.ToString("X4"));
                         TSndStr.Append(mPanelNo.ToString("D3"));
                         TSndStr.Append(ConvertToTypeInt(tDBReader["ID"] as int? ?? default(int), "D6"));
-                        TSndStr.Append(ConvertToTypeInt(Convert.ToInt32(tDBReader["Kart ID"]), "D10"));
+                        TSndStr.Append(ConvertToTypeInt64(Convert.ToInt64(tDBReader["Kart ID"]), "D10"));
                         if (tDBReader["Sifre"].ToString() != null && tDBReader["Sifre"].ToString() != "")
                         {
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Sifre"] as int? ?? default(int), "D4"));
@@ -2490,8 +2488,8 @@ namespace MaviSoftServerV1._0
             {
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
             }
             /*DOOR OPEN*/
@@ -2499,17 +2497,18 @@ namespace MaviSoftServerV1._0
             {
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
             }
             /*DOOR CLOSE*/
+            //TODO: Gelen veri FC olması gerekirken FO geliyor
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCECLOSE)
             {
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
             }
             /*DOOR FREE*/
@@ -2517,8 +2516,8 @@ namespace MaviSoftServerV1._0
             {
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
             }
 
@@ -4843,6 +4842,18 @@ namespace MaviSoftServerV1._0
         //TODO:Kendi Yazdığım Kodlar*************************Kendi Yazdığım Kodlar**********************************
 
         public string ConvertToTypeInt(int reader, string Type)
+        {
+            if (reader != -1)
+            {
+                return reader.ToString(Type);
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        public string ConvertToTypeInt64(long reader, string Type)
         {
             if (reader != -1)
             {
