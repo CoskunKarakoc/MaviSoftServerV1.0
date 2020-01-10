@@ -125,6 +125,8 @@ namespace MaviSoftServerV1._0
 
         public DateTime mMailEndTime { get; set; }
 
+        public string mMailSendTime { get; set; }
+
         public ushort mActive { get; set; }
 
         public ushort mMemIX { get; set; }
@@ -191,6 +193,8 @@ namespace MaviSoftServerV1._0
                 LogThread.Priority = ThreadPriority.Normal;
                 LogThread.IsBackground = true;
                 LogThread.Start();
+                mMailSendTime = ReceiveceMailTime();
+
                 return true;
             }
             catch (Exception)
@@ -286,12 +290,12 @@ namespace MaviSoftServerV1._0
                                     break;
                                 }
 
-
-                                //if ((CheckMailTime() == true && mMailRetryCount == 0))
-                                //{
-                                //    mLogProc = CommandConstants.CMD_SND_MAIL;
-                                //    break;
-                                //}
+                                mMailStartTime = DateTime.Now;
+                                if (mMailSendTime == mMailStartTime.ToShortTimeString() && mMailStartTime.Second == 0)
+                                {
+                                    mLogProc = CommandConstants.CMD_SND_MAIL;
+                                    break;
+                                }
 
 
 
@@ -326,18 +330,27 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_SND_MAIL:
                         {
                             mStartTime = DateTime.Now;
-                            if (SendMail("Fora Teknoloji", null, true))
+                            if (CheckMailTime() == true)
                             {
-                                mEndTime = mStartTime.AddSeconds(2);
-                                mLogProc = CommandConstants.CMD_TASK_LIST;
+                                if (SendMail("Fora Teknoloji", null, true))
+                                {
+                                    mEndTime = mStartTime.AddSeconds(2);
+                                    mLogProc = CommandConstants.CMD_TASK_LIST;
+                                }
+                                else
+                                {
+                                    if (mStartTime > mEndTime)
+                                    {
+                                        mLogProc = CommandConstants.CMD_TASK_LIST;
+                                    }
+                                }
                             }
                             else
                             {
-                                if (mStartTime > mEndTime)
-                                {
-                                    mLogProc = CommandConstants.CMD_TASK_LIST;
-                                }
+                                mLogProc = CommandConstants.CMD_TASK_LIST;
                             }
+
+
                         }
                         break;
                 }
@@ -933,16 +946,15 @@ namespace MaviSoftServerV1._0
             bool Alici3 = false;
             lock (TLockObj)
             {
-                tDBSQLStr = "SELECT [Gonderme Saati],[Alici 1 E-Mail Gonder],[Alici 2 E-Mail Gonder],[Alici 3 E-Mail Gonder] FROM EMailSettings";
+                tDBSQLStr = "SELECT [Alici 1 E-Mail Gonder],[Alici 2 E-Mail Gonder],[Alici 3 E-Mail Gonder] FROM EMailSettings";
                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                 tDBReader = tDBCmd.ExecuteReader();
                 while (tDBReader.Read())
                 {
-                    sendTime = tDBReader[0] as DateTime? ?? default(DateTime);
-                    Alici1 = tDBReader[1] as bool? ?? default(bool);
-                    Alici2 = tDBReader[2] as bool? ?? default(bool);
-                    Alici3 = tDBReader[3] as bool? ?? default(bool);
-                    if ((time.ToShortTimeString() == sendTime.ToShortTimeString() && time.Second == 0) && (Alici1 == true || Alici2 == true || Alici3 == true))
+                    Alici1 = tDBReader[0] as bool? ?? default(bool);
+                    Alici2 = tDBReader[1] as bool? ?? default(bool);
+                    Alici3 = tDBReader[2] as bool? ?? default(bool);
+                    if (Alici1 == true || Alici2 == true || Alici3 == true)
                         return true;
                     else
                         return false;
@@ -956,6 +968,36 @@ namespace MaviSoftServerV1._0
 
 
         }
+
+        public string ReceiveceMailTime()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            object TLockObj = new object();
+            DateTime time = new DateTime();
+            lock (TLockObj)
+            {
+                tDBSQLStr = "SELECT TOP 1 [Gonderme Saati] FROM EMailSettings";
+                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                tDBReader = tDBCmd.ExecuteReader();
+                if (tDBReader.Read())
+                {
+                    time = tDBReader[0] as DateTime? ?? default(DateTime);
+                    return time.ToShortTimeString();
+                }
+                else
+                {
+                    return DateTime.Now.ToShortTimeString();
+                }
+            }
+        }
+
+
+
+
+
+
 
         public void PanelDoorStatusDelete()
         {
