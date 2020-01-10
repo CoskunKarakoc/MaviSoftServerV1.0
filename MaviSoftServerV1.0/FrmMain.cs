@@ -11,9 +11,9 @@ using System.Windows.Forms;
 
 namespace MaviSoftServerV1._0
 {
-    public partial class Form1 : Form
+    public partial class FrmMain : Form
     {
-        public Form1()
+        public FrmMain()
         {
             InitializeComponent();
 
@@ -52,6 +52,7 @@ namespace MaviSoftServerV1._0
 
         private void Form1_Load(object sender, EventArgs e)
         {
+
             int TTC = 0;
             int TLC = 0;
             for (int i = 0; i < (int)TCONST.MAX_PANEL; i++)
@@ -85,7 +86,7 @@ namespace MaviSoftServerV1._0
             }
 
             MConn = new SqlConnection();
-            MConn.ConnectionString = @"data source = ARGE-2\SQLEXPRESS; initial catalog = MW301_DB25; integrated security = True; MultipleActiveResultSets = True;";
+            MConn.ConnectionString = SqlServerAdress.GetAdress();
             SQLStr = "SELECT * FROM PanelSettings ORDER BY [Sira No]";
             try
             {
@@ -134,6 +135,11 @@ namespace MaviSoftServerV1._0
             {
                 MessageBox.Show("SQL Server'a bağlantı kurulamadı!, Program kapatılacak - MAVİSOFT SERVER V1.0");
             }
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit();
         }
     }
 }

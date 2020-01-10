@@ -84,7 +84,7 @@ namespace MaviSoftServerV1._0
 
         public string mLogReturnStr;
 
-        public Form1 mParentForm { get; set; }
+        public FrmMain mParentForm { get; set; }
 
         public Label lblMesaj;
 
@@ -148,7 +148,7 @@ namespace MaviSoftServerV1._0
 
 
 
-        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, Form1 parentForm)
+        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, FrmMain parentForm)
         {
             mMemIX = MemIX;
             mActive = TActive;
@@ -176,7 +176,7 @@ namespace MaviSoftServerV1._0
                 mInTime = true;
 
                 mDBConn = new SqlConnection();
-                mDBConn.ConnectionString = @"data source = ARGE-2\SQLEXPRESS; initial catalog = MW301_DB25; integrated security = True; MultipleActiveResultSets = True;";
+                mDBConn.ConnectionString = SqlServerAdress.GetAdress();
                 mDBConn.Open();
 
                 PanelThread = new Thread(ProcessPanel);

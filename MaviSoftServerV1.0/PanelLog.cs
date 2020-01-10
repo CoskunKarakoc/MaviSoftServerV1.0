@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
@@ -86,7 +87,7 @@ namespace MaviSoftServerV1._0
 
         public string mLogReturnStr;
 
-        public Form1 mParentForm { get; set; }
+        public FrmMain mParentForm { get; set; }
 
         public Label lblMesaj;
 
@@ -120,6 +121,10 @@ namespace MaviSoftServerV1._0
 
         public DateTime mEndTime { get; set; }
 
+        public DateTime mMailStartTime { get; set; }
+
+        public DateTime mMailEndTime { get; set; }
+
         public ushort mActive { get; set; }
 
         public ushort mMemIX { get; set; }
@@ -150,7 +155,7 @@ namespace MaviSoftServerV1._0
 
 
 
-        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, Form1 parentForm)
+        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, FrmMain parentForm)
         {
             mMemIX = MemIX;
             mActive = TActive;
@@ -178,7 +183,7 @@ namespace MaviSoftServerV1._0
                 mInTime = true;
 
                 mDBConn = new SqlConnection();
-                mDBConn.ConnectionString = @"data source = ARGE-2\SQLEXPRESS; initial catalog = MW301_DB25; integrated security = True; MultipleActiveResultSets = True;";
+                mDBConn.ConnectionString = SqlServerAdress.GetAdress();
                 mDBConn.Open();
 
                 mLogProc = CommandConstants.CMD_PORT_INIT;
@@ -210,9 +215,10 @@ namespace MaviSoftServerV1._0
                         {
                             if (mMailRetryCount == 0)
                             {
-                                SendMail("Panel Bağlantısı Yok", "<b>" + mPanelNo + " <i>Nolu Panel ile bağlantı sağlanamıyor!</i></b>", true);
+                                SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
                                 mMailRetryCount++;
                             }
+                            PanelDoorStatusDelete();
                             mLogProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
@@ -280,17 +286,20 @@ namespace MaviSoftServerV1._0
                                     break;
                                 }
 
-                                if ((CheckMailTime() == true && mMailRetryCount == 0))
-                                {
-                                    mLogProc = CommandConstants.CMD_SND_MAIL;
-                                    break;
-                                }
+
+                                //if ((CheckMailTime() == true && mMailRetryCount == 0))
+                                //{
+                                //    mLogProc = CommandConstants.CMD_SND_MAIL;
+                                //    break;
+                                //}
+
+
 
                                 mStartTime = DateTime.Now;
                                 if (CheckSize(mPanelClientLog, (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS)))
                                 {
                                     mEndTime = mStartTime.AddSeconds(mTimeOut);
-                                    if (ReveiveLogData(mPanelClientLog, ref mLogReturnStr/*, CommandConstants.CMD_RCV_LOGS*/))
+                                    if (ReveiveLogData(mPanelClientLog, ref mLogReturnStr))
                                     {
                                         if (ProcessReceivedData(mPanelNo, mPanelSerialNo, mLogTaskIntParam3, (CommandConstants)mTaskType, mLogTaskSource, mLogTaskUpdateTable, mLogReturnStr))
                                         {
@@ -927,20 +936,38 @@ namespace MaviSoftServerV1._0
                 tDBSQLStr = "SELECT [Gonderme Saati],[Alici 1 E-Mail Gonder],[Alici 2 E-Mail Gonder],[Alici 3 E-Mail Gonder] FROM EMailSettings";
                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                 tDBReader = tDBCmd.ExecuteReader();
-                if (tDBReader.Read())
+                while (tDBReader.Read())
                 {
                     sendTime = tDBReader[0] as DateTime? ?? default(DateTime);
                     Alici1 = tDBReader[1] as bool? ?? default(bool);
                     Alici2 = tDBReader[2] as bool? ?? default(bool);
                     Alici3 = tDBReader[3] as bool? ?? default(bool);
-                }
-                else
-                    return false;
+                    if ((time.ToShortTimeString() == sendTime.ToShortTimeString() && time.Second == 0) && (Alici1 == true || Alici2 == true || Alici3 == true))
+                        return true;
+                    else
+                        return false;
 
-                if ((time.ToShortTimeString() == sendTime.ToShortTimeString() && time.Second == 0) && (Alici1 == true || Alici2 == true || Alici3 == true))
-                    return true;
-                else
-                    return false;
+                }
+
+                return false;
+
+
+            }
+
+
+        }
+
+        public void PanelDoorStatusDelete()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            object TLockObj = new object();
+            lock (TLockObj)
+            {
+                tDBSQLStr = "DELETE FROM DoorStatus WHERE DoorStatus.[Panel ID] = " + mPanelNo;
+                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                tDBCmd.ExecuteNonQuery();
             }
         }
 
@@ -1076,7 +1103,10 @@ namespace MaviSoftServerV1._0
                                          LEFT JOIN Sirketler ON Users.[Sirket No] = Sirketler.[Sirket No] WHERE Users.ID > 0 AND Sirketler.[Sirket No] IN(1000,1) AND Departmanlar.[Departman No] IN(1000,1)AND Users.[Kart ID] <> ALL (SELECT DISTINCT AccessDatas.[Kart ID] 
                 FROM AccessDatas 
                 WHERE AccessDatas.[Kullanici Tipi] = 0 
-                AND AccessDatas.Kod = 1 AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddSeconds(1).ToString("dd/MM/yyyy HH:mm:ss") + "',103)  AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddHours(23).AddMinutes(59).AddSeconds(59).ToString("dd/MM/yyyy HH:mm:ss") + "',103) AND AccessDatas.[Gecis Tipi] = 0)";
+                AND AccessDatas.Kod = 1
+                AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddSeconds(1).ToString("dd/MM/yyyy HH:mm:ss") + "',103)" +
+               " AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + Baslangic_Tarihi.Date.AddHours(23).AddMinutes(59).AddSeconds(59).ToString("dd/MM/yyyy HH:mm:ss") + "',103)" +
+               " AND AccessDatas.[Gecis Tipi] = 0)";
                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                 tDBReader = tDBCmd.ExecuteReader();
 
@@ -1501,7 +1531,6 @@ namespace MaviSoftServerV1._0
         }
 
 
-
         //TODO:Kendi Yazdığım Kodlar*************************Kendi Yazdığım Kodlar**********************************
 
         public string ConvertToTypeInt(int reader, string Type)
@@ -1648,6 +1677,11 @@ namespace MaviSoftServerV1._0
             }
 
         }
+
+
+
+
+
 
 
 
