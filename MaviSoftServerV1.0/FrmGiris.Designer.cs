@@ -68,14 +68,14 @@
             this.txtUserName.Location = new System.Drawing.Point(73, 21);
             this.txtUserName.Name = "txtUserName";
             this.txtUserName.Size = new System.Drawing.Size(146, 20);
-            this.txtUserName.TabIndex = 2;
+            this.txtUserName.TabIndex = 0;
             // 
             // txtSifre
             // 
             this.txtSifre.Location = new System.Drawing.Point(73, 47);
             this.txtSifre.Name = "txtSifre";
             this.txtSifre.Size = new System.Drawing.Size(146, 20);
-            this.txtSifre.TabIndex = 3;
+            this.txtSifre.TabIndex = 1;
             // 
             // groupBox1
             // 
@@ -91,7 +91,7 @@
             this.groupBox1.Location = new System.Drawing.Point(0, 88);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(264, 173);
-            this.groupBox1.TabIndex = 4;
+            this.groupBox1.TabIndex = 2;
             this.groupBox1.TabStop = false;
             // 
             // lblMessage
@@ -115,7 +115,7 @@
             this.txtHostPC.Location = new System.Drawing.Point(73, 48);
             this.txtHostPC.Name = "txtHostPC";
             this.txtHostPC.Size = new System.Drawing.Size(146, 20);
-            this.txtHostPC.TabIndex = 5;
+            this.txtHostPC.TabIndex = 1;
             // 
             // txtServer
             // 
@@ -123,7 +123,7 @@
             this.txtServer.Location = new System.Drawing.Point(73, 74);
             this.txtServer.Name = "txtServer";
             this.txtServer.Size = new System.Drawing.Size(146, 20);
-            this.txtServer.TabIndex = 6;
+            this.txtServer.TabIndex = 2;
             // 
             // btnKapat
             // 
@@ -151,7 +151,7 @@
             this.label4.Location = new System.Drawing.Point(6, 81);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(65, 13);
-            this.label4.TabIndex = 2;
+            this.label4.TabIndex = 6;
             this.label4.Text = "SQL Server:";
             // 
             // label3
@@ -160,7 +160,7 @@
             this.label3.Location = new System.Drawing.Point(6, 55);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(49, 13);
-            this.label3.TabIndex = 1;
+            this.label3.TabIndex = 7;
             this.label3.Text = "Host PC:";
             // 
             // chckDegistir

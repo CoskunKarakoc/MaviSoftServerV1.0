@@ -48,7 +48,10 @@ namespace MaviSoftServerV1._0
         public S_PORTS[] SPorts = new S_PORTS[201];
 
         public Panel[] Panels = new Panel[201];
+
         public PanelLog[] LogPanels = new PanelLog[201];
+
+        public SystemManager PanelOuther;
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -130,16 +133,23 @@ namespace MaviSoftServerV1._0
                     }
                 }
 
+                PanelOuther = new SystemManager();
+                PanelOuther.StartPanelOuther();
+
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                string eex = ex.Message;
                 MessageBox.Show("SQL Server'a bağlantı kurulamadı!, Program kapatılacak - MAVİSOFT SERVER V1.0");
             }
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+           
             Application.Exit();
         }
+
+    
     }
 }

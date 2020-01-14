@@ -144,8 +144,7 @@ namespace MaviSoftServerV1._0
 
         public SqlCommand mDBCmd { get; set; }
 
-
-
+        public bool pStop;
 
 
         public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, FrmMain parentForm)
@@ -334,6 +333,11 @@ namespace MaviSoftServerV1._0
 
                     case CommandConstants.CMD_TASK_LIST:
                         {
+                            if (pStop == true)
+                            {
+                                Thread.Sleep(500);
+                                break;
+                            }
                             if (mPanelClient.Connected == false)
                             {
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
