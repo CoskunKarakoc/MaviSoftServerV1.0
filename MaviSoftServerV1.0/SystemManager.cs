@@ -8,11 +8,48 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
+using System.Data;
 namespace MaviSoftServerV1._0
 {
     public class SystemManager
     {
+
+        private const ushort NO_TASK = 0;
+
+        private const ushort DB_TASK = 1;
+
+        private const ushort IP_TASK = 2;
+
+        private int mTaskNo;
+
+        private int mTaskType;
+
+        private int mTaskIntParam1;
+
+        private int mTaskIntParam2;
+
+        private int mTaskIntParam3;
+
+        private int mTaskIntParam4;
+
+        private int mTaskIntParam5;
+
+        private string mTaskStrParam1;
+
+        private string mTaskStrParam2;
+
+        private string mTaskUserName;
+
+        private bool mTaskUpdateTable;
+
+        private ushort mTaskSource;
+
+
+
+
+
+
+
         public ushort mPanelIdleInterval { get; set; }
 
         public bool mInTime { get; set; }
@@ -39,35 +76,49 @@ namespace MaviSoftServerV1._0
 
         public SqlCommand mDBCmd { get; set; }
 
+        public List<Panel> mPanelsList;
+
+        private DateTime mStartTime { get; set; }
+
+        private DateTime mEndTime { get; set; }
+
         int mMailRetryCount = 0;
 
         int mTimeOut = 3;
 
-        public SystemManager()
+        public SystemManager(SqlConnection connection, List<Panel> panels)
         {
+            mDBConn = connection;
+            mPanelsList = panels;
 
         }
+
+
 
         public bool StartPanelOuther()
         {
             try
             {
-                mPanelProc = CommandConstants.CMD_PORT_INIT;
-                mPanelIdleInterval = 0;
-                mInTime = true;
+                //mPanelProc = CommandConstants.CMD_PORT_INIT;
+                //mPanelIdleInterval = 0;
+                //mInTime = true;
 
-                mDBConn = new SqlConnection();
-                mDBConn.ConnectionString = SqlServerAdress.GetAdress();
-                mDBConn.Open();
+                //mDBConn = new SqlConnection();
+                //mDBConn.ConnectionString = SqlServerAdress.GetAdress();
+                //mDBConn.Open();
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
 
                 mPanelProc = CommandConstants.CMD_TASK_LIST;
-                PanelOutherThread = new Thread(OutherThreadProccess);
+                PanelOutherThread = new Thread(SystemManagerThread);
                 PanelOutherThread.Priority = ThreadPriority.Normal;
                 PanelOutherThread.IsBackground = true;
                 PanelOutherThread.Start();
                 mMailSendTime = ReceiveceMailTime();
                 mMailStartTime = DateTime.Now;
                 mMailEndTime = mMailStartTime.AddHours(mTimeOut);
+                mStartTime = DateTime.Now;
+                mEndTime = mStartTime.AddMilliseconds(500);
                 return true;
 
             }
@@ -77,16 +128,17 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        public void OutherThreadProccess()
+        public void SystemManagerThread()
         {
             while (true)
             {
-                Thread.Sleep(5);
+                Thread.Sleep(500);
 
                 switch (mPanelProc)
                 {
                     case CommandConstants.CMD_TASK_LIST:
                         {
+                            SyncGetNewTask();
                             mMailStartTime = DateTime.Now;
                             if (mMailStartTime.ToShortTimeString() == mMailEndTime.ToShortTimeString())
                             {
@@ -131,6 +183,9 @@ namespace MaviSoftServerV1._0
             MailSettings mailSettings = new MailSettings();
             lock (TLockObj)
             {
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
+
                 tDBSQLStr = "SELECT * FROM EMailSettings";
                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                 tDBReader = tDBCmd.ExecuteReader();
@@ -214,6 +269,9 @@ namespace MaviSoftServerV1._0
             DateTime time = new DateTime();
             lock (TLockObj)
             {
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
+
                 tDBSQLStr = "SELECT TOP 1 [Gonderme Saati] FROM EMailSettings";
                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                 tDBReader = tDBCmd.ExecuteReader();
@@ -240,6 +298,9 @@ namespace MaviSoftServerV1._0
             bool Alici3 = false;
             lock (TLockObj)
             {
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
+
                 tDBSQLStr = "SELECT [Alici 1 E-Mail Gonder],[Alici 2 E-Mail Gonder],[Alici 3 E-Mail Gonder] FROM EMailSettings";
                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                 tDBReader = tDBCmd.ExecuteReader();
@@ -273,6 +334,9 @@ namespace MaviSoftServerV1._0
             StringBuilder builder = new StringBuilder();
             lock (TLockObj)
             {
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
+
                 tDBSQLStr = @"SELECT Users.ID, Users.[Kart ID], Users.Adi, 
                                          Users.Soyadi,Users.TCKimlik, Sirketler.Adi AS Şirket,
                                          Departmanlar.Adi AS Departman,AltDepartman.Adi AS [Alt Departman],Bolum.Adi AS [Bolum Adi],Unvan.Adi AS [Unvan Adi], Users.Plaka, Bloklar.Adi AS Blok, 
@@ -317,7 +381,75 @@ namespace MaviSoftServerV1._0
             }
         }
 
+        //TODO:Görev Listesinden Durumu Yeni Olan Görevleri Alıyor
+        public void SyncGetNewTask()
+        {
+            object TLockObj = new object();
+            ushort TTaskOk = 0;
+            lock (TLockObj)
+            {
+                //DB TASK
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
 
+                mDBSQLStr = "Select * from TaskList where [Durum Kodu]=" + 1 + " Order By [Kayit No]";
+                mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
+                mDBReader = mDBCmd.ExecuteReader();
+
+                while (mDBReader.Read())
+                {
+                    if ((mDBReader["Kayit No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) >= 0)
+                    {
+                        TTaskOk = 1;
+                        break;
+                    }
+                }
+
+                if (TTaskOk > 0)
+                {
+                    mTaskNo = (int)mDBReader["Kayit No"];
+                    mTaskType = (int)mDBReader["Gorev Kodu"];
+                    mTaskIntParam1 = mDBReader["IntParam 1"] as int? ?? default(int);
+                    mTaskIntParam2 = mDBReader["IntParam 2"] as int? ?? default(int);
+                    mTaskIntParam3 = mDBReader["IntParam 3"] as int? ?? default(int);
+                    mTaskIntParam4 = mDBReader["IntParam 4"] as int? ?? default(int);
+                    mTaskIntParam5 = mDBReader["IntParam 5"] as int? ?? default(int);
+                    mTaskStrParam1 = mDBReader["StrParam 1"].ToString();
+                    //mTaskStrParam2 = mDBReader["StrParam 2"].ToString();
+                    mTaskUserName = mDBReader["Kullanici Adi"].ToString();
+                    mTaskUpdateTable = (bool)mDBReader["Tablo Guncelle"];
+                    foreach (var panel in mPanelsList)
+                    {
+                        var panelNo = mDBReader["Panel No"] as int? ?? default(int);
+                        if (panel.mPanelNo == panelNo)
+                        {
+                            panel.mTempTaskSource = DB_TASK;
+                            panel.mTempTaskNo = mTaskNo;
+                            panel.mTempTaskType = mTaskType;
+                            panel.mTempTaskIntParam1 = mTaskIntParam1;
+                            panel.mTempTaskIntParam2 = mTaskIntParam2;
+                            panel.mTempTaskIntParam3 = mTaskIntParam2;
+                            panel.mTempTaskIntParam4 = mTaskIntParam2;
+                            panel.mTempTaskIntParam5 = mTaskIntParam2;
+                            panel.mTempTaskStrParam1 = mTaskStrParam1;
+                            panel.mTempTaskUserName = mTaskUserName;
+                            panel.mTempTaskUpdateTable = mTaskUpdateTable;
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var panel in mPanelsList)
+                    {
+                        panel.mTempTaskSource = NO_TASK;
+                        panel.mTempTaskNo = 0;
+                        panel.mTempTaskType = 0;
+                    }
+
+                }
+                mDBReader.Close();
+            }
+        }
 
     }
 }

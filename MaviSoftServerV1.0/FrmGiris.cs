@@ -16,9 +16,11 @@ namespace MaviSoftServerV1._0
     public partial class FrmGiris : Form
     {
         public string SqlAdress = "";
+        SqlConnection connection;
         public FrmGiris()
         {
             InitializeComponent();
+
         }
 
         private void btnKapat_Click(object sender, EventArgs e)
@@ -46,16 +48,19 @@ namespace MaviSoftServerV1._0
 
                 SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
                 SqlServerAdress.SetAdres(SqlAdress);
-                SqlConnection connection = new SqlConnection(SqlAdress);
+                connection = new SqlConnection(SqlAdress);
+                //using (connection = new SqlConnection(SqlAdress))
+                //{
+                //}
+                connection.Open();
                 try
                 {
-                    connection.Open();
                     if (connection.State == ConnectionState.Open)
                     {
 
                         AddUpdateAppSettings("Host", HostPC.Trim());
                         AddUpdateAppSettings("SQLServer", SQLServer.Trim());
-                        FrmMain form1 = new FrmMain();
+                        FrmMain form1 = new FrmMain(connection);
                         form1.Show();
                         this.Hide();
                     }
@@ -72,6 +77,7 @@ namespace MaviSoftServerV1._0
                     connection.Dispose();
                     connection.Close();
                 }
+
             }
         }
 
@@ -119,7 +125,7 @@ namespace MaviSoftServerV1._0
             return appSettings.Settings[key].Value;
         }
 
-        
+
 
 
     }

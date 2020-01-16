@@ -13,13 +13,20 @@ namespace MaviSoftServerV1._0
 {
     public partial class FrmMain : Form
     {
-        public FrmMain()
-        {
-            InitializeComponent();
+        public SqlConnection MConn { get; set; }
 
+        public List<Panel> AktifPanelListesi;
+
+        public List<PanelLog> AktifPanelLogListesi;
+
+        public FrmMain(SqlConnection connection)
+        {
+            MConn = connection;
+            InitializeComponent();
+            AktifPanelListesi = new List<Panel>();
+            AktifPanelLogListesi = new List<PanelLog>();
         }
 
-        public SqlConnection MConn { get; set; }
 
         public string SQLStr { get; set; }
 
@@ -38,7 +45,9 @@ namespace MaviSoftServerV1._0
             public ushort SndRcvTimeout;
             public int PanelNo;
         }
+
         public Label[] lblIP = new Label[201];
+
         public Label[] lblMsj = new Label[201];
 
         public Label lbl;
@@ -88,12 +97,13 @@ namespace MaviSoftServerV1._0
                 Controls.Add(lblMsj[i]);
             }
 
-            MConn = new SqlConnection();
-            MConn.ConnectionString = SqlServerAdress.GetAdress();
+            //MConn.ConnectionString = SqlServerAdress.GetAdress();
             SQLStr = "SELECT * FROM PanelSettings ORDER BY [Sira No]";
             try
             {
-                MConn.Open();
+                if (MConn.State != ConnectionState.Open)
+                    MConn.Open();
+
                 Comnd = new SqlCommand(SQLStr, MConn);
                 MReader = Comnd.ExecuteReader();
 
@@ -126,30 +136,42 @@ namespace MaviSoftServerV1._0
                 {
                     if (SPorts[j].Active == 1)
                     {
-                        Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, this);
+                        Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, MConn, this);
                         Panels[j].StartPanel();
-                        LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, this);
+                        AktifPanelListesi.Add(Panels[j]);
+                        LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, MConn, this);
                         LogPanels[j].StartPanel();
+                        AktifPanelLogListesi.Add(LogPanels[j]);
                     }
                 }
 
-                PanelOuther = new SystemManager();
+                PanelOuther = new SystemManager(MConn,AktifPanelListesi);
                 PanelOuther.StartPanelOuther();
 
+                //Panels[12].mTestInt = 100;
+                //Panels[13].mTestInt = 0;
+                //Panels[14].mTestInt = 100;
+                
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                string eex = ex.Message;
                 MessageBox.Show("SQL Server'a bağlantı kurulamadı!, Program kapatılacak - MAVİSOFT SERVER V1.0");
             }
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-           
+            foreach (var panel in AktifPanelListesi)
+            {
+                panel.StopPanel();
+            }
+            foreach (var logPanel in AktifPanelLogListesi)
+            {
+                logPanel.StopPanel();
+            }
             Application.Exit();
         }
 
-    
+
     }
 }

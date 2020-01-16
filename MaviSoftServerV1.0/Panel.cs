@@ -8,81 +8,88 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Data;
 namespace MaviSoftServerV1._0
 {
     public class Panel
     {
-        public const ushort NO_TASK = 0;
+        private const ushort NO_TASK = 0;
 
-        public const ushort DB_TASK = 1;
+        private const ushort DB_TASK = 1;
 
-        public const ushort IP_TASK = 2;
+        private const ushort IP_TASK = 2;
 
-        public static int[] TaskPIX = new int[(int)TCONST.MAX_PANEL];
+        private static int[] TaskPIX = new int[(int)TCONST.MAX_PANEL];
 
-        public S_TASKLIST[,] TaskList = new S_TASKLIST[(int)TCONST.MAX_PANEL, (int)TCONST.MAX_TASK_CNT];
+        private S_TASKLIST[,] TaskList = new S_TASKLIST[(int)TCONST.MAX_PANEL, (int)TCONST.MAX_TASK_CNT];
+
+        private int mTestInt = 0;
 
         private int mTaskNo;
 
+        public int mTempTaskNo;
+
         private int mTaskType;
+
+        public int mTempTaskType;
 
         private int mTaskIntParam1;
 
-        private int mLogTaskIntParam1;
+        public int mTempTaskIntParam1;
 
         private int mTaskIntParam2;
 
-        private int mLogTaskIntParam2;
+        public int mTempTaskIntParam2;
 
         private int mTaskIntParam3;
 
-        private int mLogTaskIntParam3;
+        public int mTempTaskIntParam3;
 
         private int mTaskIntParam4;
 
-        private int mLogTaskIntParam4;
+        public int mTempTaskIntParam4;
 
         private int mTaskIntParam5;
 
-        private int mLogTaskIntParam5;
+        public int mTempTaskIntParam5;
 
         private string mTaskStrParam1;
 
-        private string mLogTaskStrParam1;
+        public string mTempTaskStrParam1;
 
         private string mTaskStrParam2;
 
-        private string mLogTaskStrParam2;
+        public string mTempTaskStrParam2;
 
         private string mTaskUserName;
 
-        private string mLogTaskUserName;
+        public string mTempTaskUserName;
 
         private bool mTaskUpdateTable;
 
-        private bool mLogTaskUpdateTable;
+        public bool mTempTaskUpdateTable;
 
         private ushort mTaskSource;
 
-        private ushort mLogTaskSource;
+        public ushort mTempTaskSource;
 
         private S_ANSWER mSAnswer;
 
-        public bool mTransferCompleted { get; set; }
+        private bool mTransferCompleted { get; set; }
 
-        public bool mLogTransferCompleted { get; set; }
+        private bool mLogTransferCompleted { get; set; }
 
-        public ushort mReadStep { get; set; }
+        private ushort mReadStep { get; set; }
 
-        public bool mProcessTerminated { get; set; }
+        private bool mProcessTerminated { get; set; }
 
-        public ushort mRetryCnt { get; set; }
+        private ushort mRetryCnt { get; set; }
 
-        const ushort RETRY_COUNT = 1;
+        private const ushort RETRY_COUNT = 1;
 
-        public string mReturnStr;
+        private string mReturnStr;
 
-        public string mLogReturnStr;
+        private string mLogReturnStr;
 
         public FrmMain mParentForm { get; set; }
 
@@ -98,56 +105,56 @@ namespace MaviSoftServerV1._0
 
         public TcpListener mPanelListener { get; set; }
 
-        public ushort mPanelIdleInterval { get; set; }
+        private ushort mPanelIdleInterval { get; set; }
 
-        public CommandConstants mPanelProc { get; set; }
+        private CommandConstants mPanelProc { get; set; }
 
-        public CommandConstants mLogProc { get; set; }
+        private CommandConstants mLogProc { get; set; }
 
-        public ushort mPanelConState { get; set; }
+        private ushort mPanelConState { get; set; }
 
-        public int mPanelTCPPort { get; set; }
+        private int mPanelTCPPort { get; set; }
 
-        public int mPanelTCPPortLog { get; set; }
+        private int mPanelTCPPortLog { get; set; }
 
-        public string mPanelIPAddress { get; set; }
+        private string mPanelIPAddress { get; set; }
 
-        public int mPanelSerialNo { get; set; }
+        private int mPanelSerialNo { get; set; }
 
-        public DateTime mStartTime { get; set; }
+        private DateTime mStartTime { get; set; }
 
-        public DateTime mEndTime { get; set; }
+        private DateTime mEndTime { get; set; }
 
-        public ushort mActive { get; set; }
+        private ushort mActive { get; set; }
 
-        public ushort mMemIX { get; set; }
+        private ushort mMemIX { get; set; }
 
-        public ushort mTimeOut { get; set; }
+        private ushort mTimeOut { get; set; }
 
-        public ushort mPortType { get; set; }
+        private ushort mPortType { get; set; }
 
-        public ushort mPanelAlarmIX { get; set; }
+        private ushort mPanelAlarmIX { get; set; }
 
         public int mPanelNo { get; set; }
 
-        public string mPanelName { get; set; }
+        private string mPanelName { get; set; }
 
-        public bool mInTime { get; set; }
+        private bool mInTime { get; set; }
 
-        public int mConnectTimeout { get; set; }
+        private int mConnectTimeout { get; set; }
 
         public SqlConnection mDBConn { get; set; }
 
-        public string mDBSQLStr { get; set; }
+        private string mDBSQLStr { get; set; }
 
-        public SqlDataReader mDBReader { get; set; }
+        private SqlDataReader mDBReader { get; set; }
 
-        public SqlCommand mDBCmd { get; set; }
+        private SqlCommand mDBCmd { get; set; }
 
-        public bool pStop;
+        private bool pStop;
 
 
-        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, FrmMain parentForm)
+        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, SqlConnection connection, FrmMain parentForm)
         {
             mMemIX = MemIX;
             mActive = TActive;
@@ -158,6 +165,7 @@ namespace MaviSoftServerV1._0
             mPanelSerialNo = TMACAdress;
             mPanelNo = TPanelNo;
             mParentForm = parentForm;
+            mDBConn = connection;
             if (mTimeOut < 3 && mTimeOut > 60)
             {
                 mTimeOut = 3;
@@ -174,10 +182,13 @@ namespace MaviSoftServerV1._0
                 mPanelIdleInterval = 0;
                 mInTime = true;
 
-                mDBConn = new SqlConnection();
-                mDBConn.ConnectionString = SqlServerAdress.GetAdress();
-                mDBConn.Open();
-
+                //mDBConn = new SqlConnection();
+                //mDBConn.ConnectionString = SqlServerAdress.GetAdress();
+                //mDBConn.Open();
+                if (mDBConn.State != ConnectionState.Open)
+                {
+                    mDBConn.Open();
+                }
                 PanelThread = new Thread(ProcessPanel);
                 PanelThread.Priority = ThreadPriority.Normal;
                 PanelThread.IsBackground = true;
@@ -192,6 +203,22 @@ namespace MaviSoftServerV1._0
                 return false;
             }
         }
+
+        public bool StopPanel()
+        {
+            try
+            {
+                mPanelClient.Close();
+                mPanelClient.Dispose();
+                PanelThread.Abort();
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         public void ProcessPanel()
         {
             ushort TProc = 0;
@@ -344,11 +371,35 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
+                            //ClearSocketBuffers(mPanelClient);
+
+                            //if ( mTestInt==100)
+                            //{
+                            //    SyncUpdateScreen("GELDİ");
+                            //    Thread.Sleep(250);
+                            //}
+                            //else
+                            //{
+                            //    SyncUpdateScreen("HAZIR");
+                            //    Thread.Sleep(250);
+
+                            //}
+
                             ClearSocketBuffers(mPanelClient);
                             SyncUpdateScreen("HAZIR");
                             Thread.Sleep(250);
-
-                            mTaskSource = SyncGetNewTask();
+                            mTaskSource = mTempTaskSource;
+                            mTaskNo = mTempTaskNo;
+                            mTaskType = mTempTaskType;
+                            mTaskIntParam1 = mTempTaskIntParam1;
+                            mTaskIntParam2 = mTempTaskIntParam2;
+                            mTaskIntParam3 = mTempTaskIntParam3;
+                            mTaskIntParam4 = mTempTaskIntParam4;
+                            mTaskIntParam5 = mTempTaskIntParam5;
+                            mTaskStrParam1 = mTempTaskStrParam1;
+                            mTaskUserName = mTempTaskUserName;
+                            mTaskUpdateTable = mTempTaskUpdateTable;
+                            //mTaskSource = SyncGetNewTask();
                             if (mTaskSource == IP_TASK)
                             {
                                 TProc = TaskList[mMemIX, TaskPIX[mMemIX]].CmdID;
@@ -735,6 +786,9 @@ namespace MaviSoftServerV1._0
             lock (TLockObj)
             {
                 //DB TASK
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
+
                 mDBSQLStr = "Select * from TaskList where [Panel No]=" + mPanelNo + " AND [Durum Kodu]=" + 1 + " Order By [Kayit No]";
                 mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
                 mDBReader = mDBCmd.ExecuteReader();
@@ -832,6 +886,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM PanelSettings " +
                         "WHERE [Panel ID] = " + DBIntParam1.ToString();
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
@@ -1142,6 +1199,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM TimeGroups " +
                         "WHERE [Zaman Grup No]=" + DBIntParam1.ToString();
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
@@ -1586,6 +1646,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM GroupsMaster WHERE [Grup No]=" + DBIntParam1;
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
@@ -1766,6 +1829,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "Select * from Users where ID=" + DBIntParam1;
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
@@ -1875,6 +1941,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM TimeZoneCalendar WHERE [Grup Takvimi No] =" + DBIntParam1;
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
@@ -2045,6 +2114,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM ProgRelay2 " +
                         "WHERE [Panel No] = " + DBIntParam1.ToString() +
                         " AND [Haftanin Gunu] = " + DBIntParam2.ToString() +
@@ -2144,6 +2216,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM PanelSettings " +
                         " WHERE [Seri No] = " + mPanelSerialNo.ToString() +
                         " AND [Panel ID] = " + mPanelNo.ToString();
@@ -2228,6 +2303,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM LiftGroups WHERE [Asansor Grup No] = " + DBIntParam1;
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
@@ -2284,6 +2362,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM Alarmlar WHERE [Alarm No] = " + DBIntParam1;
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
@@ -2401,6 +2482,9 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
+                    if (mDBConn.State != ConnectionState.Open)
+                        mDBConn.Open();
+
                     tDBSQLStr = "SELECT * FROM PanelSettings " +
                         " WHERE [Seri No] = " + mPanelSerialNo.ToString() +
                         " AND [Panel ID] = " + mPanelNo.ToString();
@@ -2607,6 +2691,8 @@ namespace MaviSoftServerV1._0
 
             lock (TLockObj)
             {
+                if (mDBConn.State != ConnectionState.Open)
+                    mDBConn.Open();
                 //mDBConn = new SqlConnection();
                 //mDBConn.ConnectionString = @"data source = ARGE-2\SQLEXPRESS; initial catalog = MW301_DB25; integrated security = True; MultipleActiveResultSets = True;";
                 //mDBConn.Open();
@@ -2740,6 +2826,9 @@ namespace MaviSoftServerV1._0
                             {
                                 lock (TLockObj)
                                 {
+                                    if (mDBConn.State != ConnectionState.Open)
+                                        mDBConn.Open();
+
                                     tDBSQLStr = "SELECT * FROM Users WHERE [ID]=" + DBIntParam1;
                                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                                     tDBReader = tDBCmd.ExecuteReader();
@@ -2886,6 +2975,8 @@ namespace MaviSoftServerV1._0
 
                                 lock (TLockObj)
                                 {
+                                    if (mDBConn.State != ConnectionState.Open)
+                                        mDBConn.Open();
 
                                     for (int i = 0; i <= /*(int)TCONST.MAX_READER*/ 7; i++)
                                     {
@@ -3092,6 +3183,9 @@ namespace MaviSoftServerV1._0
                         {
                             lock (TLockObj)
                             {
+                                if (mDBConn.State != ConnectionState.Open)
+                                    mDBConn.Open();
+
                                 tDBSQLStr = "SELECT * FROM TimeGroups " +
                                     "WHERE [Zaman Grup No] = " + DBIntParam1.ToString();
                                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
@@ -3302,6 +3396,9 @@ namespace MaviSoftServerV1._0
                             {
                                 lock (TLockObj)
                                 {
+                                    if (mDBConn.State != ConnectionState.Open)
+                                        mDBConn.Open();
+
                                     tDBSQLStr = "SELECT * FROM ProgRelay2 " +
                                         "WHERE [Panel No] = " + mPanelNo.ToString() + " " +
                                         "AND [Haftanin Gunu] = " + DBIntParam1.ToString() + " " +
@@ -4123,6 +4220,9 @@ namespace MaviSoftServerV1._0
 
                             lock (TLockObj)
                             {
+                                if (mDBConn.State != ConnectionState.Open)
+                                    mDBConn.Open();
+
                                 bool Result = false;
                                 for (int i = 0; i < 16; i++)
                                 {
@@ -4356,6 +4456,9 @@ namespace MaviSoftServerV1._0
                         {
                             lock (TLockObj)
                             {
+                                if (mDBConn.State != ConnectionState.Open)
+                                    mDBConn.Open();
+
                                 tDBSQLStr = "SELECT * FROM PanelSettings " +
                                     "WHERE [Seri No] = " + mPanelSerialNo.ToString() +
                                     "AND [Panel ID] = " + mPanelNo.ToString();
@@ -4398,6 +4501,9 @@ namespace MaviSoftServerV1._0
                         {
                             lock (TLockObj)
                             {
+                                if (mDBConn.State != ConnectionState.Open)
+                                    mDBConn.Open();
+
                                 tDBSQLStr = "SELECT * FROM PanelSettings" +
                                     " WHERE [Seri No] = " + mPanelSerialNo.ToString() +
                                     " AND [Panel ID] = " + mPanelNo.ToString();
