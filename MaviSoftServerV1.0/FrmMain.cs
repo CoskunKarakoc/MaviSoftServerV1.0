@@ -19,9 +19,8 @@ namespace MaviSoftServerV1._0
 
         public List<PanelLog> AktifPanelLogListesi;
 
-        public FrmMain(SqlConnection connection)
+        public FrmMain()
         {
-            MConn = connection;
             InitializeComponent();
             AktifPanelListesi = new List<Panel>();
             AktifPanelLogListesi = new List<PanelLog>();
@@ -62,6 +61,8 @@ namespace MaviSoftServerV1._0
 
         public SystemManager PanelOuther;
 
+        public Queue<KeyValuePair<int, string>> APBList = new Queue<KeyValuePair<int, string>>();
+
         private void Form1_Load(object sender, EventArgs e)
         {
 
@@ -101,57 +102,69 @@ namespace MaviSoftServerV1._0
             SQLStr = "SELECT * FROM PanelSettings ORDER BY [Sira No]";
             try
             {
-                if (MConn.State != ConnectionState.Open)
+
+
+                using (MConn = new SqlConnection(SqlServerAdress.Adres))
+                {
                     MConn.Open();
 
-                Comnd = new SqlCommand(SQLStr, MConn);
-                MReader = Comnd.ExecuteReader();
+                    Comnd = new SqlCommand(SQLStr, MConn);
+                    MReader = Comnd.ExecuteReader();
 
-                int i = 0;
-                while (MReader.Read())
-                {
-                    if (i <= (int)TCONST.MAX_PANEL)
+                    int i = 0;
+                    while (MReader.Read())
                     {
-                        if (MReader["Panel ID"] as int? != 0 && MReader["Panel IP1"].ToString() != "" && MReader["Panel IP2"].ToString() != "")
+                        if (i <= (int)TCONST.MAX_PANEL)
                         {
-                            SPorts[i].Active = 1;
-                            SPorts[i].PanelNo = MReader["Panel ID"] as int? ?? default(int);
-                            SPorts[i].IPAdress = MReader["Panel IP1"].ToString().Trim() + "." + MReader["Panel IP2"].ToString().Trim() + "." + MReader["Panel IP3"].ToString().Trim() + "." + MReader["Panel IP4"].ToString().Trim();
-                            SPorts[i].TCPPortNo = MReader["Panel TCP Port"] as int? ?? default(int);
-                            SPorts[i].MACAddress = MReader["Seri No"] as int? ?? default(int);
-                            SPorts[i].ConnTimeout = 3;
-                            SPorts[i].SndRcvTimeout = 3;
+                            if (MReader["Panel ID"] as int? != 0 && MReader["Panel IP1"].ToString() != "" && MReader["Panel IP2"].ToString() != "")
+                            {
+                                SPorts[i].Active = 1;
+                                SPorts[i].PanelNo = MReader["Panel ID"] as int? ?? default(int);
+                                SPorts[i].IPAdress = MReader["Panel IP1"].ToString().Trim() + "." + MReader["Panel IP2"].ToString().Trim() + "." + MReader["Panel IP3"].ToString().Trim() + "." + MReader["Panel IP4"].ToString().Trim();
+                                SPorts[i].TCPPortNo = MReader["Panel TCP Port"] as int? ?? default(int);
+                                SPorts[i].MACAddress = MReader["Seri No"] as int? ?? default(int);
+                                SPorts[i].ConnTimeout = 3;
+                                SPorts[i].SndRcvTimeout = 3;
 
-                            lblIP[i].Text = SPorts[i].PanelNo.ToString() + " :: " + SPorts[i].IPAdress;
+                                lblIP[i].Text = SPorts[i].PanelNo.ToString() + " :: " + SPorts[i].IPAdress;
+                            }
+                            else
+                            {
+                                SPorts[i].Active = 0;
+                            }
                         }
-                        else
+                        i++;
+                    }
+
+                    for (ushort j = 0; j <= (ushort)TCONST.MAX_PANEL; j++)
+                    {
+                        if (SPorts[j].Active == 1)
                         {
-                            SPorts[i].Active = 0;
+                            Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, this);
+                            Panels[j].StartPanel();
+                            AktifPanelListesi.Add(Panels[j]);
+                            LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, AktifPanelListesi, this);
+                            LogPanels[j].StartPanel();
+                            AktifPanelLogListesi.Add(LogPanels[j]);
                         }
                     }
-                    i++;
-                }
-
-                for (ushort j = 0; j <= (ushort)TCONST.MAX_PANEL; j++)
-                {
-                    if (SPorts[j].Active == 1)
+                    foreach (var logPanel in LogPanels)
                     {
-                        Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, MConn, this);
-                        Panels[j].StartPanel();
-                        AktifPanelListesi.Add(Panels[j]);
-                        LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, MConn, this);
-                        LogPanels[j].StartPanel();
-                        AktifPanelLogListesi.Add(LogPanels[j]);
+                        if (logPanel != null)
+                        {
+                            foreach (var panel in LogPanels)
+                            {
+                                if (panel != null)
+                                {
+                                    logPanel.LogPanelListesi.Add(panel);
+                                }
+                            }
+                        }
                     }
+
+                    PanelOuther = new SystemManager(AktifPanelListesi, AktifPanelLogListesi, this);
+                    PanelOuther.StartPanelOuther();
                 }
-
-                PanelOuther = new SystemManager(MConn,AktifPanelListesi);
-                PanelOuther.StartPanelOuther();
-
-                //Panels[12].mTestInt = 100;
-                //Panels[13].mTestInt = 0;
-                //Panels[14].mTestInt = 100;
-                
             }
             catch (Exception)
             {

@@ -48,36 +48,34 @@ namespace MaviSoftServerV1._0
 
                 SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
                 SqlServerAdress.SetAdres(SqlAdress);
-                connection = new SqlConnection(SqlAdress);
-                //using (connection = new SqlConnection(SqlAdress))
-                //{
-                //}
-                connection.Open();
-                try
+                using (connection = new SqlConnection(SqlAdress))
                 {
-                    if (connection.State == ConnectionState.Open)
+                    connection.Open();
+                    try
                     {
+                        if (connection.State == ConnectionState.Open)
+                        {
 
-                        AddUpdateAppSettings("Host", HostPC.Trim());
-                        AddUpdateAppSettings("SQLServer", SQLServer.Trim());
-                        FrmMain form1 = new FrmMain(connection);
-                        form1.Show();
-                        this.Hide();
+                            AddUpdateAppSettings("Host", HostPC.Trim());
+                            AddUpdateAppSettings("SQLServer", SQLServer.Trim());
+                            FrmMain form1 = new FrmMain();
+                            form1.Show();
+                            this.Hide();
+                        }
+
                     }
-
+                    catch (Exception)
+                    {
+                        lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
+                        lblMessage.Visible = true;
+                        txtServer.Clear();
+                        txtUserName.Clear();
+                        txtSifre.Clear();
+                        txtHostPC.Clear();
+                        connection.Dispose();
+                        connection.Close();
+                    }
                 }
-                catch (Exception)
-                {
-                    lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
-                    lblMessage.Visible = true;
-                    txtServer.Clear();
-                    txtUserName.Clear();
-                    txtSifre.Clear();
-                    txtHostPC.Clear();
-                    connection.Dispose();
-                    connection.Close();
-                }
-
             }
         }
 

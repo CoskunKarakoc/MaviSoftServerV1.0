@@ -12,6 +12,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data;
+using System.Diagnostics;
+using System.Collections;
+
 namespace MaviSoftServerV1._0
 {
     public class PanelLog
@@ -106,7 +109,9 @@ namespace MaviSoftServerV1._0
 
         public CommandConstants mPanelProc { get; set; }
 
-        public CommandConstants mLogProc { get; set; }
+        private CommandConstants mLogProc { get; set; }
+
+        public CommandConstants mTempLogProc { get; set; }
 
         public ushort mPanelConState { get; set; }
 
@@ -154,13 +159,19 @@ namespace MaviSoftServerV1._0
 
         public SqlCommand mDBCmd { get; set; }
 
+        public string TSndAPBStr = "";
+
         private string DoorStatusStr = "";
 
         int mMailRetryCount = 0;
 
-        public bool lStop;
+        List<Panel> PanelListesi = new List<Panel>();
 
-        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, SqlConnection connection, FrmMain parentForm)
+        public List<PanelLog> LogPanelListesi = new List<PanelLog>();
+
+        public Queue SndQueue = new Queue();
+
+        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, List<Panel> Panels, FrmMain parentForm)
         {
             mMemIX = MemIX;
             mActive = TActive;
@@ -171,7 +182,7 @@ namespace MaviSoftServerV1._0
             mPanelSerialNo = TMACAdress;
             mPanelNo = TPanelNo;
             mParentForm = parentForm;
-            mDBConn = connection;
+            PanelListesi = Panels;
             if (mTimeOut < 3 && mTimeOut > 60)
             {
                 mTimeOut = 3;
@@ -187,20 +198,11 @@ namespace MaviSoftServerV1._0
                 mPanelProc = CommandConstants.CMD_PORT_INIT;
                 mPanelIdleInterval = 0;
                 mInTime = true;
-
-                //mDBConn = new SqlConnection();
-                //mDBConn.ConnectionString = SqlServerAdress.GetAdress();
-                //mDBConn.Open();
-                if (mDBConn.State != System.Data.ConnectionState.Open)
-                {
-                    mDBConn.Open();
-                }
                 mLogProc = CommandConstants.CMD_PORT_INIT;
                 LogThread = new Thread(LogThreadProccess);
                 LogThread.Priority = ThreadPriority.Normal;
                 LogThread.IsBackground = true;
                 LogThread.Start();
-
                 return true;
             }
             catch (Exception)
@@ -225,6 +227,7 @@ namespace MaviSoftServerV1._0
             }
         }
 
+
         public void LogThreadProccess()
         {
             while (true)
@@ -244,6 +247,7 @@ namespace MaviSoftServerV1._0
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
                                 mMailRetryCount++;
                             }
+                            PanelDoorStatusDelete();
                             mLogProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
@@ -303,11 +307,6 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_TASK_LIST:
                         {
-                            if (lStop == true)
-                            {
-                                Thread.Sleep(500);
-                                break;
-                            }
                             while (true)
                             {
                                 Thread.Sleep(50);
@@ -316,7 +315,6 @@ namespace MaviSoftServerV1._0
                                     mLogProc = CommandConstants.CMD_PORT_CLOSE;
                                     break;
                                 }
-
                                 mStartTime = DateTime.Now;
                                 if (CheckSize(mPanelClientLog, (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS)))
                                 {
@@ -342,7 +340,28 @@ namespace MaviSoftServerV1._0
                                     }
 
                                 }
+
+                                if (SndQueue.Count > 0)
+                                {
+                                    mLogProc = CommandConstants.CMD_SND_GLOBALDATAUPDATE;
+                                    break;
+                                }
+
                             }
+                        }
+                        break;
+                    case CommandConstants.CMD_SND_GLOBALDATAUPDATE:
+                        {
+                            if (SendGenericDBData(mPanelClientLog))
+                            {
+                                mLogProc = CommandConstants.CMD_TASK_LIST;
+                            }
+                            else
+                            {
+                                mLogProc = CommandConstants.CMD_TASK_LIST;
+                                break;
+                            }
+
                         }
                         break;
                 }
@@ -393,6 +412,15 @@ namespace MaviSoftServerV1._0
                 {
                     return false;
                 }
+
+                TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_ADD_GLOBALDATAUPDATE));
+                if (TPos > -1)
+                {
+                    TReturnLogStr = TRcvData;
+                    mTaskType = (int)CommandConstants.CMD_ADD_GLOBALDATAUPDATE;
+                    return true;
+                }
+
                 TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_RCV_DOORSTATUS));
                 if (TPos > -1)
                 {
@@ -562,39 +590,40 @@ namespace MaviSoftServerV1._0
                             //TODO: Hangi kullanıcı olduğuna göre where koşulu uylunacak ProgInit'e
                             lock (TLockObj)
                             {
-                                if (mDBConn.State != ConnectionState.Open)
-                                    mDBConn.Open();
-
-                                tDBSQLStr = "SELECT TOP 1 * FROM ProgInit ";
-                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                tDBReader = tDBCmd.ExecuteReader();
-                                if (tDBReader.Read())
+                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                 {
-                                    if (TAccessResult == 2)
-                                        if ((tDBReader["LiveAPBInvalid"] as bool? ?? default(bool)) == true)
-                                            break;
+                                    mDBConn.Open();
+                                    tDBSQLStr = "SELECT TOP 1 * FROM ProgInit ";
+                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                    tDBReader = tDBCmd.ExecuteReader();
+                                    if (tDBReader.Read())
+                                    {
+                                        if (TAccessResult == 2)
+                                            if ((tDBReader["LiveAPBInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
 
-                                    if (TAccessResult == 0)
-                                        if ((tDBReader["LiveDeniedInvalid"] as bool? ?? default(bool)) == true)
-                                            break;
+                                        if (TAccessResult == 0)
+                                            if ((tDBReader["LiveDeniedInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
 
-                                    if (TAccessResult == 4)
-                                        if ((tDBReader["LiveUnknownInvalid"] as bool? ?? default(bool)) == true)
-                                            break;
+                                        if (TAccessResult == 4)
+                                            if ((tDBReader["LiveUnknownInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
 
-                                    if (TAccessResult == 5 || TAccessResult == 6 || TAccessResult == 7 || TAccessResult == 13)
-                                        if ((tDBReader["LiveManuelInvalid"] as bool? ?? default(bool)) == true)
-                                            break;
+                                        if (TAccessResult == 5 || TAccessResult == 6 || TAccessResult == 7 || TAccessResult == 13)
+                                            if ((tDBReader["LiveManuelInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
 
-                                    if (TAccessResult == 8)
-                                        if ((tDBReader["LiveButtonInvalid"] as bool? ?? default(bool)) == true)
-                                            break;
+                                        if (TAccessResult == 8)
+                                            if ((tDBReader["LiveButtonInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
 
-                                    if (TAccessResult == 9 || TAccessResult == 10)
-                                        if ((tDBReader["LiveProgrammedInvalid"] as bool? ?? default(bool)) == true)
-                                            break;
+                                        if (TAccessResult == 9 || TAccessResult == 10)
+                                            if ((tDBReader["LiveProgrammedInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
+                                    }
+                                    tDBReader.Close();
                                 }
-                                tDBReader.Close();
                             }
 
 
@@ -605,23 +634,24 @@ namespace MaviSoftServerV1._0
 
                                 lock (TLockObj)
                                 {
-                                    if (mDBConn.State != ConnectionState.Open)
-                                        mDBConn.Open();
-
-                                    tDBSQLStr = @"SELECT * FROM Users " +
-                                  "WHERE [Kart ID] = '" + TCardID + "' " +
-                                  "ORDER BY [Kayit No]";
-                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                    tDBReader = tDBCmd.ExecuteReader();
-                                    if (tDBReader.Read())
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                     {
-                                        TUserType = tDBReader["Kullanici Tipi"] as int? ?? default(int);
-                                        TUserKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
-                                        TmpTelefon = tDBReader["Telefon"].ToString();
-                                        TmpName = tDBReader["Adi"].ToString();
-                                        TmpSurname = tDBReader["Soyadi"].ToString();
+                                        mDBConn.Open();
+                                        tDBSQLStr = @"SELECT * FROM Users " +
+                                      "WHERE [Kart ID] = '" + TCardID + "' " +
+                                      "ORDER BY [Kayit No]";
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        tDBReader = tDBCmd.ExecuteReader();
+                                        if (tDBReader.Read())
+                                        {
+                                            TUserType = tDBReader["Kullanici Tipi"] as int? ?? default(int);
+                                            TUserKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
+                                            TmpTelefon = tDBReader["Telefon"].ToString();
+                                            TmpName = tDBReader["Adi"].ToString();
+                                            TmpSurname = tDBReader["Soyadi"].ToString();
+                                        }
+                                        tDBReader.Close();
                                     }
-                                    tDBReader.Close();
                                 }
 
                                 TVisitorKayitNo = 0;
@@ -629,22 +659,23 @@ namespace MaviSoftServerV1._0
                                 {
                                     lock (TLockObj)
                                     {
-                                        if (mDBConn.State != ConnectionState.Open)
-                                            mDBConn.Open();
-
-                                        tDBSQLStr = @"SELECT * FROM Visitors " +
-                                          "WHERE Visitors.[Kart ID] = '" + TCardID + "' " +
-                                          "AND Visitors.Tarih = CONVERT(SMALLDATETIME,'" + TDate.ToString("MM/dd/yyyy HH:mm:ss") + "',101) " +
-                                          "ORDER BY [Kayit No]";
-
-                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                        tDBReader = tDBCmd.ExecuteReader();
-                                        if (tDBReader.Read())
+                                        using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                         {
-                                            TVisitorKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
-                                        }
+                                            mDBConn.Open();
+                                            tDBSQLStr = @"SELECT * FROM Visitors " +
+                                              "WHERE Visitors.[Kart ID] = '" + TCardID + "' " +
+                                              "AND Visitors.Tarih = CONVERT(SMALLDATETIME,'" + TDate.ToString("MM/dd/yyyy HH:mm:ss") + "',101) " +
+                                              "ORDER BY [Kayit No]";
 
-                                        tDBReader.Close();
+                                            tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                            tDBReader = tDBCmd.ExecuteReader();
+                                            if (tDBReader.Read())
+                                            {
+                                                TVisitorKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
+                                            }
+
+                                            tDBReader.Close();
+                                        }
                                     }
                                 }
 
@@ -663,27 +694,28 @@ namespace MaviSoftServerV1._0
                         }
                         lock (TLockObj)
                         {
-                            if (mDBConn.State != ConnectionState.Open)
-                                mDBConn.Open();
-
-                            if (TAccessResult == 4)
-                                TUserKayitNo = 1;
-
-                            tDBSQLStr = @"INSERT INTO AccessDatas " +
-                               "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
-                               "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
-                               "[User Kayit No],Kontrol,[Canli Resim])" +
-                               "VALUES " +
-                               "(" +
-                               TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
-                               TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
-                               (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
-                               TUserKayitNo + "," + 0 + "," + "'user_1.jpg'" + ")";
-                            tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                            TRetInt = tDBCmd.ExecuteNonQuery();
-                            if (TRetInt <= 0)
+                            using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                             {
-                                return false;
+                                mDBConn.Open();
+                                if (TAccessResult == 4)
+                                    TUserKayitNo = 1;
+
+                                tDBSQLStr = @"INSERT INTO AccessDatas " +
+                                   "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
+                                   "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
+                                   "[User Kayit No],Kontrol,[Canli Resim])" +
+                                   "VALUES " +
+                                   "(" +
+                                   TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
+                                   TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
+                                   (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
+                                   TUserKayitNo + "," + 0 + "," + "'user_1.jpg'" + ")";
+                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                TRetInt = tDBCmd.ExecuteNonQuery();
+                                if (TRetInt <= 0)
+                                {
+                                    return false;
+                                }
                             }
                         }
                     }
@@ -700,6 +732,7 @@ namespace MaviSoftServerV1._0
                         if (DoorStatusStr != TmpReturnStr)
                         {
                             DoorStatusStr = TmpReturnStr;
+                            PanelDoorStatusDelete();
                             if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 4, 4), 16) == PanelSerialNo)
                             {
                                 for (int i = 0; i <= 15; i++)
@@ -738,130 +771,151 @@ namespace MaviSoftServerV1._0
                             }
                             lock (TLockObj)
                             {
-                                if (mDBConn.State != ConnectionState.Open)
+                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                {
                                     mDBConn.Open();
 
-                                tDBSQLStr = "SELECT * FROM DoorStatus WHERE [Seri No] = " + mPanelSerialNo.ToString().Trim() + " " +
-                                 " AND [Panel ID] = " + mPanelNo.ToString().Trim();
-                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                tDBReader = tDBCmd.ExecuteReader();
-                                if (!tDBReader.Read())
-                                {
-                                    tDBSQLStr2 = "INSERT INTO DoorStatus " +
-                                        "([Panel ID],[Seri No],[Hirsiz Alarm Durumu],[Yangin Alarm Durumu],[Kapi Alarm Durumu]," +
-                                        "[Kapi 1 Baglanti],[Kapi 2 Baglanti],[Kapi 3 Baglanti],[Kapi 4 Baglanti],[Kapi 5 Baglanti],[Kapi 6 Baglanti],[Kapi 7 Baglanti],[Kapi 8 Baglanti]," +
-                                        "[Kapi 9 Baglanti],[Kapi 10 Baglanti],[Kapi 11 Baglanti],[Kapi 12 Baglanti],[Kapi 13 Baglanti],[Kapi 14 Baglanti],[Kapi 15 Baglanti],[Kapi 16 Baglanti]," +
-                                        "[Kapi 1 Sensor],[Kapi 2 Sensor],[Kapi 3 Sensor],[Kapi 4 Sensor],[Kapi 5 Sensor],[Kapi 6 Sensor],[Kapi 7 Sensor],[Kapi 8 Sensor]," +
-                                        "[Kapi 9 Sensor],[Kapi 10 Sensor],[Kapi 11 Sensor],[Kapi 12 Sensor],[Kapi 13 Sensor],[Kapi 14 Sensor],[Kapi 15 Sensor],[Kapi 16 Sensor]," +
-                                        "[Kapi 1 Button],[Kapi 2 Button],[Kapi 3 Button],[Kapi 4 Button],[Kapi 5 Button],[Kapi 6 Button],[Kapi 7 Button],[Kapi 8 Button]," +
-                                        "[Kapi 9 Button],[Kapi 10 Button],[Kapi 11 Button],[Kapi 12 Button],[Kapi 13 Button],[Kapi 14 Button],[Kapi 15 Button],[Kapi 16 Button])" +
-                                        "VALUES " +
-                                        "(";
-                                    tDBSQLStr2 += mPanelNo.ToString() + ",";
-                                    tDBSQLStr2 += mPanelSerialNo.ToString() + ",";
-                                    tDBSQLStr2 += RobberAlarm + ",";
-                                    tDBSQLStr2 += FireAlarm + ",";
-                                    tDBSQLStr2 += DoorAlarm + ",";
-                                    for (int i = 0; i <= 15; i++)
+                                    tDBSQLStr = "SELECT * FROM DoorStatus WHERE [Seri No] = " + mPanelSerialNo.ToString().Trim() + " " +
+                                     " AND [Panel ID] = " + mPanelNo.ToString().Trim();
+                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                    tDBReader = tDBCmd.ExecuteReader();
+                                    if (!tDBReader.Read())
                                     {
-                                        tDBSQLStr2 += DoorStatus[i] + ",";
-                                    }
-                                    for (int i = 0; i <= 15; i++)
-                                    {
-                                        tDBSQLStr2 += DoorSensor[i] + ",";
-                                    }
-                                    for (int i = 0; i <= 15; i++)
-                                    {
-                                        if (i == 15)
+                                        tDBSQLStr2 = "INSERT INTO DoorStatus " +
+                                            "([Panel ID],[Seri No],[Hirsiz Alarm Durumu],[Yangin Alarm Durumu],[Kapi Alarm Durumu]," +
+                                            "[Kapi 1 Baglanti],[Kapi 2 Baglanti],[Kapi 3 Baglanti],[Kapi 4 Baglanti],[Kapi 5 Baglanti],[Kapi 6 Baglanti],[Kapi 7 Baglanti],[Kapi 8 Baglanti]," +
+                                            "[Kapi 9 Baglanti],[Kapi 10 Baglanti],[Kapi 11 Baglanti],[Kapi 12 Baglanti],[Kapi 13 Baglanti],[Kapi 14 Baglanti],[Kapi 15 Baglanti],[Kapi 16 Baglanti]," +
+                                            "[Kapi 1 Sensor],[Kapi 2 Sensor],[Kapi 3 Sensor],[Kapi 4 Sensor],[Kapi 5 Sensor],[Kapi 6 Sensor],[Kapi 7 Sensor],[Kapi 8 Sensor]," +
+                                            "[Kapi 9 Sensor],[Kapi 10 Sensor],[Kapi 11 Sensor],[Kapi 12 Sensor],[Kapi 13 Sensor],[Kapi 14 Sensor],[Kapi 15 Sensor],[Kapi 16 Sensor]," +
+                                            "[Kapi 1 Button],[Kapi 2 Button],[Kapi 3 Button],[Kapi 4 Button],[Kapi 5 Button],[Kapi 6 Button],[Kapi 7 Button],[Kapi 8 Button]," +
+                                            "[Kapi 9 Button],[Kapi 10 Button],[Kapi 11 Button],[Kapi 12 Button],[Kapi 13 Button],[Kapi 14 Button],[Kapi 15 Button],[Kapi 16 Button])" +
+                                            "VALUES " +
+                                            "(";
+                                        tDBSQLStr2 += mPanelNo.ToString() + ",";
+                                        tDBSQLStr2 += mPanelSerialNo.ToString() + ",";
+                                        tDBSQLStr2 += RobberAlarm + ",";
+                                        tDBSQLStr2 += FireAlarm + ",";
+                                        tDBSQLStr2 += DoorAlarm + ",";
+                                        for (int i = 0; i <= 15; i++)
                                         {
-                                            tDBSQLStr2 += DoorButton[i] + ")";
+                                            tDBSQLStr2 += DoorStatus[i] + ",";
                                         }
-                                        else
+                                        for (int i = 0; i <= 15; i++)
                                         {
-                                            tDBSQLStr2 += DoorButton[i] + ",";
+                                            tDBSQLStr2 += DoorSensor[i] + ",";
                                         }
+                                        for (int i = 0; i <= 15; i++)
+                                        {
+                                            if (i == 15)
+                                            {
+                                                tDBSQLStr2 += DoorButton[i] + ")";
+                                            }
+                                            else
+                                            {
+                                                tDBSQLStr2 += DoorButton[i] + ",";
+                                            }
 
+                                        }
+                                        tDBReader.Close();
                                     }
-                                    tDBReader.Close();
-                                }
-                                else
-                                {
-                                    tDBSQLStr2 = "UPDATE DoorStatus " +
-                                        "SET " +
-                                        "[Panel ID] = " + mPanelNo.ToString() + "," +
-                                        "[Seri No] = " + mPanelSerialNo.ToString() + "," +
-                                        "[Hirsiz Alarm Durumu] = " + RobberAlarm + "," +
-                                        "[Yangin Alarm Durumu] = " + FireAlarm + "," +
-                                        "[Kapi Alarm Durumu] = " + DoorAlarm + "," +
-                                        "[Kapi 1 Baglanti] = " + DoorStatus[0] + "," +
-                                        "[Kapi 2 Baglanti] = " + DoorStatus[1] + "," +
-                                        "[Kapi 3 Baglanti] = " + DoorStatus[2] + "," +
-                                        "[Kapi 4 Baglanti] = " + DoorStatus[3] + "," +
-                                        "[Kapi 5 Baglanti] = " + DoorStatus[4] + "," +
-                                        "[Kapi 6 Baglanti] = " + DoorStatus[5] + "," +
-                                        "[Kapi 7 Baglanti] = " + DoorStatus[6] + "," +
-                                        "[Kapi 8 Baglanti] = " + DoorStatus[7] + "," +
-                                        "[Kapi 9 Baglanti] = " + DoorStatus[8] + "," +
-                                        "[Kapi 10 Baglanti] = " + DoorStatus[9] + "," +
-                                        "[Kapi 11 Baglanti] = " + DoorStatus[10] + "," +
-                                        "[Kapi 12 Baglanti] = " + DoorStatus[11] + "," +
-                                        "[Kapi 13 Baglanti] = " + DoorStatus[12] + "," +
-                                        "[Kapi 14 Baglanti] = " + DoorStatus[13] + "," +
-                                        "[Kapi 15 Baglanti] = " + DoorStatus[14] + "," +
-                                        "[Kapi 16 Baglanti] = " + DoorStatus[15] + "," +
-                                        "[Kapi 1 Sensor] = " + DoorSensor[0] + "," +
-                                        "[Kapi 2 Sensor] = " + DoorSensor[1] + "," +
-                                        "[Kapi 3 Sensor] = " + DoorSensor[2] + "," +
-                                        "[Kapi 4 Sensor] = " + DoorSensor[3] + "," +
-                                        "[Kapi 5 Sensor] = " + DoorSensor[4] + "," +
-                                        "[Kapi 6 Sensor] = " + DoorSensor[5] + "," +
-                                        "[Kapi 7 Sensor] = " + DoorSensor[6] + "," +
-                                        "[Kapi 8 Sensor] = " + DoorSensor[7] + "," +
-                                        "[Kapi 9 Sensor] = " + DoorSensor[8] + "," +
-                                        "[Kapi 10 Sensor] = " + DoorSensor[9] + "," +
-                                        "[Kapi 11 Sensor] = " + DoorSensor[10] + "," +
-                                        "[Kapi 12 Sensor] = " + DoorSensor[11] + "," +
-                                        "[Kapi 13 Sensor] = " + DoorSensor[12] + "," +
-                                        "[Kapi 14 Sensor] = " + DoorSensor[13] + "," +
-                                        "[Kapi 15 Sensor] = " + DoorSensor[14] + "," +
-                                        "[Kapi 16 Sensor] = " + DoorSensor[15] + "," +
-                                        "[Kapi 1 Button] = " + DoorButton[0] + "," +
-                                        "[Kapi 2 Button] = " + DoorButton[1] + "," +
-                                        "[Kapi 3 Button] = " + DoorButton[2] + "," +
-                                        "[Kapi 4 Button] = " + DoorButton[3] + "," +
-                                        "[Kapi 5 Button] = " + DoorButton[4] + "," +
-                                        "[Kapi 6 Button] = " + DoorButton[5] + "," +
-                                        "[Kapi 7 Button] = " + DoorButton[6] + "," +
-                                        "[Kapi 8 Button] = " + DoorButton[7] + "," +
-                                        "[Kapi 9 Button] = " + DoorButton[8] + "," +
-                                        "[Kapi 10 Button] = " + DoorButton[9] + "," +
-                                        "[Kapi 11 Button] = " + DoorButton[10] + "," +
-                                        "[Kapi 12 Button] = " + DoorButton[11] + "," +
-                                        "[Kapi 13 Button] = " + DoorButton[12] + "," +
-                                        "[Kapi 14 Button] = " + DoorButton[13] + "," +
-                                        "[Kapi 15 Button] = " + DoorButton[14] + "," +
-                                        "[Kapi 16 Button] = " + DoorButton[15];
-                                }
-                                tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
-                                TRetInt = tDBCmd2.ExecuteNonQuery();
-                                if (TRetInt > 0)
-                                {
-                                    return true;
-                                }
-                                else
-                                {
-                                    return false;
+                                    else
+                                    {
+                                        tDBSQLStr2 = "UPDATE DoorStatus " +
+                                            "SET " +
+                                            "[Panel ID] = " + mPanelNo.ToString() + "," +
+                                            "[Seri No] = " + mPanelSerialNo.ToString() + "," +
+                                            "[Hirsiz Alarm Durumu] = " + RobberAlarm + "," +
+                                            "[Yangin Alarm Durumu] = " + FireAlarm + "," +
+                                            "[Kapi Alarm Durumu] = " + DoorAlarm + "," +
+                                            "[Kapi 1 Baglanti] = " + DoorStatus[0] + "," +
+                                            "[Kapi 2 Baglanti] = " + DoorStatus[1] + "," +
+                                            "[Kapi 3 Baglanti] = " + DoorStatus[2] + "," +
+                                            "[Kapi 4 Baglanti] = " + DoorStatus[3] + "," +
+                                            "[Kapi 5 Baglanti] = " + DoorStatus[4] + "," +
+                                            "[Kapi 6 Baglanti] = " + DoorStatus[5] + "," +
+                                            "[Kapi 7 Baglanti] = " + DoorStatus[6] + "," +
+                                            "[Kapi 8 Baglanti] = " + DoorStatus[7] + "," +
+                                            "[Kapi 9 Baglanti] = " + DoorStatus[8] + "," +
+                                            "[Kapi 10 Baglanti] = " + DoorStatus[9] + "," +
+                                            "[Kapi 11 Baglanti] = " + DoorStatus[10] + "," +
+                                            "[Kapi 12 Baglanti] = " + DoorStatus[11] + "," +
+                                            "[Kapi 13 Baglanti] = " + DoorStatus[12] + "," +
+                                            "[Kapi 14 Baglanti] = " + DoorStatus[13] + "," +
+                                            "[Kapi 15 Baglanti] = " + DoorStatus[14] + "," +
+                                            "[Kapi 16 Baglanti] = " + DoorStatus[15] + "," +
+                                            "[Kapi 1 Sensor] = " + DoorSensor[0] + "," +
+                                            "[Kapi 2 Sensor] = " + DoorSensor[1] + "," +
+                                            "[Kapi 3 Sensor] = " + DoorSensor[2] + "," +
+                                            "[Kapi 4 Sensor] = " + DoorSensor[3] + "," +
+                                            "[Kapi 5 Sensor] = " + DoorSensor[4] + "," +
+                                            "[Kapi 6 Sensor] = " + DoorSensor[5] + "," +
+                                            "[Kapi 7 Sensor] = " + DoorSensor[6] + "," +
+                                            "[Kapi 8 Sensor] = " + DoorSensor[7] + "," +
+                                            "[Kapi 9 Sensor] = " + DoorSensor[8] + "," +
+                                            "[Kapi 10 Sensor] = " + DoorSensor[9] + "," +
+                                            "[Kapi 11 Sensor] = " + DoorSensor[10] + "," +
+                                            "[Kapi 12 Sensor] = " + DoorSensor[11] + "," +
+                                            "[Kapi 13 Sensor] = " + DoorSensor[12] + "," +
+                                            "[Kapi 14 Sensor] = " + DoorSensor[13] + "," +
+                                            "[Kapi 15 Sensor] = " + DoorSensor[14] + "," +
+                                            "[Kapi 16 Sensor] = " + DoorSensor[15] + "," +
+                                            "[Kapi 1 Button] = " + DoorButton[0] + "," +
+                                            "[Kapi 2 Button] = " + DoorButton[1] + "," +
+                                            "[Kapi 3 Button] = " + DoorButton[2] + "," +
+                                            "[Kapi 4 Button] = " + DoorButton[3] + "," +
+                                            "[Kapi 5 Button] = " + DoorButton[4] + "," +
+                                            "[Kapi 6 Button] = " + DoorButton[5] + "," +
+                                            "[Kapi 7 Button] = " + DoorButton[6] + "," +
+                                            "[Kapi 8 Button] = " + DoorButton[7] + "," +
+                                            "[Kapi 9 Button] = " + DoorButton[8] + "," +
+                                            "[Kapi 10 Button] = " + DoorButton[9] + "," +
+                                            "[Kapi 11 Button] = " + DoorButton[10] + "," +
+                                            "[Kapi 12 Button] = " + DoorButton[11] + "," +
+                                            "[Kapi 13 Button] = " + DoorButton[12] + "," +
+                                            "[Kapi 14 Button] = " + DoorButton[13] + "," +
+                                            "[Kapi 15 Button] = " + DoorButton[14] + "," +
+                                            "[Kapi 16 Button] = " + DoorButton[15];
+                                    }
+                                    tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                    TRetInt = tDBCmd2.ExecuteNonQuery();
+                                    if (TRetInt > 0)
+                                    {
+                                        return true;
+                                    }
+                                    else
+                                    {
+                                        return false;
+                                    }
                                 }
                             }
                         }
                         return true;
                     }
+                case CommandConstants.CMD_ADD_GLOBALDATAUPDATE:
+                    {
+                        object obj = new object();
+                        lock (obj)
+                        {
+                            try
+                            {
+                                foreach (var logPanel in LogPanelListesi)
+                                {
+                                    if (logPanel.mPanelNo != mPanelNo)
+                                    {
+                                        logPanel.SndQueue.Enqueue(TmpReturnStr);
+                                    }
+                                }
+                                return true;
+                            }
+                            catch (Exception)
+                            {
+                                return false;
+                            }
+                        }
+                    }
                 default:
                     break;
             }
-
-
-
             return false;
         }
 
@@ -907,6 +961,32 @@ namespace MaviSoftServerV1._0
             return result;
         }
 
+        //TODO:Veritabanından Gelen Görevi Panele Gönderme
+        public bool SendGenericDBData(TcpClient TClient)
+        {
+            byte[] TSndBytes;
+            string SendStr = SndQueue.Dequeue().ToString();
+            try
+            {
+                var netStream = TClient.GetStream();
+                if (netStream.CanWrite)
+                {
+                    TSndBytes = Encoding.UTF8.GetBytes(SendStr.ToString());
+                    netStream.Write(TSndBytes, 0, TSndBytes.Length);
+                    return true;
+                }
+                else
+                {
+                    SndQueue.Enqueue(SendStr);
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+
+                return false;
+            }
+        }
 
         public MailSettings ReceiveMailSettings()
         {
@@ -917,34 +997,35 @@ namespace MaviSoftServerV1._0
             MailSettings mailSettings = new MailSettings();
             lock (TLockObj)
             {
-                if (mDBConn.State != ConnectionState.Open)
-                    mDBConn.Open();
-
-                tDBSQLStr = "SELECT * FROM EMailSettings";
-                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                tDBReader = tDBCmd.ExecuteReader();
-                if (tDBReader.Read())
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
-                    mailSettings = new MailSettings
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT * FROM EMailSettings";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
                     {
-                        EMail_Adres = tDBReader[1].ToString(),
-                        Kullanici_Adi = tDBReader[2].ToString(),
-                        Password = tDBReader[3].ToString(),
-                        MailHost = tDBReader[4].ToString(),
-                        MailPort = tDBReader[5] as int? ?? default(int),
-                        SSL = tDBReader[6] as bool? ?? default(bool),
-                        Authentication = tDBReader[7] as int? ?? default(int),
-                        Gonderme_Saati = tDBReader[8] as DateTime? ?? default(DateTime),
-                        Gelmeyenler_Raporu = tDBReader[9] as bool? ?? default(bool),
-                        Alici_1_EmailAdress = tDBReader[10].ToString(),
-                        Alici_1_EmailGonder = tDBReader[11] as bool? ?? default(bool),
-                        Alici_2_EmailAdress = tDBReader[12].ToString(),
-                        Alici_2_EmailGonder = tDBReader[13] as bool? ?? default(bool),
-                        Alici_3_EmailAdress = tDBReader[14].ToString(),
-                        Alici_3_EmailGonder = tDBReader[15] as bool? ?? default(bool),
-                    };
+                        mailSettings = new MailSettings
+                        {
+                            EMail_Adres = tDBReader[1].ToString(),
+                            Kullanici_Adi = tDBReader[2].ToString(),
+                            Password = tDBReader[3].ToString(),
+                            MailHost = tDBReader[4].ToString(),
+                            MailPort = tDBReader[5] as int? ?? default(int),
+                            SSL = tDBReader[6] as bool? ?? default(bool),
+                            Authentication = tDBReader[7] as int? ?? default(int),
+                            Gonderme_Saati = tDBReader[8] as DateTime? ?? default(DateTime),
+                            Gelmeyenler_Raporu = tDBReader[9] as bool? ?? default(bool),
+                            Alici_1_EmailAdress = tDBReader[10].ToString(),
+                            Alici_1_EmailGonder = tDBReader[11] as bool? ?? default(bool),
+                            Alici_2_EmailAdress = tDBReader[12].ToString(),
+                            Alici_2_EmailGonder = tDBReader[13] as bool? ?? default(bool),
+                            Alici_3_EmailAdress = tDBReader[14].ToString(),
+                            Alici_3_EmailGonder = tDBReader[15] as bool? ?? default(bool),
+                        };
+                    }
+                    return mailSettings;
                 }
-                return mailSettings;
             }
         }
 
@@ -956,12 +1037,13 @@ namespace MaviSoftServerV1._0
             object TLockObj = new object();
             lock (TLockObj)
             {
-                if (mDBConn.State != ConnectionState.Open)
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
                     mDBConn.Open();
-
-                tDBSQLStr = "DELETE FROM DoorStatus WHERE DoorStatus.[Panel ID] = " + mPanelNo;
-                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                tDBCmd.ExecuteNonQuery();
+                    tDBSQLStr = "DELETE FROM DoorStatus WHERE DoorStatus.[Panel ID] = " + mPanelNo;
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBCmd.ExecuteNonQuery();
+                }
             }
         }
 
@@ -974,15 +1056,16 @@ namespace MaviSoftServerV1._0
             bool check = false;
             lock (TLockObj)
             {
-                if (mDBConn.State != ConnectionState.Open)
-                    mDBConn.Open();
-
-                ChekDBString = "SELECT * FROM PanelSettings WHERE [Seri No]=" + Mac;
-                CheckDBCommand = new SqlCommand(ChekDBString, mDBConn);
-                CheckDBReader = CheckDBCommand.ExecuteReader();
-                if (CheckDBReader.Read())
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
-                    check = true;
+                    mDBConn.Open();
+                    ChekDBString = "SELECT * FROM PanelSettings WHERE [Seri No]=" + Mac;
+                    CheckDBCommand = new SqlCommand(ChekDBString, mDBConn);
+                    CheckDBReader = CheckDBCommand.ExecuteReader();
+                    if (CheckDBReader.Read())
+                    {
+                        check = true;
+                    }
                 }
             }
             return check;
@@ -1023,17 +1106,18 @@ namespace MaviSoftServerV1._0
             object TLockObj = new object();
             lock (TLockObj)
             {
-                if (mDBConn.State != ConnectionState.Open)
-                    mDBConn.Open();
-
-                FindUserBString = @"SELECT Users.ID, Users.[Kart ID] FROM Users " +
-           "WHERE  Users.ID = " + TempUser + " " +
-           "ORDER BY Users.ID";
-                FindUserDBCommand = new SqlCommand(FindUserBString, mDBConn);
-                FindUserDBReader = FindUserDBCommand.ExecuteReader();
-                if (FindUserDBReader.Read())
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
-                    FindUserCardID = FindUserDBReader["Kart ID"].ToString().Trim();
+                    mDBConn.Open();
+                    FindUserBString = @"SELECT Users.ID, Users.[Kart ID] FROM Users " +
+               "WHERE  Users.ID = " + TempUser + " " +
+               "ORDER BY Users.ID";
+                    FindUserDBCommand = new SqlCommand(FindUserBString, mDBConn);
+                    FindUserDBReader = FindUserDBCommand.ExecuteReader();
+                    if (FindUserDBReader.Read())
+                    {
+                        FindUserCardID = FindUserDBReader["Kart ID"].ToString().Trim();
+                    }
                 }
             }
 
@@ -1051,15 +1135,16 @@ namespace MaviSoftServerV1._0
             int TLokalBolgeNo = 1;
             lock (TLockObj)
             {
-                if (mDBConn.State != ConnectionState.Open)
-                    mDBConn.Open();
-
-                LBNDBString = "SELECT * FROM ReaderSettingsNew WHERE [Seri No]=" + MacSerial + " AND [WKapi ID]=" + Reader;
-                LBNDBCommand = new SqlCommand(LBNDBString, mDBConn);
-                LBNDBReader = LBNDBCommand.ExecuteReader();
-                if (LBNDBReader.Read())
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
-                    TLokalBolgeNo = LBNDBReader["WKapi Lokal Bolge"] as int? ?? default(int);
+                    mDBConn.Open();
+                    LBNDBString = "SELECT * FROM ReaderSettingsNew WHERE [Seri No]=" + MacSerial + " AND [WKapi ID]=" + Reader;
+                    LBNDBCommand = new SqlCommand(LBNDBString, mDBConn);
+                    LBNDBReader = LBNDBCommand.ExecuteReader();
+                    if (LBNDBReader.Read())
+                    {
+                        TLokalBolgeNo = LBNDBReader["WKapi Lokal Bolge"] as int? ?? default(int);
+                    }
                 }
             }
 
@@ -1075,30 +1160,31 @@ namespace MaviSoftServerV1._0
             int TGlobalBolgeNo = 1;
             lock (TLockObj)
             {
-                if (mDBConn.State != ConnectionState.Open)
-                    mDBConn.Open();
-
-                GBNDBString = "SELECT * FROM PanelSettings WHERE [Seri No]=" + MacSerial;
-                GBNDBCommand = new SqlCommand(GBNDBString, mDBConn);
-                GBNDBReader = GBNDBCommand.ExecuteReader();
-                if (GBNDBReader.Read())
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
-                    if (LokalBolgeNo == 1)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge1"] as int? ?? default(int);
-                    if (LokalBolgeNo == 2)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge2"] as int? ?? default(int);
-                    if (LokalBolgeNo == 3)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge3"] as int? ?? default(int);
-                    if (LokalBolgeNo == 4)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge4"] as int? ?? default(int);
-                    if (LokalBolgeNo == 5)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge5"] as int? ?? default(int);
-                    if (LokalBolgeNo == 6)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge6"] as int? ?? default(int);
-                    if (LokalBolgeNo == 7)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge7"] as int? ?? default(int);
-                    if (LokalBolgeNo == 8)
-                        TGlobalBolgeNo = GBNDBReader["Panel Global Bolge8"] as int? ?? default(int);
+                    mDBConn.Open();
+                    GBNDBString = "SELECT * FROM PanelSettings WHERE [Seri No]=" + MacSerial;
+                    GBNDBCommand = new SqlCommand(GBNDBString, mDBConn);
+                    GBNDBReader = GBNDBCommand.ExecuteReader();
+                    if (GBNDBReader.Read())
+                    {
+                        if (LokalBolgeNo == 1)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge1"] as int? ?? default(int);
+                        if (LokalBolgeNo == 2)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge2"] as int? ?? default(int);
+                        if (LokalBolgeNo == 3)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge3"] as int? ?? default(int);
+                        if (LokalBolgeNo == 4)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge4"] as int? ?? default(int);
+                        if (LokalBolgeNo == 5)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge5"] as int? ?? default(int);
+                        if (LokalBolgeNo == 6)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge6"] as int? ?? default(int);
+                        if (LokalBolgeNo == 7)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge7"] as int? ?? default(int);
+                        if (LokalBolgeNo == 8)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge8"] as int? ?? default(int);
+                    }
                 }
             }
 
@@ -1209,6 +1295,8 @@ namespace MaviSoftServerV1._0
                     return "CMS";
                 case (ushort)CommandConstants.CMD_RCV_LOGS:
                     return "CD";
+                case (ushort)CommandConstants.CMD_ADD_GLOBALDATAUPDATE:
+                    return "APB";
                 default:
                     return "ERR";
             }
