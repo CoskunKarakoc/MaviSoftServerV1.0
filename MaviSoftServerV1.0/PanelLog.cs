@@ -29,47 +29,11 @@ namespace MaviSoftServerV1._0
 
         public S_TASKLIST[,] TaskList = new S_TASKLIST[(int)TCONST.MAX_PANEL, (int)TCONST.MAX_TASK_CNT];
 
-        private int mTaskNo;
-
         private int mTaskType;
-
-        private int mTaskIntParam1;
-
-        private int mLogTaskIntParam1;
-
-        private int mTaskIntParam2;
-
-        private int mLogTaskIntParam2;
-
-        private int mTaskIntParam3;
 
         private int mLogTaskIntParam3;
 
-        private int mTaskIntParam4;
-
-        private int mLogTaskIntParam4;
-
-        private int mTaskIntParam5;
-
-        private int mLogTaskIntParam5;
-
-        private string mTaskStrParam1;
-
-        private string mLogTaskStrParam1;
-
-        private string mTaskStrParam2;
-
-        private string mLogTaskStrParam2;
-
-        private string mTaskUserName;
-
-        private string mLogTaskUserName;
-
-        private bool mTaskUpdateTable;
-
         private bool mLogTaskUpdateTable;
-
-        private ushort mTaskSource;
 
         private ushort mLogTaskSource;
 
@@ -99,37 +63,41 @@ namespace MaviSoftServerV1._0
 
         public Thread LogThread { get; set; }
 
-        public TcpClient mPanelClient { get; set; }
+        private TcpClient mPanelClient { get; set; }
 
-        public TcpClient mPanelClientLog { get; set; }
+        private TcpClient mPanelClientLog { get; set; }
 
-        public TcpListener mPanelListener { get; set; }
 
         public ushort mPanelIdleInterval { get; set; }
 
-        public CommandConstants mPanelProc { get; set; }
+        private CommandConstants mPanelProc { get; set; }
 
         private CommandConstants mLogProc { get; set; }
 
-        public CommandConstants mTempLogProc { get; set; }
 
-        public ushort mPanelConState { get; set; }
+        private ushort mPanelConState { get; set; }
 
-        public int mPanelTCPPort { get; set; }
+        private int mPanelTCPPort { get; set; }
 
-        public int mPanelTCPPortLog { get; set; }
+        private int mPanelTCPPortLog { get; set; }
 
-        public string mPanelIPAddress { get; set; }
+        private string mPanelIPAddress { get; set; }
 
-        public int mPanelSerialNo { get; set; }
+        private int mPanelSerialNo { get; set; }
 
-        public DateTime mStartTime { get; set; }
+        private DateTime mStartTime { get; set; }
 
-        public DateTime mEndTime { get; set; }
+        private DateTime mEndTime { get; set; }
 
         public DateTime mMailStartTime { get; set; }
 
         public DateTime mMailEndTime { get; set; }
+
+
+        private DateTime mReceiveTimeStart { get; set; }
+
+        private DateTime mReceiveTimeEnd { get; set; }
+
 
         public string mMailSendTime { get; set; }
 
@@ -183,6 +151,8 @@ namespace MaviSoftServerV1._0
             mPanelNo = TPanelNo;
             mParentForm = parentForm;
             PanelListesi = Panels;
+            mReceiveTimeStart = DateTime.Now;
+
             if (mTimeOut < 3 && mTimeOut > 60)
             {
                 mTimeOut = 3;
@@ -200,7 +170,7 @@ namespace MaviSoftServerV1._0
                 mInTime = true;
                 mLogProc = CommandConstants.CMD_PORT_INIT;
                 LogThread = new Thread(LogThreadProccess);
-                LogThread.Priority = ThreadPriority.Normal;
+                LogThread.Priority = ThreadPriority.AboveNormal;
                 LogThread.IsBackground = true;
                 LogThread.Start();
                 return true;
@@ -242,6 +212,8 @@ namespace MaviSoftServerV1._0
                 {
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
+                            SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
+
                             if (mMailRetryCount == 0)
                             {
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
@@ -253,9 +225,11 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_INIT:
                         {
+                            SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.SkyBlue);
+
                             mPanelClientLog = new TcpClient();
-                            mPanelClientLog.ReceiveBufferSize = 1024;
-                            mPanelClientLog.SendBufferSize = 1024;
+                            mPanelClientLog.ReceiveBufferSize = 0x1FFFF;
+                            mPanelClientLog.SendBufferSize = 0x1FFFF;
                             mPanelClientLog.ReceiveTimeout = mTimeOut;
                             mPanelClientLog.SendTimeout = mTimeOut;
 
@@ -268,12 +242,14 @@ namespace MaviSoftServerV1._0
                             }
                             catch (Exception)
                             {
-                                mLogProc = CommandConstants.CMD_PORT_DISABLED;
+                                mLogProc = CommandConstants.CMD_PORT_CLOSE;
                             }
                         }
                         break;
                     case CommandConstants.CMD_PORT_CONNECT:
                         {
+                            SyncUpdateScreen("BAĞLANIYOR", System.Drawing.Color.Yellow);
+
                             mStartTime = DateTime.Now;
 
                             if (mStartTime > mEndTime)
@@ -287,6 +263,8 @@ namespace MaviSoftServerV1._0
                                     mLogProc = CommandConstants.CMD_TASK_LIST;
                                     mStartTime = DateTime.Now;
                                     mEndTime = mStartTime.AddSeconds(mTimeOut);
+                                    mReceiveTimeStart = DateTime.Now;
+                                    mReceiveTimeEnd = mReceiveTimeStart.AddSeconds(3);
                                 }
 
                             }
@@ -295,7 +273,8 @@ namespace MaviSoftServerV1._0
 
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
-                            SyncUpdateScreen("KAPATILIYOR");
+                            SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
+
                             PanelDoorStatusDelete();
                             if (mPanelClientLog.Connected == true)
                             {
@@ -309,15 +288,40 @@ namespace MaviSoftServerV1._0
                         {
                             while (true)
                             {
-                                Thread.Sleep(50);
-                                if (mPanelClientLog.Connected == false)
+                                Thread.Sleep(5); //(50);
+                                if (mPanelClientLog.Connected == false && mPanelClientLog.LingerState.Enabled == false)
                                 {
                                     mLogProc = CommandConstants.CMD_PORT_CLOSE;
                                     break;
                                 }
-                                mStartTime = DateTime.Now;
-                                if (CheckSize(mPanelClientLog, (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS)))
+                                SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
+
+                                mReceiveTimeStart = DateTime.Now;
+                                if (mReceiveTimeStart > mReceiveTimeEnd)
                                 {
+                                    // Debug.WriteLine("Durdu" + mPanelNo.ToString());
+                                    //if (mPanelNo == 15)
+                                    //{
+                                    //    Debug.WriteLine("Durdu");
+
+                                    //}
+
+                                    mLogProc = CommandConstants.CMD_PORT_CLOSE;
+                                    break;
+
+                                }
+
+                                mStartTime = DateTime.Now;
+
+                                //if (CheckSize(mPanelClientLog, (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS)))
+                                if (mPanelClientLog.Available > (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS))
+                                {
+                                    mReceiveTimeEnd = mReceiveTimeStart.AddSeconds(3);
+
+                                    //Debug.WriteLine("  ");
+                                    //Debug.WriteLine(mPanelNo.ToString() + " Start: " + mReceiveTimeStart.ToString("yyyy-MM-dd HH:mm:ss"));
+                                    //Debug.WriteLine(mPanelNo.ToString() + "  End:  " + mReceiveTimeEnd.ToString("yyyy-MM-dd HH:mm:ss"));
+
                                     mEndTime = mStartTime.AddSeconds(mTimeOut);
                                     if (ReveiveLogData(mPanelClientLog, ref mLogReturnStr))
                                     {
@@ -333,12 +337,9 @@ namespace MaviSoftServerV1._0
                                 }
                                 else
                                 {
-                                    if (mStartTime > mEndTime)
-                                    {
-                                        mLogProc = CommandConstants.CMD_PORT_CLOSE;
-                                        break;
-                                    }
 
+                                    mLogProc = CommandConstants.CMD_TASK_LIST;
+                                    break;
                                 }
 
                                 if (SndQueue.Count > 0)
@@ -352,6 +353,8 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_SND_GLOBALDATAUPDATE:
                         {
+
+
                             if (SendGenericDBData(mPanelClientLog))
                             {
                                 mLogProc = CommandConstants.CMD_TASK_LIST;
@@ -403,6 +406,7 @@ namespace MaviSoftServerV1._0
             int TPos;
             try
             {
+
                 if (TClient.Available > 0)
                 {
                     TClient.GetStream().Read(RcvBuffer, 0, TSize);
@@ -410,9 +414,9 @@ namespace MaviSoftServerV1._0
                 }
                 else
                 {
+                    mLogProc = CommandConstants.CMD_PORT_CLOSE;
                     return false;
                 }
-
                 TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_ADD_GLOBALDATAUPDATE));
                 if (TPos > -1)
                 {
@@ -440,6 +444,8 @@ namespace MaviSoftServerV1._0
                 {
                     return false;
                 }
+
+
             }
             catch (Exception)
             {
@@ -452,7 +458,6 @@ namespace MaviSoftServerV1._0
         public bool ProcessReceivedData(int PanelNo, int PanelSerialNo, int DBIntParam3, CommandConstants TmpTaskType, ushort TmpTaskSoruce, bool TmpTaskUpdateTable, string TmpReturnStr)
         {
             StringBuilder TSndStr = new StringBuilder();
-            ushort TDataInt;
             object TLockObj = new object();
             string tDBSQLStr;
             SqlCommand tDBCmd;
@@ -461,11 +466,6 @@ namespace MaviSoftServerV1._0
             SqlDataReader tDBReader;
             int TRetInt;
             int TPos;
-            byte TByte1;
-            byte TByte2;
-            int TLong;
-            int SI;
-            int TInt;
 
             TPos = TmpReturnStr.IndexOf("%" + GetCommandPrefix((ushort)TmpTaskType));
             if (TPos < 0)
@@ -481,7 +481,6 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_RCV_LOGS:
                     {
 
-                        string TmpStr;
                         int TLocalBolgeNo = 1;
                         int TGlobalBolgeNo = 1;
                         int TMacSerial = 0;
@@ -496,9 +495,6 @@ namespace MaviSoftServerV1._0
                         long TUserKayitNo = 0;
                         long TVisitorKayitNo = 0;
                         DateTime TDate = new DateTime();
-                        int TK = 0;
-                        int TDCount = 0;
-                        int TDIX = 0;
                         string TmpName = "";
                         string TmpSurname = "";
                         string TmpTelefon = "";
@@ -893,6 +889,7 @@ namespace MaviSoftServerV1._0
                     }
                 case CommandConstants.CMD_ADD_GLOBALDATAUPDATE:
                     {
+                        SyncUpdateScreen("GLOBAL DATA", System.Drawing.Color.Green);
                         object obj = new object();
                         lock (obj)
                         {
@@ -965,9 +962,10 @@ namespace MaviSoftServerV1._0
         public bool SendGenericDBData(TcpClient TClient)
         {
             byte[] TSndBytes;
-            string SendStr = SndQueue.Dequeue().ToString();
             try
             {
+                string SendStr = SndQueue.Dequeue().ToString();
+
                 var netStream = TClient.GetStream();
                 if (netStream.CanWrite)
                 {
@@ -1033,7 +1031,6 @@ namespace MaviSoftServerV1._0
         {
             string tDBSQLStr;
             SqlCommand tDBCmd;
-            SqlDataReader tDBReader;
             object TLockObj = new object();
             lock (TLockObj)
             {
@@ -1045,30 +1042,6 @@ namespace MaviSoftServerV1._0
                     tDBCmd.ExecuteNonQuery();
                 }
             }
-        }
-
-        public bool CheckPanel(int PanelID, int Mac)
-        {
-            string ChekDBString = "";
-            object TLockObj = new object();
-            SqlCommand CheckDBCommand;
-            SqlDataReader CheckDBReader;
-            bool check = false;
-            lock (TLockObj)
-            {
-                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
-                {
-                    mDBConn.Open();
-                    ChekDBString = "SELECT * FROM PanelSettings WHERE [Seri No]=" + Mac;
-                    CheckDBCommand = new SqlCommand(ChekDBString, mDBConn);
-                    CheckDBReader = CheckDBCommand.ExecuteReader();
-                    if (CheckDBReader.Read())
-                    {
-                        check = true;
-                    }
-                }
-            }
-            return check;
         }
 
         public string ClearPreZeros(string CardID)
@@ -1117,6 +1090,10 @@ namespace MaviSoftServerV1._0
                     if (FindUserDBReader.Read())
                     {
                         FindUserCardID = FindUserDBReader["Kart ID"].ToString().Trim();
+                    }
+                    else
+                    {
+                        FindUserCardID = "0";
                     }
                 }
             }
@@ -1403,8 +1380,8 @@ namespace MaviSoftServerV1._0
         }
 
         //TODO:Ekrandaki Label Text'lerini Güncelleme
-        delegate void TextDegisDelegate(string TMsg);
-        public void SyncUpdateScreen(string TMsg)
+        delegate void TextDegisDelegate(string TMsg, System.Drawing.Color color);
+        public void SyncUpdateScreen(string TMsg, System.Drawing.Color color)
         {
             Thread.Sleep(20);
             object frmMainLock = new object();
@@ -1412,17 +1389,18 @@ namespace MaviSoftServerV1._0
             {
 
 
-                if (mParentForm.lblMsj[mMemIX].InvokeRequired == true)
+                if (mParentForm.lblMsjLog[mMemIX].InvokeRequired == true)
                 {
                     TextDegisDelegate del = new TextDegisDelegate(SyncUpdateScreen);
-                    mParentForm.Invoke(del, new object[] { TMsg });
+                    mParentForm.Invoke(del, new object[] { TMsg, color });
 
                 }
                 else
                 {
-                    if (TMsg != mParentForm.lblMsj[mMemIX].Text)
+                    if (TMsg != mParentForm.lblMsjLog[mMemIX].Text)
                     {
-                        mParentForm.lblMsj[mMemIX].Text = TMsg;
+                        mParentForm.lblMsjLog[mMemIX].Text = TMsg;
+                        mParentForm.lblMsjLog[mMemIX].BackColor = color;
 
                     }
 
@@ -1591,58 +1569,7 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
         //TODO:Kendi Yazdığım Kodlar*************************Kendi Yazdığım Kodlar**********************************
-
-        public string ConvertToTypeInt(int reader, string Type)
-        {
-            if (reader != -1)
-            {
-                return reader.ToString(Type);
-            }
-            else
-            {
-                return "";
-            }
-        }
-
-        public string ConvertToTypeDatetime(DateTime date, string Type)
-        {
-            if (date != null)
-            {
-                return date.Day.ToString(Type) + date.Month.ToString(Type) + date.Year.ToString(Type).Substring(2, 2);
-            }
-            return "";
-        }
-
-        public string ConvertToTypeTime(DateTime date, string Type)
-        {
-            if (date != null)
-            {
-                return date.Hour.ToString(Type) + date.Minute.ToString(Type);
-            }
-            return "";
-        }
-
-        public string ConvertToTypeTimeWithSecond(DateTime date, string Type)
-        {
-            if (date != null)
-            {
-                return date.Hour.ToString(Type) + date.Minute.ToString(Type) + date.Second.ToString(Type);
-            }
-            return "";
-        }
-
-        public bool IsNumeric(string str)
-        {
-            double myNum = 0;
-            if (double.TryParse(str, out myNum))
-            {
-                return true;
-            }
-            return false;
-        }
-
         public bool IsDate(string str)
         {
             try
@@ -1662,82 +1589,6 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        /***************************************************************************/
-
-        public bool ClearSocketBuffers(TcpClient TClient/*, TcpClient TClientLog*/)
-        {
-            byte[] DummyBuffer;
-            byte[] DummyBufferLog;
-            StringBuilder sBuilder = new StringBuilder();
-            //string TRcvData=null;
-            //string TRcvDataTr = null;
-            int TSize;
-            int TSizeLog;
-            try
-            {
-                if (TClient.Available > 0 /*&& TClientLog.Available > 0*/)
-                {
-                    var netStream = TClient.GetStream();
-                    //var netStreamLog = TClientLog.GetStream();
-                    if (netStream.CanRead/* && netStreamLog.CanRead*/)
-                    {
-                        TSize = TClient.Available;
-                        DummyBuffer = new byte[TSize];
-                        netStream.Read(DummyBuffer, 0, TSize);
-                        //TSizeLog = TClientLog.Available;
-                        //DummyBufferLog = new byte[TSizeLog];
-                        //netStreamLog.Read(DummyBufferLog, 0, TSizeLog);
-                    }
-                    else
-                    {
-                        return true;
-                    }
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            catch (Exception)
-            {
-
-                return false;
-            }
-
-        }
-
-        public bool TransferAnswer(ushort TRetCode)
-        {
-            byte[] TSndBytes;
-            object TLockObj = new object();
-
-            lock (TLockObj)
-            {
-                mSAnswer.Size = (int)SizeConstants.SIZE_ANSWER_DATA;
-                mSAnswer.RetCode = TRetCode;
-                mSAnswer.CmdNum = TaskList[mMemIX, TaskPIX[mMemIX]].CmdNum;
-                TSndBytes = new byte[mSAnswer.Size];
-                try
-                {
-                    var netStream = TaskList[mMemIX, TaskPIX[mMemIX]].SenderClient.GetStream();
-                    if (netStream.CanWrite)
-                    {
-                        netStream.Write(TSndBytes, 0, TSndBytes.Length);
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            }
-
-        }
 
 
 

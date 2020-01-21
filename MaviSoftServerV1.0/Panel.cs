@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
-using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data;
 namespace MaviSoftServerV1._0
 {
     public class Panel
@@ -22,8 +19,6 @@ namespace MaviSoftServerV1._0
         private static int[] TaskPIX = new int[(int)TCONST.MAX_PANEL];
 
         private S_TASKLIST[,] TaskList = new S_TASKLIST[(int)TCONST.MAX_PANEL, (int)TCONST.MAX_TASK_CNT];
-
-        private int mTestInt = 0;
 
         private int mTaskNo;
 
@@ -89,8 +84,6 @@ namespace MaviSoftServerV1._0
 
         private string mReturnStr;
 
-        private string mLogReturnStr;
-
         public FrmMain mParentForm { get; set; }
 
         public Label lblMesaj;
@@ -131,6 +124,8 @@ namespace MaviSoftServerV1._0
 
         private ushort mTimeOut { get; set; }
 
+        private ushort mTaskTimeOut { get; set; }
+
         private ushort mPortType { get; set; }
 
         private ushort mPanelAlarmIX { get; set; }
@@ -153,10 +148,6 @@ namespace MaviSoftServerV1._0
 
         public string TSndStr = "";
 
-
-        private bool pStop;
-
-
         public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, FrmMain parentForm)
         {
             mMemIX = MemIX;
@@ -168,6 +159,7 @@ namespace MaviSoftServerV1._0
             mPanelSerialNo = TMACAdress;
             mPanelNo = TPanelNo;
             mParentForm = parentForm;
+            mTaskTimeOut = 3;
             if (mTimeOut < 3 && mTimeOut > 60)
             {
                 mTimeOut = 3;
@@ -238,17 +230,17 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
 
-                            SyncUpdateScreen("IPTAL");
+                            SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
                         }
                         break;
 
                     case CommandConstants.CMD_PORT_INIT:
                         {
 
-                            SyncUpdateScreen("AYARLANIYOR");
+                            SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.Yellow);
                             mPanelClient = new TcpClient();
-                            mPanelClient.ReceiveBufferSize = 1024;
-                            mPanelClient.SendBufferSize = 1024;
+                            mPanelClient.ReceiveBufferSize = 65536;
+                            mPanelClient.SendBufferSize = 65536;
                             mPanelClient.ReceiveTimeout = mTimeOut;
                             mPanelClient.SendTimeout = mTimeOut;
 
@@ -263,7 +255,7 @@ namespace MaviSoftServerV1._0
                             }
                             catch (Exception)
                             {
-                                mPanelProc = CommandConstants.CMD_PORT_DISABLED;
+                                mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                             }
 
                         }
@@ -272,7 +264,7 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_CONNECT:
                         {
 
-                            SyncUpdateScreen("BAĞLANIYOR");
+                            SyncUpdateScreen("BAĞLANIYOR", System.Drawing.Color.Yellow);
 
                             mStartTime = DateTime.Now;
 
@@ -293,7 +285,7 @@ namespace MaviSoftServerV1._0
 
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
-                            SyncUpdateScreen("KAPATILIYOR");
+                            SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Red);
                             if (mPanelClient.Connected == true)
                             {
                                 mPanelClient.Close();
@@ -307,7 +299,7 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_TEST:
                         {
                             //Port Test (Read RTC Command)
-                            SyncUpdateScreen("PORT TEST");//, Color.Yellow)
+                            SyncUpdateScreen("PORT TEST", System.Drawing.Color.RoyalBlue);//, Color.Yellow)
 
                             mTransferCompleted = true;
                             mReadStep = 0;
@@ -337,7 +329,7 @@ namespace MaviSoftServerV1._0
                                     if (mStartTime >= mEndTime)
                                     {
                                         //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI");//, Color.LightPink)
+                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
                                         mRetryCnt++;
                                     }
                                     else
@@ -362,34 +354,16 @@ namespace MaviSoftServerV1._0
 
                     case CommandConstants.CMD_TASK_LIST:
                         {
-                            if (pStop == true)
-                            {
-                                Thread.Sleep(500);
-                                break;
-                            }
                             if (mPanelClient.Connected == false)
                             {
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
 
-                            //ClearSocketBuffers(mPanelClient);
-
-                            //if ( mTestInt==100)
-                            //{
-                            //    SyncUpdateScreen("GELDİ");
-                            //    Thread.Sleep(250);
-                            //}
-                            //else
-                            //{
-                            //    SyncUpdateScreen("HAZIR");
-                            //    Thread.Sleep(250);
-
-                            //}
-
                             ClearSocketBuffers(mPanelClient);
-                            SyncUpdateScreen("HAZIR");
+                            SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
                             Thread.Sleep(250);
+
                             mTaskSource = mTempTaskSource;
                             mTaskNo = mTempTaskNo;
                             mTaskType = mTempTaskType;
@@ -399,9 +373,9 @@ namespace MaviSoftServerV1._0
                             mTaskIntParam4 = mTempTaskIntParam4;
                             mTaskIntParam5 = mTempTaskIntParam5;
                             mTaskStrParam1 = mTempTaskStrParam1;
+                            mTaskStrParam2 = mTempTaskStrParam2;
                             mTaskUserName = mTempTaskUserName;
                             mTaskUpdateTable = mTempTaskUpdateTable;
-                            //mTaskSource = SyncGetNewTask();
                             if (mTaskSource == IP_TASK)
                             {
                                 TProc = TaskList[mMemIX, TaskPIX[mMemIX]].CmdID;
@@ -456,7 +430,7 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType));
+                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
                             mTransferCompleted = true;
                             mReadStep = 0;
                             while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
@@ -472,7 +446,7 @@ namespace MaviSoftServerV1._0
                                     //ReciveGenericDBData(mPanelClient, mTaskIntParam1, 0, 0, (CommandConstants)mTaskType);
                                     SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
                                     mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTimeOut);
+                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
                                     do
                                     {
                                         Thread.Sleep(20);
@@ -485,7 +459,7 @@ namespace MaviSoftServerV1._0
                                     if (mStartTime >= mEndTime)
                                     {
                                         //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI");//, Color.LightPink)
+                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
                                         mRetryCnt++;
                                     }
                                     else
@@ -582,7 +556,7 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType));
+                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
                             mTransferCompleted = true;
                             mReadStep = 0;
                             while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
@@ -598,7 +572,7 @@ namespace MaviSoftServerV1._0
                                     SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
 
                                     mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTimeOut);
+                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
                                     do
                                     {
                                         Thread.Sleep(20);
@@ -611,7 +585,7 @@ namespace MaviSoftServerV1._0
                                     if (mStartTime >= mEndTime)
                                     {
                                         //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI");//, Color.LightPink)
+                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
                                         mRetryCnt++;
                                     }
                                     else
@@ -623,7 +597,7 @@ namespace MaviSoftServerV1._0
                                         else
                                         {
                                             mTransferCompleted = true;
-
+                                            mTaskTimeOut = 3;
                                         }
                                     }
                                 }
@@ -674,7 +648,7 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-                            SyncUpdateScreen("SAAT OKUMA");
+                            SyncUpdateScreen("SAAT OKUMA", System.Drawing.Color.Aquamarine);
                             Thread.Sleep(250);
 
                             mTransferCompleted = true;
@@ -692,7 +666,7 @@ namespace MaviSoftServerV1._0
                                     //SendIPTaskCommand(mPanelClient, 0, 0, 0, (ushort)mTaskType);
 
                                     mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTimeOut);
+                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
                                     do
                                     {
                                         Thread.Sleep(20);
@@ -705,14 +679,14 @@ namespace MaviSoftServerV1._0
                                     if (mStartTime >= mEndTime)
                                     {
                                         //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI");//, Color.LightPink)
+                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
                                         mRetryCnt++;
                                     }
                                     else
                                     {
                                         if (ReceiveIPTaskCommand(mPanelClient, ref mReturnStr, (ushort)mTaskType))
                                         {
-                                            SyncUpdateScreen(mReturnStr);
+                                            SyncUpdateScreen(mReturnStr, System.Drawing.Color.RoyalBlue);
                                             Thread.Sleep(1000);
                                             break;
                                         }
@@ -758,6 +732,7 @@ namespace MaviSoftServerV1._0
                     default:
                         {
                             mPanelProc = CommandConstants.CMD_PORT_DISABLED;
+                            mTaskTimeOut = 3;
                             break;
                         }
 
@@ -766,88 +741,6 @@ namespace MaviSoftServerV1._0
 
             }
 
-        }
-
-
-
-
-        //TODO:Görev Listesinden Durumu Yeni Olan Görevleri Alıyor
-        public ushort SyncGetNewTask()
-        {
-            object TLockObj = new object();
-            ushort TTaskOk = 0;
-
-
-            lock (TLockObj)
-            {
-                for (int i = 0; i < (int)TCONST.MAX_TASK_CNT; i++)
-                {
-                    if (TaskPIX[mMemIX] < (int)TCONST.MAX_TASK_CNT - 1)
-                    {
-                        TaskPIX[mMemIX] += 1;
-                    }
-                    else
-                    {
-                        TaskPIX[mMemIX] = 0;
-                    }
-                    if (TaskList[mMemIX, TaskPIX[mMemIX]].CmdID != 0)
-                    {
-                        break;
-                    }
-                }
-
-                if (TaskList[mMemIX, TaskPIX[mMemIX]].CmdID > 0)
-                {
-                    return IP_TASK;
-                }
-            }
-
-            lock (TLockObj)
-            {
-                //DB TASK
-                if (mDBConn.State != ConnectionState.Open)
-                    mDBConn.Open();
-
-                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
-                {
-                    mDBConn.Open();
-                    mDBSQLStr = "Select * from TaskList where [Panel No]=" + mPanelNo + " AND [Durum Kodu]=" + 1 + " Order By [Kayit No]";
-                    mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
-                    mDBReader = mDBCmd.ExecuteReader();
-
-                    while (mDBReader.Read())
-                    {
-                        if ((mDBReader["Kayit No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) >= 0)
-                        {
-                            TTaskOk = 1;
-                            break;
-                        }
-                    }
-
-                    if (TTaskOk > 0)
-                    {
-                        mTaskNo = (int)mDBReader["Kayit No"];
-                        mTaskType = (int)mDBReader["Gorev Kodu"];
-                        mTaskIntParam1 = mDBReader["IntParam 1"] as int? ?? default(int);
-                        mTaskIntParam2 = mDBReader["IntParam 2"] as int? ?? default(int);
-                        mTaskIntParam3 = mDBReader["IntParam 3"] as int? ?? default(int);
-                        mTaskIntParam4 = mDBReader["IntParam 4"] as int? ?? default(int);
-                        mTaskIntParam5 = mDBReader["IntParam 5"] as int? ?? default(int);
-                        mTaskStrParam1 = mDBReader["StrParam 1"].ToString();
-                        //mTaskStrParam2 = mDBReader["StrParam 2"].ToString();
-                        mTaskUserName = mDBReader["Kullanici Adi"].ToString();
-                        mTaskUpdateTable = (bool)mDBReader["Tablo Guncelle"];
-                        return DB_TASK;
-                    }
-                    else
-                    {
-                        mTaskNo = 0;
-                        mTaskType = 0;
-                        return NO_TASK;
-
-                    }
-                }
-            }
         }
 
         //TODO:Veritabanından Gelen Görevi Panele Gönderme
@@ -901,6 +794,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 3;
             }
             /*3*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_GENERALSETTINGS)
@@ -1205,7 +1099,7 @@ namespace MaviSoftServerV1._0
                                 }
                             }
                             TSndStr.Append("**\r");
-                            mTimeOut = 5;
+                            mTaskTimeOut = 5;
 
                         }
                         else
@@ -1636,6 +1530,7 @@ namespace MaviSoftServerV1._0
                             //Multiple Hour Access - Additional Time
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Ek Saat"] as int? ?? default(int), "D1"));
                             TSndStr.Append("**\r");
+                            mTaskTimeOut = 3;
                         }
                         else
                         {
@@ -1653,7 +1548,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTimeOut = 5;
+                mTaskTimeOut = 5;
             }
             /*5*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_TIMEGROUP)
@@ -1663,6 +1558,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("***\r");
+                mTaskTimeOut = 5;
             }
             /*6*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_ACCESSGROUP)
@@ -1817,10 +1713,8 @@ namespace MaviSoftServerV1._0
 
                                 }
                             }
-
-
-
                             TSndStr.Append("**\r");
+                            mTaskTimeOut = 5;
                         }
                         else
                         {
@@ -1838,6 +1732,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("***\r");
+                mTaskTimeOut = 3;
             }
             /*Geçiş Gruplarının Silinmesi*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP)
@@ -1846,7 +1741,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTimeOut = 5;
+                mTaskTimeOut = 5;
             }
             /*8-9*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_USER || DBTaskType == (ushort)CommandConstants.CMD_SNDALL_USER)
@@ -1942,7 +1837,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("00");
                             TSndStr.Append("**\r");
-
+                            mTaskTimeOut = 5;
                         }
                         else
                         {
@@ -1960,6 +1855,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*12*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_GROUPCALENDAR || DBTaskType == (ushort)CommandConstants.CMD_SNDALL_GROUPCALENDAR)
@@ -2000,6 +1896,7 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 2"] as int? ?? default(int), "D4"));
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 3"] as int? ?? default(int), "D4"));
                             TSndStr.Append("**\r");
+                            mTaskTimeOut = 5;
                         }
                         else
                         {
@@ -2017,6 +1914,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*14*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_USER)
@@ -2025,7 +1923,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTimeOut = 30;
+                mTaskTimeOut = 30;
             }
             /*15*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOGCOUNT)
@@ -2034,6 +1932,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*17*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_LOGCOUNT)
@@ -2042,6 +1941,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*18*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_MAXINCOUNTERS)
@@ -2051,6 +1951,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*19*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_ACCESSCOUNTERS)
@@ -2060,6 +1961,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*20*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_ACCESSCOUNTERS)
@@ -2068,6 +1970,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*21*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_ACCESSCOUNTERS)
@@ -2077,6 +1980,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*22*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP)
@@ -2085,6 +1989,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*23*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_ACCESSGROUP)
@@ -2094,6 +1999,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 10;
             }
             /*24*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_APBCOUNTERS)
@@ -2102,6 +2008,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*25*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_APBCOUNTERS)
@@ -2111,6 +2018,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
 
             }
             /*26*/
@@ -2127,6 +2035,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(tDate.Second.ToString("D2"));
                 TSndStr.Append(((int)tDate.DayOfWeek).ToString("D2"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*27*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_RTC)
@@ -2135,6 +2044,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*31*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_RELAYPROGRAM)
@@ -2187,11 +2097,8 @@ namespace MaviSoftServerV1._0
                                     TSndStr.Append("0");
                                 }
                             }
-
-
-
                             TSndStr.Append("**\r");
-
+                            mTaskTimeOut = 5;
                         }
                         else
                         {
@@ -2210,6 +2117,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(DBIntParam1.ToString("D2"));
                 TSndStr.Append(DBIntParam2.ToString("D2"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 3;
             }
             /*35*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOCALCAPACITYCOUNTERS)
@@ -2219,6 +2127,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D2"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*36*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LOCALCAPACITYCOUNTERS)
@@ -2229,6 +2138,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(DBIntParam1.ToString("D2"));
                 TSndStr.Append(DBIntParam2.ToString("D5"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*37*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_MAXUSERID)
@@ -2238,6 +2148,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*38*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LOGSETTINGS)
@@ -2307,7 +2218,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("0");
                             }
                             TSndStr.Append("**\r");
-
+                            mTaskTimeOut = 5;
                         }
                         else
                         {
@@ -2325,6 +2236,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*40*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LIFTGROUP)
@@ -2365,6 +2277,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("0000000000000000");
                             TSndStr.Append("**\r");
+                            mTaskTimeOut = 5;
                         }
                     }
                 }
@@ -2377,6 +2290,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*42*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_LIFTGROUP || DBTaskType == (ushort)CommandConstants.CMD_ERSALL_LIFTGROUP)
@@ -2385,6 +2299,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*43*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_USERALARM)
@@ -2468,6 +2383,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("000001");
                             }
                             TSndStr.Append("**\r");
+                            mTaskTimeOut = 5;
                         }
                     }
                 }
@@ -2481,7 +2397,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
-
+                mTaskTimeOut = 5;
             }
             /*45*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_USERALARM || DBTaskType == (ushort)CommandConstants.CMD_ERSALL_USERALARM)
@@ -2490,6 +2406,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*46*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_ALARMFIRE_STATUS)
@@ -2498,6 +2415,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*47*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_DOORALARM_STATUS)
@@ -2506,6 +2424,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("****\r");
+                mTaskTimeOut = 5;
             }
             /*49*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LOCALINTERLOCK)
@@ -2590,6 +2509,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("00");
                             }
                             TSndStr.Append("**\r");
+                            mTaskTimeOut = 5;
                         }
                     }
                 }
@@ -2601,6 +2521,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*DOOR TRIGGER*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORTRIGGER)
@@ -2610,6 +2531,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*DOOR OPEN*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCEOPEN)
@@ -2619,6 +2541,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*DOOR CLOSE*/
             //TODO: Gelen veri FC olması gerekirken FO geliyor
@@ -2629,6 +2552,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
             /*DOOR FREE*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFREE)
@@ -2638,6 +2562,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
+                mTaskTimeOut = 5;
             }
 
             return TSndStr.ToString();
@@ -2780,42 +2705,6 @@ namespace MaviSoftServerV1._0
             }
 
         }
-
-        public bool ReveiveLogData(TcpClient TClient, ref string TReturnLogStr, CommandConstants TmpLogTaskType)
-        {
-            int TSize = GetAnswerSize(TmpLogTaskType);
-            byte[] RcvBuffer = new byte[TSize];
-            string TRcvData = null;
-            int TPos;
-            try
-            {
-                if (TClient.Available > 0)
-                {
-                    TClient.GetStream().Read(RcvBuffer, 0, TSize);
-                    TRcvData = Encoding.UTF8.GetString(RcvBuffer);
-                }
-                else
-                {
-                    return false;
-                }
-                TPos = TRcvData.IndexOf("$" + GetCommandPrefix((ushort)TmpLogTaskType));
-                if (TPos > -1)
-                {
-                    TReturnLogStr = TRcvData;
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
-
         //TODO:Değişkendeki dönen verinin veritabanına kayıt işlemlerini gerçekleştiriyor
         public bool ProcessReceivedData(int DBIntParam1, int DBIntParam2, int DBIntParam3, CommandConstants TmpTaskType, ushort TmpTaskSoruce, bool TmpTaskUpdateTable, string TmpReturnStr)
         {
@@ -4796,8 +4685,8 @@ namespace MaviSoftServerV1._0
         }
 
         //TODO:Ekrandaki Label Text'lerini Güncelleme
-        delegate void TextDegisDelegate(string TMsg);
-        public void SyncUpdateScreen(string TMsg)
+        delegate void TextDegisDelegate(string TMsg, System.Drawing.Color color);
+        public void SyncUpdateScreen(string TMsg, System.Drawing.Color color)
         {
             Thread.Sleep(20);
             object frmMainLock = new object();
@@ -4808,7 +4697,7 @@ namespace MaviSoftServerV1._0
                 if (mParentForm.lblMsj[mMemIX].InvokeRequired == true)
                 {
                     TextDegisDelegate del = new TextDegisDelegate(SyncUpdateScreen);
-                    mParentForm.Invoke(del, new object[] { TMsg });
+                    mParentForm.Invoke(del, new object[] { TMsg, color });
 
                 }
                 else
@@ -4816,7 +4705,7 @@ namespace MaviSoftServerV1._0
                     if (TMsg != mParentForm.lblMsj[mMemIX].Text)
                     {
                         mParentForm.lblMsj[mMemIX].Text = TMsg;
-
+                        mParentForm.lblMsj[mMemIX].BackColor = color;
                     }
 
                 }
