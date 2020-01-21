@@ -65,6 +65,10 @@ namespace MaviSoftServerV1._0
 
         public DateTime mMailSendTime { get; set; }
 
+        private DateTime mTaskListStartTime { get; set; }
+
+        private DateTime mTaskListEndTime { get; set; }
+
         public SqlConnection mDBConn { get; set; }
 
         public string mDBSQLStr { get; set; }
@@ -92,6 +96,8 @@ namespace MaviSoftServerV1._0
             mPanelsList = panels;
             mLogPanelList = logPanels;
             mParentForm = frmMain;
+            mTaskListStartTime = DateTime.Now;
+            mTaskListEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 3, 0, 0, 0);
         }
 
 
@@ -147,6 +153,14 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_SND_MAIL;
                                 break;
                             }
+                            mTaskListStartTime = DateTime.Now;
+                            if (mTaskListStartTime.ToShortTimeString() == mTaskListEndTime.ToShortTimeString())
+                            {
+                                ClearTaskList();
+                                mTaskListEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 3, 0, 0, 0);
+                            }
+
+
                         }
                         break;
                     case CommandConstants.CMD_SND_MAIL:
@@ -447,7 +461,31 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
+        private bool ClearTaskList()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            object TLockObj = new object();
+            int TRetInt = 0;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "DELETE FROM TaskList WHERE TaskList.Tarih <= '" + mTaskListEndTime.ToString("yyyy-MM-dd HH:mm:ss") + "'";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    TRetInt = tDBCmd.ExecuteNonQuery();
+                    if (TRetInt < 0)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
 
     }
 }
