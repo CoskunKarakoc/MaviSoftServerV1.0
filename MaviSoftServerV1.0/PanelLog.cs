@@ -29,53 +29,11 @@ namespace MaviSoftServerV1._0
 
         public S_TASKLIST[,] TaskList = new S_TASKLIST[(int)TCONST.MAX_PANEL, (int)TCONST.MAX_TASK_CNT];
 
-        private int mTaskNo;
-
         private int mTaskType;
-
-        private int mTaskIntParam1;
-
-        private int mLogTaskIntParam1;
-
-        private int mTaskIntParam2;
-
-        private int mLogTaskIntParam2;
-
-        private int mTaskIntParam3;
-
-        private int mLogTaskIntParam3;
-
-        private int mTaskIntParam4;
-
-        private int mLogTaskIntParam4;
-
-        private int mTaskIntParam5;
-
-        private int mLogTaskIntParam5;
-
-        private string mTaskStrParam1;
-
-        private string mLogTaskStrParam1;
-
-        private string mTaskStrParam2;
-
-        private string mLogTaskStrParam2;
-
-        private string mTaskUserName;
-
-        private string mLogTaskUserName;
-
-        private bool mTaskUpdateTable;
 
         private bool mLogTaskUpdateTable;
 
-        private ushort mTaskSource;
-
         private ushort mLogTaskSource;
-
-        private S_ANSWER mSAnswer;
-
-        public bool mTransferCompleted { get; set; }
 
         public bool mLogTransferCompleted { get; set; }
 
@@ -330,16 +288,8 @@ namespace MaviSoftServerV1._0
                                 mReceiveTimeStart = DateTime.Now;
                                 if (mReceiveTimeStart > mReceiveTimeEnd)
                                 {
-                                    // Debug.WriteLine("Durdu" + mPanelNo.ToString());
-                                    //if (mPanelNo == 15)
-                                    //{
-                                    //    Debug.WriteLine("Durdu");
-
-                                    //}
-
                                     mLogProc = CommandConstants.CMD_PORT_CLOSE;
                                     break;
-
                                 }
                                 mStartTime = DateTime.Now;
                                 //if (CheckSize(mPanelClientLog, (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS)))
@@ -350,7 +300,7 @@ namespace MaviSoftServerV1._0
                                     mEndTime = mStartTime.AddSeconds(mTimeOut);
                                     if (ReveiveLogData(mPanelClientLog, ref mLogReturnStr))
                                     {
-                                        if (ProcessReceivedData(mPanelNo, mPanelSerialNo, mLogTaskIntParam3, (CommandConstants)mTaskType, mLogTaskSource, mLogTaskUpdateTable, mLogReturnStr))
+                                        if (ProcessReceivedData(mPanelNo, mPanelSerialNo, (CommandConstants)mTaskType, mLogTaskSource, mLogTaskUpdateTable, mLogReturnStr))
                                         {
                                             mLogTransferCompleted = true;
                                         }
@@ -421,7 +371,7 @@ namespace MaviSoftServerV1._0
         }
 
 
-        public bool ReveiveLogData(TcpClient TClient, ref string TReturnLogStr/*, CommandConstants TmpLogTaskType*/)
+        public bool ReveiveLogData(TcpClient TClient, ref string TReturnLogStr)
         {
             int TSize = GetAnswerSize(CommandConstants.CMD_RCV_LOGS);
             byte[] RcvBuffer = new byte[TSize];
@@ -476,10 +426,9 @@ namespace MaviSoftServerV1._0
 
 
         //TODO:Değişkendeki dönen verinin veritabanına kayıt işlemlerini gerçekleştiriyor
-        public bool ProcessReceivedData(int PanelNo, int PanelSerialNo, int DBIntParam3, CommandConstants TmpTaskType, ushort TmpTaskSoruce, bool TmpTaskUpdateTable, string TmpReturnStr)
+        public bool ProcessReceivedData(int PanelNo, int PanelSerialNo, CommandConstants TmpTaskType, ushort TmpTaskSoruce, bool TmpTaskUpdateTable, string TmpReturnStr)
         {
             StringBuilder TSndStr = new StringBuilder();
-            ushort TDataInt;
             object TLockObj = new object();
             string tDBSQLStr;
             SqlCommand tDBCmd;
@@ -1057,7 +1006,6 @@ namespace MaviSoftServerV1._0
         {
             string tDBSQLStr;
             SqlCommand tDBCmd;
-            SqlDataReader tDBReader;
             object TLockObj = new object();
             lock (TLockObj)
             {
@@ -1148,9 +1096,6 @@ namespace MaviSoftServerV1._0
                     }
                 }
             }
-
-
-
             return FindUserCardID;
         }
 
@@ -1620,19 +1565,6 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
-        //TODO:Kendi Yazdığım Kodlar*************************Kendi Yazdığım Kodlar**********************************
-
-     
-
-      
-
-       
-
-      
-
-       
-
         public bool IsDate(string str)
         {
             try
@@ -1651,16 +1583,6 @@ namespace MaviSoftServerV1._0
                 return false;
             }
         }
-       
-
-
-
-
-
-
-
-
-
 
     }
 }

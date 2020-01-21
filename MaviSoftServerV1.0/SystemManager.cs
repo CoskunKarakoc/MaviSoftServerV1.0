@@ -245,7 +245,7 @@ namespace MaviSoftServerV1._0
                     }
                 }
             }
-            catch (Exception )
+            catch (Exception)
             {
                 result = false;
             }
