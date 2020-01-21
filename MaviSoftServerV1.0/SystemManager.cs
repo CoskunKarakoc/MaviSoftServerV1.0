@@ -38,6 +38,9 @@ namespace MaviSoftServerV1._0
 
         private string mTaskStrParam2;
 
+        private string mTaskStrParam3;
+
+
         private string mTaskUserName;
 
         private bool mTaskUpdateTable;
@@ -242,7 +245,7 @@ namespace MaviSoftServerV1._0
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception )
             {
                 result = false;
             }
@@ -406,7 +409,8 @@ namespace MaviSoftServerV1._0
                         mTaskIntParam4 = mDBReader["IntParam 4"] as int? ?? default(int);
                         mTaskIntParam5 = mDBReader["IntParam 5"] as int? ?? default(int);
                         mTaskStrParam1 = mDBReader["StrParam 1"].ToString();
-                        //mTaskStrParam2 = mDBReader["StrParam 2"].ToString();
+                        mTaskStrParam2 = mDBReader["StrParam 2"].ToString();
+                        mTaskStrParam3 = mDBReader["StrParam 3"].ToString();
                         mTaskUserName = mDBReader["Kullanici Adi"].ToString();
                         mTaskUpdateTable = (bool)mDBReader["Tablo Guncelle"];
                         foreach (var panel in mPanelsList)

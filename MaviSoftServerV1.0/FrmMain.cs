@@ -19,6 +19,13 @@ namespace MaviSoftServerV1._0
 
         public List<PanelLog> AktifPanelLogListesi;
 
+
+        public string SQLStr { get; set; }
+
+        public SqlCommand Comnd { get; set; }
+
+        public SqlDataReader MReader { get; set; }
+
         public FrmMain()
         {
             InitializeComponent();
@@ -27,11 +34,6 @@ namespace MaviSoftServerV1._0
         }
 
 
-        public string SQLStr { get; set; }
-
-        public SqlCommand Comnd { get; set; }
-
-        public SqlDataReader MReader { get; set; }
 
 
         public struct S_PORTS
@@ -48,6 +50,8 @@ namespace MaviSoftServerV1._0
         public Label[] lblIP = new Label[201];
 
         public Label[] lblMsj = new Label[201];
+
+        public Label[] lblMsjLog = new Label[201];
 
         public Label lbl;
 
@@ -77,9 +81,9 @@ namespace MaviSoftServerV1._0
                 lblIP[i] = new Label();
                 lblIP[i].AutoSize = false;
                 lblIP[i].BorderStyle = BorderStyle.FixedSingle;
-                lblIP[i].Location = new Point((10 + (TTC * 385)), (18 + (TLC * 15)));
-                lblIP[i].Size = new Size(165, 16);
-                lblIP[i].Font = new Font("Arial Narrow TUR", 7.0F);
+                lblIP[i].Location = new Point((10 + (TTC * 381)), (18 + (TLC * 15)));
+                lblIP[i].Size = new Size(165, 16); lblIP[i].Size = new Size(140, 16);
+                lblIP[i].Font = new Font("Arial Narrow TUR", 7.0F); lblIP[i].Font = new Font("Arial TUR", 7.0F);
                 lblIP[i].Text = "";// "Mesaj";
                 lblIP[i].TextAlign = ContentAlignment.MiddleCenter;
                 lblIP[i].Visible = true;
@@ -89,13 +93,27 @@ namespace MaviSoftServerV1._0
                 lblMsj[i] = new Label();
                 lblMsj[i].AutoSize = false;
                 lblMsj[i].BorderStyle = BorderStyle.FixedSingle;
-                lblMsj[i].Location = new Point((174 + (TTC * 385)), (18 + (TLC * 15)));
-                lblMsj[i].Size = new Size(165, 16);
-                lblMsj[i].Font = new Font("Arial Narrow TUR", 7.0F);
+                lblMsj[i].Location = new Point((149 + (TTC * 381)), (18 + (TLC * 15)));
+                lblMsj[i].Size = new Size(165, 16); lblMsj[i].Size = new Size(110, 16);
+                lblMsj[i].Font = new Font("Arial Narrow TUR", 7.0F); lblMsj[i].Font = new Font("Arial TUR", 7.0F);
                 lblMsj[i].Text = "";// "Mesaj";
                 lblMsj[i].TextAlign = ContentAlignment.MiddleCenter;
                 lblMsj[i].Visible = true;
                 Controls.Add(lblMsj[i]);
+
+
+                // MESSAGES LOG
+                lblMsjLog[i] = new Label();
+                lblMsjLog[i].AutoSize = false;
+                lblMsjLog[i].BorderStyle = BorderStyle.FixedSingle;
+                lblMsjLog[i].Location = new Point((258 + (TTC * 381)), (18 + (TLC * 15)));
+                lblMsjLog[i].Size = new Size(110, 16);
+                lblMsjLog[i].Font = new Font("Arial TUR", 7.0F);
+                lblMsjLog[i].Text = "";// "Mesaj";
+                lblMsjLog[i].TextAlign = ContentAlignment.MiddleCenter;
+                lblMsjLog[i].Visible = true;
+                Controls.Add(lblMsjLog[i]);
+
             }
 
             //MConn.ConnectionString = SqlServerAdress.GetAdress();
@@ -126,7 +144,7 @@ namespace MaviSoftServerV1._0
                                 SPorts[i].ConnTimeout = 3;
                                 SPorts[i].SndRcvTimeout = 3;
 
-                                lblIP[i].Text = SPorts[i].PanelNo.ToString() + " :: " + SPorts[i].IPAdress;
+                                lblIP[i].Text = SPorts[i].PanelNo.ToString() + ">" + SPorts[i].MACAddress.ToString("X4") + ">" + SPorts[i].IPAdress;
                             }
                             else
                             {
