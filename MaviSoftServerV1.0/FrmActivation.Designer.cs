@@ -39,6 +39,7 @@
             this.btnKapat = new System.Windows.Forms.Button();
             this.label3 = new System.Windows.Forms.Label();
             this.chkBoxActivation = new System.Windows.Forms.CheckBox();
+            this.lblActivationStatus = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // txtActivationKey
@@ -51,11 +52,13 @@
             // 
             // txtActivationCode
             // 
+            this.txtActivationCode.Enabled = false;
             this.txtActivationCode.Location = new System.Drawing.Point(12, 94);
             this.txtActivationCode.Multiline = true;
             this.txtActivationCode.Name = "txtActivationCode";
             this.txtActivationCode.Size = new System.Drawing.Size(328, 21);
             this.txtActivationCode.TabIndex = 1;
+            this.txtActivationCode.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
             // label1
             // 
@@ -86,6 +89,7 @@
             this.btnYenile.TabIndex = 4;
             this.btnYenile.Text = "Yenile";
             this.btnYenile.UseVisualStyleBackColor = true;
+            this.btnYenile.Click += new System.EventHandler(this.btnYenile_Click);
             // 
             // btnKontrol
             // 
@@ -95,10 +99,11 @@
             this.btnKontrol.TabIndex = 5;
             this.btnKontrol.Text = "Kontrol";
             this.btnKontrol.UseVisualStyleBackColor = true;
+            this.btnKontrol.Click += new System.EventHandler(this.btnKontrol_Click);
             // 
             // btnKaydet
             // 
-            this.btnKaydet.Location = new System.Drawing.Point(11, 160);
+            this.btnKaydet.Location = new System.Drawing.Point(11, 178);
             this.btnKaydet.Name = "btnKaydet";
             this.btnKaydet.Size = new System.Drawing.Size(197, 31);
             this.btnKaydet.TabIndex = 6;
@@ -108,7 +113,7 @@
             // 
             // btnKapat
             // 
-            this.btnKapat.Location = new System.Drawing.Point(223, 160);
+            this.btnKapat.Location = new System.Drawing.Point(223, 178);
             this.btnKapat.Name = "btnKapat";
             this.btnKapat.Size = new System.Drawing.Size(198, 31);
             this.btnKapat.TabIndex = 7;
@@ -133,12 +138,24 @@
             this.chkBoxActivation.Size = new System.Drawing.Size(15, 14);
             this.chkBoxActivation.TabIndex = 9;
             this.chkBoxActivation.UseVisualStyleBackColor = true;
+            this.chkBoxActivation.CheckedChanged += new System.EventHandler(this.chkBoxActivation_CheckedChanged);
+            // 
+            // lblActivationStatus
+            // 
+            this.lblActivationStatus.AutoSize = true;
+            this.lblActivationStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.lblActivationStatus.Location = new System.Drawing.Point(24, 144);
+            this.lblActivationStatus.Name = "lblActivationStatus";
+            this.lblActivationStatus.Size = new System.Drawing.Size(0, 17);
+            this.lblActivationStatus.TabIndex = 10;
+            this.lblActivationStatus.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // FrmActivation
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(429, 203);
+            this.ClientSize = new System.Drawing.Size(432, 221);
+            this.Controls.Add(this.lblActivationStatus);
             this.Controls.Add(this.chkBoxActivation);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.btnKapat);
@@ -155,6 +172,7 @@
             this.Name = "FrmActivation";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Ürün Etkinleştirme";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmActivation_FormClosing);
             this.Load += new System.EventHandler(this.FrmActivation_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -173,5 +191,6 @@
         private System.Windows.Forms.Button btnKapat;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.CheckBox chkBoxActivation;
+        private System.Windows.Forms.Label lblActivationStatus;
     }
 }

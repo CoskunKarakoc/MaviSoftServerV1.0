@@ -123,8 +123,9 @@ namespace MaviSoftServerV1._0
             return appSettings.Settings[key].Value;
         }
 
-
-
-
+        private void FrmGiris_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Application.Exit();
+        }
     }
 }

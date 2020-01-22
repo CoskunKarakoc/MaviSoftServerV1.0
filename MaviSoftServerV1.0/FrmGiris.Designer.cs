@@ -190,6 +190,7 @@
             this.Name = "FrmGiris";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Sisteme Giriş";
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FrmGiris_FormClosed);
             this.Load += new System.EventHandler(this.FrmGiris_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
