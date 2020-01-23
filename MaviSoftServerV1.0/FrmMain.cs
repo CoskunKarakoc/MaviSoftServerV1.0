@@ -200,9 +200,8 @@ namespace MaviSoftServerV1._0
             {
                 logPanel.StopPanel();
             }
-            Application.Exit();
         }
 
-       
+
     }
 }
