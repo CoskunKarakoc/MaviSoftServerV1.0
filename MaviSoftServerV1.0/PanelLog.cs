@@ -150,6 +150,8 @@ namespace MaviSoftServerV1._0
             {
                 mTimeOut = 3;
             }
+
+
         }
 
 
@@ -166,6 +168,8 @@ namespace MaviSoftServerV1._0
                 LogThread.Priority = ThreadPriority.AboveNormal;
                 LogThread.IsBackground = true;
                 LogThread.Start();
+                ReaderBind();
+                DoorStatusStr = "%CMS" + mPanelSerialNo.ToString() + "" + mPanelNo.ToString("D3") + "00000000000000000000000000000000000000000000000000000000000515000**";
                 return true;
             }
             catch (Exception)
@@ -212,7 +216,7 @@ namespace MaviSoftServerV1._0
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
                                 mMailRetryCount++;
                             }
-                            PanelDoorStatusDelete();
+
                             mLogProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
@@ -265,7 +269,7 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
                             SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
-                            PanelDoorStatusDelete();
+
                             if (mPanelClientLog.Connected == true)
                             {
                                 mPanelClientLog.Close();
@@ -347,7 +351,13 @@ namespace MaviSoftServerV1._0
 
 
 
-        //TODO:Beklenen Boyutla Gelen Boyutu Kıyaslama Yapıyor
+      
+        /// <summary>
+        /// Boyut kontrolü
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <param name="TWaitSize"></param>
+        /// <returns></returns>
         public bool CheckSize(TcpClient TClient, int TWaitSize)
         {
             try
@@ -371,6 +381,13 @@ namespace MaviSoftServerV1._0
         }
 
 
+
+        /// <summary>
+        /// Panel'den veri alma ve gelen verinin prefixine göre görev atama 
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <param name="TReturnLogStr">Panel'den dönen verinin dışarı gönderilmesi</param>
+        /// <returns></returns>
         public bool ReveiveLogData(TcpClient TClient, ref string TReturnLogStr)
         {
             int TSize = GetAnswerSize(CommandConstants.CMD_RCV_LOGS);
@@ -425,7 +442,17 @@ namespace MaviSoftServerV1._0
         }
 
 
-        //TODO:Değişkendeki dönen verinin veritabanına kayıt işlemlerini gerçekleştiriyor
+
+        /// <summary>
+        /// Değişkendeki dönen verinin veritabanına kayıt işlemlerini gerçekleştiriyor
+        /// </summary>
+        /// <param name="PanelNo"></param>
+        /// <param name="PanelSerialNo"></param>
+        /// <param name="TmpTaskType"></param>
+        /// <param name="TmpTaskSoruce"></param>
+        /// <param name="TmpTaskUpdateTable"></param>
+        /// <param name="TmpReturnStr"></param>
+        /// <returns></returns>
         public bool ProcessReceivedData(int PanelNo, int PanelSerialNo, CommandConstants TmpTaskType, ushort TmpTaskSoruce, bool TmpTaskUpdateTable, string TmpReturnStr)
         {
             StringBuilder TSndStr = new StringBuilder();
@@ -703,7 +730,7 @@ namespace MaviSoftServerV1._0
                         if (DoorStatusStr != TmpReturnStr)
                         {
                             DoorStatusStr = TmpReturnStr;
-                            PanelDoorStatusDelete();
+
                             if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 4, 4), 16) == PanelSerialNo)
                             {
                                 for (int i = 0; i <= 15; i++)
@@ -745,108 +772,64 @@ namespace MaviSoftServerV1._0
                                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                 {
                                     mDBConn.Open();
+                                    tDBSQLStr2 = "UPDATE DoorStatus " +
+                                        "SET " +
+                                        "[Panel ID] = " + mPanelNo.ToString() + "," +
+                                        "[Seri No] = " + mPanelSerialNo.ToString() + "," +
+                                        "[Hirsiz Alarm Durumu] = " + RobberAlarm + "," +
+                                        "[Yangin Alarm Durumu] = " + FireAlarm + "," +
+                                        "[Kapi Alarm Durumu] = " + DoorAlarm + "," +
+                                        "[Kapi 1 Baglanti] = " + DoorStatus[0] + "," +
+                                        "[Kapi 2 Baglanti] = " + DoorStatus[1] + "," +
+                                        "[Kapi 3 Baglanti] = " + DoorStatus[2] + "," +
+                                        "[Kapi 4 Baglanti] = " + DoorStatus[3] + "," +
+                                        "[Kapi 5 Baglanti] = " + DoorStatus[4] + "," +
+                                        "[Kapi 6 Baglanti] = " + DoorStatus[5] + "," +
+                                        "[Kapi 7 Baglanti] = " + DoorStatus[6] + "," +
+                                        "[Kapi 8 Baglanti] = " + DoorStatus[7] + "," +
+                                        "[Kapi 9 Baglanti] = " + DoorStatus[8] + "," +
+                                        "[Kapi 10 Baglanti] = " + DoorStatus[9] + "," +
+                                        "[Kapi 11 Baglanti] = " + DoorStatus[10] + "," +
+                                        "[Kapi 12 Baglanti] = " + DoorStatus[11] + "," +
+                                        "[Kapi 13 Baglanti] = " + DoorStatus[12] + "," +
+                                        "[Kapi 14 Baglanti] = " + DoorStatus[13] + "," +
+                                        "[Kapi 15 Baglanti] = " + DoorStatus[14] + "," +
+                                        "[Kapi 16 Baglanti] = " + DoorStatus[15] + "," +
+                                        "[Kapi 1 Sensor] = " + DoorSensor[0] + "," +
+                                        "[Kapi 2 Sensor] = " + DoorSensor[1] + "," +
+                                        "[Kapi 3 Sensor] = " + DoorSensor[2] + "," +
+                                        "[Kapi 4 Sensor] = " + DoorSensor[3] + "," +
+                                        "[Kapi 5 Sensor] = " + DoorSensor[4] + "," +
+                                        "[Kapi 6 Sensor] = " + DoorSensor[5] + "," +
+                                        "[Kapi 7 Sensor] = " + DoorSensor[6] + "," +
+                                        "[Kapi 8 Sensor] = " + DoorSensor[7] + "," +
+                                        "[Kapi 9 Sensor] = " + DoorSensor[8] + "," +
+                                        "[Kapi 10 Sensor] = " + DoorSensor[9] + "," +
+                                        "[Kapi 11 Sensor] = " + DoorSensor[10] + "," +
+                                        "[Kapi 12 Sensor] = " + DoorSensor[11] + "," +
+                                        "[Kapi 13 Sensor] = " + DoorSensor[12] + "," +
+                                        "[Kapi 14 Sensor] = " + DoorSensor[13] + "," +
+                                        "[Kapi 15 Sensor] = " + DoorSensor[14] + "," +
+                                        "[Kapi 16 Sensor] = " + DoorSensor[15] + "," +
+                                        "[Kapi 1 Button] = " + DoorButton[0] + "," +
+                                        "[Kapi 2 Button] = " + DoorButton[1] + "," +
+                                        "[Kapi 3 Button] = " + DoorButton[2] + "," +
+                                        "[Kapi 4 Button] = " + DoorButton[3] + "," +
+                                        "[Kapi 5 Button] = " + DoorButton[4] + "," +
+                                        "[Kapi 6 Button] = " + DoorButton[5] + "," +
+                                        "[Kapi 7 Button] = " + DoorButton[6] + "," +
+                                        "[Kapi 8 Button] = " + DoorButton[7] + "," +
+                                        "[Kapi 9 Button] = " + DoorButton[8] + "," +
+                                        "[Kapi 10 Button] = " + DoorButton[9] + "," +
+                                        "[Kapi 11 Button] = " + DoorButton[10] + "," +
+                                        "[Kapi 12 Button] = " + DoorButton[11] + "," +
+                                        "[Kapi 13 Button] = " + DoorButton[12] + "," +
+                                        "[Kapi 14 Button] = " + DoorButton[13] + "," +
+                                        "[Kapi 15 Button] = " + DoorButton[14] + "," +
+                                        "[Kapi 16 Button] = " + DoorButton[15] +
+                                        " WHERE [Panel ID] = " + mPanelNo.ToString() +
+                                        " AND [Seri No] = " + mPanelSerialNo.ToString();
 
-                                    tDBSQLStr = "SELECT * FROM DoorStatus WHERE [Seri No] = " + mPanelSerialNo.ToString().Trim() + " " +
-                                     " AND [Panel ID] = " + mPanelNo.ToString().Trim();
-                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                    tDBReader = tDBCmd.ExecuteReader();
-                                    if (!tDBReader.Read())
-                                    {
-                                        tDBSQLStr2 = "INSERT INTO DoorStatus " +
-                                            "([Panel ID],[Seri No],[Hirsiz Alarm Durumu],[Yangin Alarm Durumu],[Kapi Alarm Durumu]," +
-                                            "[Kapi 1 Baglanti],[Kapi 2 Baglanti],[Kapi 3 Baglanti],[Kapi 4 Baglanti],[Kapi 5 Baglanti],[Kapi 6 Baglanti],[Kapi 7 Baglanti],[Kapi 8 Baglanti]," +
-                                            "[Kapi 9 Baglanti],[Kapi 10 Baglanti],[Kapi 11 Baglanti],[Kapi 12 Baglanti],[Kapi 13 Baglanti],[Kapi 14 Baglanti],[Kapi 15 Baglanti],[Kapi 16 Baglanti]," +
-                                            "[Kapi 1 Sensor],[Kapi 2 Sensor],[Kapi 3 Sensor],[Kapi 4 Sensor],[Kapi 5 Sensor],[Kapi 6 Sensor],[Kapi 7 Sensor],[Kapi 8 Sensor]," +
-                                            "[Kapi 9 Sensor],[Kapi 10 Sensor],[Kapi 11 Sensor],[Kapi 12 Sensor],[Kapi 13 Sensor],[Kapi 14 Sensor],[Kapi 15 Sensor],[Kapi 16 Sensor]," +
-                                            "[Kapi 1 Button],[Kapi 2 Button],[Kapi 3 Button],[Kapi 4 Button],[Kapi 5 Button],[Kapi 6 Button],[Kapi 7 Button],[Kapi 8 Button]," +
-                                            "[Kapi 9 Button],[Kapi 10 Button],[Kapi 11 Button],[Kapi 12 Button],[Kapi 13 Button],[Kapi 14 Button],[Kapi 15 Button],[Kapi 16 Button])" +
-                                            "VALUES " +
-                                            "(";
-                                        tDBSQLStr2 += mPanelNo.ToString() + ",";
-                                        tDBSQLStr2 += mPanelSerialNo.ToString() + ",";
-                                        tDBSQLStr2 += RobberAlarm + ",";
-                                        tDBSQLStr2 += FireAlarm + ",";
-                                        tDBSQLStr2 += DoorAlarm + ",";
-                                        for (int i = 0; i <= 15; i++)
-                                        {
-                                            tDBSQLStr2 += DoorStatus[i] + ",";
-                                        }
-                                        for (int i = 0; i <= 15; i++)
-                                        {
-                                            tDBSQLStr2 += DoorSensor[i] + ",";
-                                        }
-                                        for (int i = 0; i <= 15; i++)
-                                        {
-                                            if (i == 15)
-                                            {
-                                                tDBSQLStr2 += DoorButton[i] + ")";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += DoorButton[i] + ",";
-                                            }
-
-                                        }
-                                        tDBReader.Close();
-                                    }
-                                    else
-                                    {
-                                        tDBSQLStr2 = "UPDATE DoorStatus " +
-                                            "SET " +
-                                            "[Panel ID] = " + mPanelNo.ToString() + "," +
-                                            "[Seri No] = " + mPanelSerialNo.ToString() + "," +
-                                            "[Hirsiz Alarm Durumu] = " + RobberAlarm + "," +
-                                            "[Yangin Alarm Durumu] = " + FireAlarm + "," +
-                                            "[Kapi Alarm Durumu] = " + DoorAlarm + "," +
-                                            "[Kapi 1 Baglanti] = " + DoorStatus[0] + "," +
-                                            "[Kapi 2 Baglanti] = " + DoorStatus[1] + "," +
-                                            "[Kapi 3 Baglanti] = " + DoorStatus[2] + "," +
-                                            "[Kapi 4 Baglanti] = " + DoorStatus[3] + "," +
-                                            "[Kapi 5 Baglanti] = " + DoorStatus[4] + "," +
-                                            "[Kapi 6 Baglanti] = " + DoorStatus[5] + "," +
-                                            "[Kapi 7 Baglanti] = " + DoorStatus[6] + "," +
-                                            "[Kapi 8 Baglanti] = " + DoorStatus[7] + "," +
-                                            "[Kapi 9 Baglanti] = " + DoorStatus[8] + "," +
-                                            "[Kapi 10 Baglanti] = " + DoorStatus[9] + "," +
-                                            "[Kapi 11 Baglanti] = " + DoorStatus[10] + "," +
-                                            "[Kapi 12 Baglanti] = " + DoorStatus[11] + "," +
-                                            "[Kapi 13 Baglanti] = " + DoorStatus[12] + "," +
-                                            "[Kapi 14 Baglanti] = " + DoorStatus[13] + "," +
-                                            "[Kapi 15 Baglanti] = " + DoorStatus[14] + "," +
-                                            "[Kapi 16 Baglanti] = " + DoorStatus[15] + "," +
-                                            "[Kapi 1 Sensor] = " + DoorSensor[0] + "," +
-                                            "[Kapi 2 Sensor] = " + DoorSensor[1] + "," +
-                                            "[Kapi 3 Sensor] = " + DoorSensor[2] + "," +
-                                            "[Kapi 4 Sensor] = " + DoorSensor[3] + "," +
-                                            "[Kapi 5 Sensor] = " + DoorSensor[4] + "," +
-                                            "[Kapi 6 Sensor] = " + DoorSensor[5] + "," +
-                                            "[Kapi 7 Sensor] = " + DoorSensor[6] + "," +
-                                            "[Kapi 8 Sensor] = " + DoorSensor[7] + "," +
-                                            "[Kapi 9 Sensor] = " + DoorSensor[8] + "," +
-                                            "[Kapi 10 Sensor] = " + DoorSensor[9] + "," +
-                                            "[Kapi 11 Sensor] = " + DoorSensor[10] + "," +
-                                            "[Kapi 12 Sensor] = " + DoorSensor[11] + "," +
-                                            "[Kapi 13 Sensor] = " + DoorSensor[12] + "," +
-                                            "[Kapi 14 Sensor] = " + DoorSensor[13] + "," +
-                                            "[Kapi 15 Sensor] = " + DoorSensor[14] + "," +
-                                            "[Kapi 16 Sensor] = " + DoorSensor[15] + "," +
-                                            "[Kapi 1 Button] = " + DoorButton[0] + "," +
-                                            "[Kapi 2 Button] = " + DoorButton[1] + "," +
-                                            "[Kapi 3 Button] = " + DoorButton[2] + "," +
-                                            "[Kapi 4 Button] = " + DoorButton[3] + "," +
-                                            "[Kapi 5 Button] = " + DoorButton[4] + "," +
-                                            "[Kapi 6 Button] = " + DoorButton[5] + "," +
-                                            "[Kapi 7 Button] = " + DoorButton[6] + "," +
-                                            "[Kapi 8 Button] = " + DoorButton[7] + "," +
-                                            "[Kapi 9 Button] = " + DoorButton[8] + "," +
-                                            "[Kapi 10 Button] = " + DoorButton[9] + "," +
-                                            "[Kapi 11 Button] = " + DoorButton[10] + "," +
-                                            "[Kapi 12 Button] = " + DoorButton[11] + "," +
-                                            "[Kapi 13 Button] = " + DoorButton[12] + "," +
-                                            "[Kapi 14 Button] = " + DoorButton[13] + "," +
-                                            "[Kapi 15 Button] = " + DoorButton[14] + "," +
-                                            "[Kapi 16 Button] = " + DoorButton[15];
-                                    }
                                     tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
                                     TRetInt = tDBCmd2.ExecuteNonQuery();
                                     if (TRetInt > 0)
@@ -890,7 +873,59 @@ namespace MaviSoftServerV1._0
             }
             return false;
         }
+        /// <summary>
+        /// Başlangıçta o panele ait kapı durumlarını doldurma
+        /// </summary>
+        private void ReaderBind()
+        {
+            StringBuilder TSndStr = new StringBuilder();
+            object TLockObj = new object();
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            string tDBSQLStr2;
+            SqlCommand tDBCmd2;
+            SqlDataReader tDBReader;
+            int TRetInt;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT * FROM DoorStatus WHERE [Seri No] = " + mPanelSerialNo.ToString().Trim() + " " +
+                                    " AND [Panel ID] = " + mPanelNo.ToString().Trim();
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (!tDBReader.Read())
+                    {
+                        tDBSQLStr = "INSERT INTO DoorStatus " +
+                                          "([Panel ID],[Seri No],[Hirsiz Alarm Durumu],[Yangin Alarm Durumu],[Kapi Alarm Durumu]," +
+                                          "[Kapi 1 Baglanti],[Kapi 2 Baglanti],[Kapi 3 Baglanti],[Kapi 4 Baglanti],[Kapi 5 Baglanti],[Kapi 6 Baglanti],[Kapi 7 Baglanti],[Kapi 8 Baglanti]," +
+                                          "[Kapi 9 Baglanti],[Kapi 10 Baglanti],[Kapi 11 Baglanti],[Kapi 12 Baglanti],[Kapi 13 Baglanti],[Kapi 14 Baglanti],[Kapi 15 Baglanti],[Kapi 16 Baglanti]," +
+                                          "[Kapi 1 Sensor],[Kapi 2 Sensor],[Kapi 3 Sensor],[Kapi 4 Sensor],[Kapi 5 Sensor],[Kapi 6 Sensor],[Kapi 7 Sensor],[Kapi 8 Sensor]," +
+                                          "[Kapi 9 Sensor],[Kapi 10 Sensor],[Kapi 11 Sensor],[Kapi 12 Sensor],[Kapi 13 Sensor],[Kapi 14 Sensor],[Kapi 15 Sensor],[Kapi 16 Sensor]," +
+                                          "[Kapi 1 Button],[Kapi 2 Button],[Kapi 3 Button],[Kapi 4 Button],[Kapi 5 Button],[Kapi 6 Button],[Kapi 7 Button],[Kapi 8 Button]," +
+                                          "[Kapi 9 Button],[Kapi 10 Button],[Kapi 11 Button],[Kapi 12 Button],[Kapi 13 Button],[Kapi 14 Button],[Kapi 15 Button],[Kapi 16 Button])" +
+                                          "VALUES " +
+                                          "(";
+                        tDBSQLStr += mPanelNo.ToString() + ",";
+                        tDBSQLStr += mPanelSerialNo.ToString() + ",";
+                        tDBSQLStr += "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0";
+                        tDBSQLStr += ")";
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBCmd.ExecuteNonQuery();
+                    }
+                }
+            }
+        }
 
+
+        /// <summary>
+        /// Mail gönderme rutini
+        /// </summary>
+        /// <param name="subject"></param>
+        /// <param name="body"></param>
+        /// <param name="isHtml"></param>
+        /// <returns></returns>
         public bool SendMail(string subject, string body = null, bool isHtml = true)
         {
             bool result = false;
@@ -933,7 +968,12 @@ namespace MaviSoftServerV1._0
             return result;
         }
 
-        //TODO:Veritabanından Gelen Görevi Panele Gönderme
+
+        /// <summary>
+        /// Veritabanından gelen görevi panele gönderme
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <returns></returns>
         public bool SendGenericDBData(TcpClient TClient)
         {
             byte[] TSndBytes;
@@ -961,6 +1001,10 @@ namespace MaviSoftServerV1._0
             }
         }
 
+        /// <summary>
+        /// Veritabanından mail ayarlarını alma
+        /// </summary>
+        /// <returns></returns>
         public MailSettings ReceiveMailSettings()
         {
             string tDBSQLStr;
@@ -1002,46 +1046,6 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        public void PanelDoorStatusDelete()
-        {
-            string tDBSQLStr;
-            SqlCommand tDBCmd;
-            object TLockObj = new object();
-            lock (TLockObj)
-            {
-                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
-                {
-                    mDBConn.Open();
-                    tDBSQLStr = "DELETE FROM DoorStatus WHERE DoorStatus.[Panel ID] = " + mPanelNo;
-                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                    tDBCmd.ExecuteNonQuery();
-                }
-            }
-        }
-
-        public bool CheckPanel(int PanelID, int Mac)
-        {
-            string ChekDBString = "";
-            object TLockObj = new object();
-            SqlCommand CheckDBCommand;
-            SqlDataReader CheckDBReader;
-            bool check = false;
-            lock (TLockObj)
-            {
-                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
-                {
-                    mDBConn.Open();
-                    ChekDBString = "SELECT * FROM PanelSettings WHERE [Seri No]=" + Mac;
-                    CheckDBCommand = new SqlCommand(ChekDBString, mDBConn);
-                    CheckDBReader = CheckDBCommand.ExecuteReader();
-                    if (CheckDBReader.Read())
-                    {
-                        check = true;
-                    }
-                }
-            }
-            return check;
-        }
 
         public string ClearPreZeros(string CardID)
         {
@@ -1069,6 +1073,11 @@ namespace MaviSoftServerV1._0
             return TSortStr;
         }
 
+        /// <summary>
+        /// Veritabanında kullanıcı ID'sine göre Kart ID bulma
+        /// </summary>
+        /// <param name="TempUser"></param>
+        /// <returns></returns>
         public string FindUserCardID(long TempUser)
         {
             string FindUserCardID = "0";
@@ -1164,7 +1173,12 @@ namespace MaviSoftServerV1._0
             return TGlobalBolgeNo;
         }
 
-        //TODO:Görev Tipine Göre Komut Prefixini Getiriyor
+
+        /// <summary>
+        /// Görev tipine göre komut prefixini getiriyor.
+        /// </summary>
+        /// <param name="DBTaskType"></param>
+        /// <returns></returns>
         public string GetCommandPrefix(ushort DBTaskType)
         {
             switch (DBTaskType)
@@ -1275,7 +1289,12 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        //TODO:Görev Tipine Göre Beklenen Cevap Boyutunu Getiriyor
+
+        /// <summary>
+        /// Görev tipine göre beklenen cevap boyutunu getiriyor.
+        /// </summary>
+        /// <param name="TmpTaskType"></param>
+        /// <returns></returns>
         public int GetAnswerSize(CommandConstants TmpTaskType)
         {
 
@@ -1375,7 +1394,12 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        //TODO:Ekrandaki Label Text'lerini Güncelleme
+
+        /// <summary>
+        /// Ekranda ki Label Text'lerini güncelliyor.
+        /// </summary>
+        /// <param name="TMsg"></param>
+        /// <param name="color"></param>
         delegate void TextDegisDelegate(string TMsg, System.Drawing.Color color);
         public void SyncUpdateScreen(string TMsg, System.Drawing.Color color)
         {
@@ -1404,7 +1428,11 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        //TODO:Görev Tipine Göre String Mesaj Dönderiyor
+        /// <summary>
+        /// Görev tipine göre string mesaj gönderiyor.
+        /// </summary>
+        /// <param name="TmpTaskType"></param>
+        /// <returns></returns>
         public string GetScreenMessage(CommandConstants TmpTaskType)
         {
             switch (TmpTaskType)
@@ -1565,6 +1593,12 @@ namespace MaviSoftServerV1._0
             }
         }
 
+
+        /// <summary>
+        /// Girilen değerin tarih tipi mi olduğuna bakıyor.
+        /// </summary>
+        /// <param name="str">Parametre olarak girilen değerin Datetime formatta olup olmadığını kontrol ediyor.</param>
+        /// <returns></returns>
         public bool IsDate(string str)
         {
             try

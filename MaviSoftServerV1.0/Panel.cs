@@ -337,7 +337,6 @@ namespace MaviSoftServerV1._0
 
                                     if (mStartTime >= mEndTime)
                                     {
-                                        //Display Timeout&Retrying Message
                                         SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
                                         mRetryCnt++;
                                     }
@@ -368,20 +367,6 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-
-                            //ClearSocketBuffers(mPanelClient);
-
-                            //if ( mTestInt==100)
-                            //{
-                            //    SyncUpdateScreen("GELDİ");
-                            //    Thread.Sleep(250);
-                            //}
-                            //else
-                            //{
-                            //    SyncUpdateScreen("HAZIR");
-                            //    Thread.Sleep(250);
-
-                            //}
 
                             ClearSocketBuffers(mPanelClient);
                             SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
@@ -420,12 +405,6 @@ namespace MaviSoftServerV1._0
                             {
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
-
-
-                            //if (TProc != (ushort)mPanelProc && TProc != 0)
-                            //{
-                            //    mPanelProc = (CommandConstants)TProc;
-                            //}
 
                         }
                         break;
@@ -536,8 +515,10 @@ namespace MaviSoftServerV1._0
                                 }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
+                            mTaskTimeOut = 3;
                         }
                         break;
+                    case CommandConstants.CMD_SND_RTC:
                     case CommandConstants.CMD_SNDALL_USER:
                     case CommandConstants.CMD_SND_USER:
                     case CommandConstants.CMD_SND_ACCESSGROUP:
@@ -620,7 +601,7 @@ namespace MaviSoftServerV1._0
                                         else
                                         {
                                             mTransferCompleted = true;
-                                            mTaskTimeOut = 3;
+
                                         }
                                     }
                                 }
@@ -660,7 +641,7 @@ namespace MaviSoftServerV1._0
                                 }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
-
+                            mTaskTimeOut = 3;
                         }
                         break;
 
@@ -1123,7 +1104,7 @@ namespace MaviSoftServerV1._0
                                 }
                             }
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
 
                         }
                         else
@@ -1572,7 +1553,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*5*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_TIMEGROUP)
@@ -1582,7 +1563,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("***\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*6*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_ACCESSGROUP)
@@ -1741,7 +1722,7 @@ namespace MaviSoftServerV1._0
 
 
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
                         }
                         else
                         {
@@ -1768,7 +1749,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*8-9*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_USER || DBTaskType == (ushort)CommandConstants.CMD_SNDALL_USER)
@@ -1864,7 +1845,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("00");
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
 
                         }
                         else
@@ -1883,7 +1864,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*12*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_GROUPCALENDAR || DBTaskType == (ushort)CommandConstants.CMD_SNDALL_GROUPCALENDAR)
@@ -1924,7 +1905,7 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 2"] as int? ?? default(int), "D4"));
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 3"] as int? ?? default(int), "D4"));
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
                         }
                         else
                         {
@@ -1942,7 +1923,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*14*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_USER)
@@ -1960,7 +1941,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*17*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_LOGCOUNT)
@@ -1969,7 +1950,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*18*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_MAXINCOUNTERS)
@@ -1979,7 +1960,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*19*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_ACCESSCOUNTERS)
@@ -1989,7 +1970,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*20*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_ACCESSCOUNTERS)
@@ -1998,7 +1979,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*21*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_ACCESSCOUNTERS)
@@ -2008,7 +1989,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*22*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP)
@@ -2017,7 +1998,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*23*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_ACCESSGROUP)
@@ -2027,7 +2008,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 10;
+                mTaskTimeOut = 3;
             }
             /*24*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_APBCOUNTERS)
@@ -2036,7 +2017,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*25*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_APBCOUNTERS)
@@ -2046,7 +2027,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*26*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_RTC)
@@ -2062,7 +2043,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(tDate.Second.ToString("D2"));
                 TSndStr.Append(((int)tDate.DayOfWeek).ToString("D2"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*27*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_RTC)
@@ -2071,7 +2052,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*31*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_RELAYPROGRAM)
@@ -2128,7 +2109,7 @@ namespace MaviSoftServerV1._0
 
 
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
                         }
                         else
                         {
@@ -2157,7 +2138,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D2"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*36*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LOCALCAPACITYCOUNTERS)
@@ -2168,7 +2149,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(DBIntParam1.ToString("D2"));
                 TSndStr.Append(DBIntParam2.ToString("D5"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*37*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_MAXUSERID)
@@ -2178,7 +2159,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D6"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*38*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LOGSETTINGS)
@@ -2248,7 +2229,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("0");
                             }
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
                         }
                         else
                         {
@@ -2266,7 +2247,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*40*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LIFTGROUP)
@@ -2307,7 +2288,7 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("0000000000000000");
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
                         }
                     }
                 }
@@ -2320,7 +2301,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*42*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_LIFTGROUP || DBTaskType == (ushort)CommandConstants.CMD_ERSALL_LIFTGROUP)
@@ -2329,7 +2310,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*43*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_USERALARM)
@@ -2413,7 +2394,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("000001");
                             }
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
                         }
                     }
                 }
@@ -2427,7 +2408,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(DBIntParam1.ToString("D4"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*45*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_USERALARM || DBTaskType == (ushort)CommandConstants.CMD_ERSALL_USERALARM)
@@ -2436,7 +2417,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*46*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_ALARMFIRE_STATUS)
@@ -2445,7 +2426,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*47*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_DOORALARM_STATUS)
@@ -2454,7 +2435,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("****\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*49*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LOCALINTERLOCK)
@@ -2539,7 +2520,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("00");
                             }
                             TSndStr.Append("**\r");
-                            mTaskTimeOut = 5;
+                            mTaskTimeOut = 3;
                         }
                     }
                 }
@@ -2551,7 +2532,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*DOOR TRIGGER*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORTRIGGER)
@@ -2561,7 +2542,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*DOOR OPEN*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCEOPEN)
@@ -2571,7 +2552,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*DOOR CLOSE*/
             //TODO: Gelen veri FC olması gerekirken FO geliyor
@@ -2582,7 +2563,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
             /*DOOR FREE*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFREE)
@@ -2592,7 +2573,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append(mPanelNo.ToString("D3"));
                 TSndStr.Append(mTaskStrParam1.ToString());
                 TSndStr.Append("**\r");
-                mTaskTimeOut = 5;
+                mTaskTimeOut = 3;
             }
 
             return TSndStr.ToString();
