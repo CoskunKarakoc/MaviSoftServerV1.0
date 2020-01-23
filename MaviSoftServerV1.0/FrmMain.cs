@@ -19,7 +19,6 @@ namespace MaviSoftServerV1._0
 
         public List<PanelLog> AktifPanelLogListesi;
 
-
         public string SQLStr { get; set; }
 
         public SqlCommand Comnd { get; set; }
@@ -32,8 +31,6 @@ namespace MaviSoftServerV1._0
             AktifPanelListesi = new List<Panel>();
             AktifPanelLogListesi = new List<PanelLog>();
         }
-
-
 
 
         public struct S_PORTS
@@ -200,6 +197,7 @@ namespace MaviSoftServerV1._0
             {
                 logPanel.StopPanel();
             }
+            Environment.Exit(0);
         }
 
 

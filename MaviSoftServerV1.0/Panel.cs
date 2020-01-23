@@ -185,21 +185,10 @@ namespace MaviSoftServerV1._0
                 mPanelProc = CommandConstants.CMD_PORT_INIT;
                 mPanelIdleInterval = 0;
                 mInTime = true;
-
-                //mDBConn = new SqlConnection();
-                //mDBConn.ConnectionString = SqlServerAdress.GetAdress();
-                //mDBConn.Open();
-                //if (mDBConn.State != ConnectionState.Open)
-                //{
-                //    mDBConn.Open();
-                //}
                 PanelThread = new Thread(ProcessPanel);
                 PanelThread.Priority = ThreadPriority.Normal;
                 PanelThread.IsBackground = true;
                 PanelThread.Start();
-
-
-
                 return true;
             }
             catch (Exception)
@@ -243,7 +232,6 @@ namespace MaviSoftServerV1._0
                             SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
                         }
                         break;
-
                     case CommandConstants.CMD_PORT_INIT:
                         {
                             SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.Yellow);
@@ -269,7 +257,6 @@ namespace MaviSoftServerV1._0
 
                         }
                         break;
-
                     case CommandConstants.CMD_PORT_CONNECT:
                         {
 
@@ -291,7 +278,6 @@ namespace MaviSoftServerV1._0
                             }
                         }
                         break;
-
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
                             SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Red);
@@ -304,7 +290,6 @@ namespace MaviSoftServerV1._0
 
                         }
                         break;
-
                     case CommandConstants.CMD_PORT_TEST:
                         {
                             //Port Test (Read RTC Command)
@@ -359,7 +344,6 @@ namespace MaviSoftServerV1._0
 
                         }
                         break;
-
                     case CommandConstants.CMD_TASK_LIST:
                         {
                             if (mPanelClient.Connected == false)
@@ -408,7 +392,6 @@ namespace MaviSoftServerV1._0
 
                         }
                         break;
-
                     case CommandConstants.CMD_RCV_USER:
                     case CommandConstants.CMD_RCVALL_USER:
                     case CommandConstants.CMD_RCV_ACCESSGROUP:
@@ -644,7 +627,6 @@ namespace MaviSoftServerV1._0
                             mTaskTimeOut = 3;
                         }
                         break;
-
                     case CommandConstants.CMD_RCV_RTC:
                         {
                             if (!mPanelClient.Connected)
@@ -708,7 +690,6 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
-
                     case CommandConstants.CMD_ZERO:
                         {
                             DeleteTaskFromTaskList();
@@ -1936,6 +1917,15 @@ namespace MaviSoftServerV1._0
             }
             /*15*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOGCOUNT)
+            {
+                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                TSndStr.Append(mPanelNo.ToString("D3"));
+                TSndStr.Append("**\r");
+                mTaskTimeOut = 3;
+            }
+            /*16*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOGS)
             {
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
@@ -4625,7 +4615,7 @@ namespace MaviSoftServerV1._0
                 case (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP:
                     return "TE";
                 case (ushort)CommandConstants.CMD_RCV_LOGS:
-                    return "CD";
+                    return "DD";
                 default:
                     return "ERR";
             }

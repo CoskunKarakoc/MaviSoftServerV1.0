@@ -19,9 +19,12 @@ namespace MaviSoftServerV1._0
 
         public FrmActivation()
         {
-            string Code = "";
             InitializeComponent();
+
+            string Code = "";
+
             Code = ReadActivationCode();
+
             if (CheckActivationCode(Code) == true)
             {
                 Application.Run(new FrmGiris());
@@ -283,7 +286,9 @@ namespace MaviSoftServerV1._0
         private void FrmActivation_FormClosing(object sender, FormClosingEventArgs e)
         {
             string Code = "";
+
             Code = ReadActivationCode();
+
             if (CheckActivationCode(Code) == true)
             {
                 FrmGiris frmGiris = new FrmGiris();

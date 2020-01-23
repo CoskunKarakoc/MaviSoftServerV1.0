@@ -150,8 +150,6 @@ namespace MaviSoftServerV1._0
             {
                 mTimeOut = 3;
             }
-
-
         }
 
 
@@ -265,7 +263,6 @@ namespace MaviSoftServerV1._0
                             }
                         }
                         break;
-
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
                             SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
@@ -347,9 +344,6 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
-
-
-
 
       
         /// <summary>
@@ -873,6 +867,8 @@ namespace MaviSoftServerV1._0
             }
             return false;
         }
+      
+        
         /// <summary>
         /// Başlangıçta o panele ait kapı durumlarını doldurma
         /// </summary>
@@ -1001,6 +997,7 @@ namespace MaviSoftServerV1._0
             }
         }
 
+
         /// <summary>
         /// Veritabanından mail ayarlarını alma
         /// </summary>
@@ -1073,6 +1070,7 @@ namespace MaviSoftServerV1._0
             return TSortStr;
         }
 
+      
         /// <summary>
         /// Veritabanında kullanıcı ID'sine göre Kart ID bulma
         /// </summary>
@@ -1108,6 +1106,7 @@ namespace MaviSoftServerV1._0
             return FindUserCardID;
         }
 
+
         public int LokalBolgeNo(int MacSerial, int Reader)
         {
             string LBNDBString = "";
@@ -1132,6 +1131,7 @@ namespace MaviSoftServerV1._0
 
             return TLokalBolgeNo;
         }
+
 
         public int GlobalBolgeNo(int MacSerial, int LokalBolgeNo)
         {
@@ -1172,6 +1172,7 @@ namespace MaviSoftServerV1._0
 
             return TGlobalBolgeNo;
         }
+
 
 
         /// <summary>
@@ -1427,6 +1428,7 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
+
 
         /// <summary>
         /// Görev tipine göre string mesaj gönderiyor.

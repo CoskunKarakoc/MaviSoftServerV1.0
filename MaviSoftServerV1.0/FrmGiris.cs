@@ -16,7 +16,9 @@ namespace MaviSoftServerV1._0
     public partial class FrmGiris : Form
     {
         public string SqlAdress = "";
-        SqlConnection connection;
+
+        SqlConnection connection = null;
+
         public FrmGiris()
         {
             InitializeComponent();
@@ -25,7 +27,7 @@ namespace MaviSoftServerV1._0
 
         private void btnKapat_Click(object sender, EventArgs e)
         {
-            Application.Exit();
+            Environment.Exit(0);
         }
 
         private void btnTamam_Click(object sender, EventArgs e)
@@ -97,7 +99,6 @@ namespace MaviSoftServerV1._0
         {
             txtHostPC.Text = ReadSettings("Host");
             txtServer.Text = ReadSettings("SQLServer");
-
         }
 
         public static void AddUpdateAppSettings(string key, string value)
@@ -125,7 +126,7 @@ namespace MaviSoftServerV1._0
 
         private void FrmGiris_FormClosed(object sender, FormClosedEventArgs e)
         {
-            Application.Exit();
+            Environment.Exit(0);
         }
     }
 }
