@@ -40,12 +40,9 @@ namespace MaviSoftServerV1._0
 
         private string mTaskStrParam3;
 
-
         private string mTaskUserName;
 
         private bool mTaskUpdateTable;
-
-        private ushort mTaskSource;
 
         public ushort mPanelIdleInterval { get; set; }
 
@@ -85,7 +82,11 @@ namespace MaviSoftServerV1._0
 
         private DateTime mEndTime { get; set; }
 
-        int mMailRetryCount = 0;
+        private DateTime mPeriodeAccessStartTime { get; set; }
+
+        private DateTime mPeriodeAccessEndTime { get; set; }
+
+        private DateTime mPeriodicAccessDataTime { get; set; }
 
         int mTimeOut = 3;
 
@@ -117,6 +118,9 @@ namespace MaviSoftServerV1._0
                 mMailEndTime = mMailStartTime.AddHours(mTimeOut);
                 mStartTime = DateTime.Now;
                 mEndTime = mStartTime.AddMilliseconds(500);
+                mPeriodeAccessStartTime = DateTime.Now;
+                mPeriodeAccessEndTime = mPeriodeAccessStartTime.AddHours(mTimeOut);
+                mPeriodicAccessDataTime = ReceivePeriodicAccessDataTime();
                 return true;
 
             }
@@ -137,6 +141,8 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_TASK_LIST:
                         {
                             SyncGetNewTask();
+
+                            /*Mail gönderme kontrolü*/
                             mMailStartTime = DateTime.Now;
                             if (mMailStartTime.ToShortTimeString() == mMailEndTime.ToShortTimeString())
                             {
@@ -153,6 +159,8 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_SND_MAIL;
                                 break;
                             }
+
+                            /*Her gün saat 03:00' da TaskList Table temizleme kontrolü*/
                             mTaskListStartTime = DateTime.Now;
                             if (mTaskListStartTime.ToShortTimeString() == mTaskListEndTime.ToShortTimeString())
                             {
@@ -160,6 +168,26 @@ namespace MaviSoftServerV1._0
                                 mTaskListEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 3, 0, 0, 0);
                             }
 
+
+                            /*Tüm Geçiş Olay Verilerinin Alınması Kontrolü*/
+                            mPeriodeAccessStartTime = DateTime.Now;
+                            if (mPeriodeAccessStartTime.ToShortTimeString() == mPeriodeAccessEndTime.ToShortTimeString())
+                            {
+
+                                if (mPeriodeAccessStartTime.ToShortTimeString() == mPeriodicAccessDataTime.ToShortTimeString() && mPeriodeAccessStartTime.Second == 0)
+                                {
+                                    mPanelProc = CommandConstants.CMD_RCV_LOGS;
+                                    break;
+                                }
+                                mPeriodicAccessDataTime = ReceivePeriodicAccessDataTime();
+                                mPeriodeAccessEndTime = mPeriodeAccessStartTime.AddHours(mTimeOut);
+
+                            }
+                            else if (mPeriodeAccessStartTime.ToShortTimeString() == mPeriodicAccessDataTime.ToShortTimeString() && mPeriodeAccessStartTime.Second == 0)
+                            {
+                                mPanelProc = CommandConstants.CMD_RCV_LOGS;
+                                break;
+                            }
 
                         }
                         break;
@@ -176,11 +204,49 @@ namespace MaviSoftServerV1._0
                             }
                         }
                         break;
+                    case CommandConstants.CMD_RCV_LOGS:
+                        {
+                            if (CheckPeriodicAccessReceive() == true)
+                            {
+                                // CheckDeleteAfterReceiving();
+                                StringBuilder TSndStr = new StringBuilder();
+                                int TDataInt;
+                                object TLockObj = new object();
+                                string tDBSQLStr = "";
+                                SqlCommand tDBCmd;
+                                lock (TLockObj)
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        foreach (var panel in mPanelsList)
+                                        {
+                                            tDBSQLStr += "INSERT INTO TaskList ([Gorev Kodu], [IntParam 1], [Panel No], [Durum Kodu], Tarih, [Kullanici Adi], [Tablo Guncelle])" +
+                                            " VALUES(" +
+                                            (int)CommandConstants.CMD_RCV_LOGS + "," + 1 + "," + panel.mPanelNo + "," + 1 + "," + "'" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "'," + "'System'," + 0 + ") ";
+                                        }
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        TDataInt = tDBCmd.ExecuteNonQuery();
+                                    }
+                                }
+                                mPanelProc = CommandConstants.CMD_TASK_LIST;
+                                break;
+                            }
+                            else
+                            {
+                                mPanelProc = CommandConstants.CMD_TASK_LIST;
+                                break;
+                            }
+                        }
                 }
 
             }
         }
 
+        /// <summary>
+        /// Web Arayüzde Oluşturulan Mail Ayarlarının Alındığı Yer
+        /// </summary>
+        /// <returns></returns>
         public MailSettings ReceiveMailSettings()
         {
             string tDBSQLStr;
@@ -221,7 +287,15 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
-
+        
+        /// <summary>
+        /// Mail Gönderme Rutin
+        /// Not:'Body boş bırakılırsa Gelmeyenler Raporu HTML Çıktısı Olarak Dolduruluyor.'
+        /// </summary>
+        /// <param name="subject"></param>
+        /// <param name="body"></param>
+        /// <param name="isHtml"></param>
+        /// <returns></returns>
         public bool SendMail(string subject, string body = null, bool isHtml = true)
         {
             if (body == null)
@@ -267,7 +341,10 @@ namespace MaviSoftServerV1._0
             return result;
         }
 
-
+        /// <summary>
+        /// Mail Gönderme Saatinin Alındığı Yer
+        /// </summary>
+        /// <returns></returns>
         public DateTime ReceiveceMailTime()
         {
             string tDBSQLStr;
@@ -296,6 +373,70 @@ namespace MaviSoftServerV1._0
             }
         }
 
+        /// <summary>
+        /// Offline Geçiş Kayıtlarının Alınma Saatinin Kontrol Edildiği Yer.
+        /// </summary>
+        /// <returns></returns>
+        public DateTime ReceivePeriodicAccessDataTime()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            object TLockObj = new object();
+            DateTime time = new DateTime();
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT TOP 1 [PeriodicAccessDataTime] FROM ProgInit";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        time = tDBReader[0] as DateTime? ?? default(DateTime);
+                        return time;
+                    }
+                    else
+                    {
+                        return DateTime.Now;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Offline Geçiş Kayıtlarının Tüm Panellerden Alınıp Alınmayacağının Kontrolü
+        /// </summary>
+        /// <returns></returns>
+        public bool CheckPeriodicAccessReceive()
+        {
+            object TLockObj = new object();
+            string tDBSQLStr = "";
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            bool AllPanelAccess = false;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT TOP 1 [AllPanelPeriodicAccessReceive] FROM ProgInit";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        AllPanelAccess = tDBReader[0] as bool? ?? default(bool);
+                    }
+                }
+            }
+            return AllPanelAccess;
+        }
+
+        /// <summary>
+        /// Mail'in Gönderilip-Gönderilmeyeceğinin Kontrolünün Yapıldığı Methot
+        /// </summary>
+        /// <returns></returns>
         public bool CheckMailSend()
         {
             string tDBSQLStr;
@@ -333,6 +474,10 @@ namespace MaviSoftServerV1._0
 
         }
 
+        /// <summary>
+        /// Mail İşlemi İçin Gelmeyenler Raporu
+        /// </summary>
+        /// <returns></returns>
         public string GelmeyenlerReport()
         {
             string tDBSQLStr;
@@ -390,7 +535,9 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        //TODO:Görev Listesinden Durumu Yeni Olan Görevleri Alıyor
+        /// <summary>
+        /// Görev Listesinden Durumu Yeni Olan Görev Alınıyor.
+        /// </summary>
         public void SyncGetNewTask()
         {
             object TLockObj = new object();
@@ -461,6 +608,10 @@ namespace MaviSoftServerV1._0
             }
         }
 
+        /// <summary>
+        /// Zaman Periyoduna Göre Önceki Görev Listesi Temizleniyor.
+        /// </summary>
+        /// <returns></returns>
         private bool ClearTaskList()
         {
             string tDBSQLStr;

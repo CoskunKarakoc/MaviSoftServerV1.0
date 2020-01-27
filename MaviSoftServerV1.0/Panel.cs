@@ -23,8 +23,6 @@ namespace MaviSoftServerV1._0
 
         private S_TASKLIST[,] TaskList = new S_TASKLIST[(int)TCONST.MAX_PANEL, (int)TCONST.MAX_TASK_CNT];
 
-        private int mTestInt = 0;
-
         private int mTaskNo;
 
         public int mTempTaskNo;
@@ -88,8 +86,6 @@ namespace MaviSoftServerV1._0
         private const ushort RETRY_COUNT = 1;
 
         private string mReturnStr;
-
-        private string mLogReturnStr;
 
         public FrmMain mParentForm { get; set; }
 
@@ -305,7 +301,7 @@ namespace MaviSoftServerV1._0
                                 while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                                 {
 
-                                    ClearSocketBuffers(mPanelClient);
+                                    ClearSocketBuffers(mPanelClient, null);
 
                                     SendTestCommand(mPanelClient);
 
@@ -352,7 +348,7 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            ClearSocketBuffers(mPanelClient);
+                            ClearSocketBuffers(mPanelClient, null);
                             SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
                             Thread.Sleep(250);
                             mTaskSource = mTempTaskSource;
@@ -389,7 +385,10 @@ namespace MaviSoftServerV1._0
                             {
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
-
+                            if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
+                            {
+                                SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+                            }
                         }
                         break;
                     case CommandConstants.CMD_RCV_USER:
@@ -405,7 +404,6 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_RCV_LOGSETTINGS:
                     case CommandConstants.CMD_RCV_LIFTGROUP:
                     case CommandConstants.CMD_RCV_USERALARM:
-                    case CommandConstants.CMD_RCV_LOGS:
                     case CommandConstants.CMD_RCV_GENERALSETTINGS:
                     case CommandConstants.CMD_RCV_LOCALINTERLOCK:
                         {
@@ -426,7 +424,7 @@ namespace MaviSoftServerV1._0
                                 while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                                 {
 
-                                    ClearSocketBuffers(mPanelClient);
+                                    ClearSocketBuffers(mPanelClient, null);
 
                                     //ReciveGenericDBData(mPanelClient, mTaskIntParam1, 0, 0, (CommandConstants)mTaskType);
                                     SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
@@ -479,8 +477,12 @@ namespace MaviSoftServerV1._0
                                 }
                                 else
                                 {
+
+                                    if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
+                                        break;
+
                                     //DB Task
-                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED);
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED, mPanelProc);
                                 }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
@@ -493,8 +495,12 @@ namespace MaviSoftServerV1._0
                                 }
                                 else
                                 {
+
+                                    if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
+                                        break;
+
                                     //DB Task
-                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR);
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, mPanelProc);
                                 }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
@@ -554,7 +560,7 @@ namespace MaviSoftServerV1._0
                                 while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                                 {
 
-                                    ClearSocketBuffers(mPanelClient);
+                                    ClearSocketBuffers(mPanelClient, null);
 
                                     SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
 
@@ -601,7 +607,7 @@ namespace MaviSoftServerV1._0
                                 else
                                 {
                                     //DB Task
-                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED);
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED, mPanelProc);
                                 }
 
                                 if ((CommandConstants)mTaskType == CommandConstants.CMD_SND_GENERALSETTINGS)
@@ -620,7 +626,7 @@ namespace MaviSoftServerV1._0
                                 else
                                 {
                                     //DB Task
-                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR);
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, mPanelProc);
                                 }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
@@ -647,7 +653,7 @@ namespace MaviSoftServerV1._0
                                 while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                                 {
 
-                                    ClearSocketBuffers(mPanelClient);
+                                    ClearSocketBuffers(mPanelClient, null);
                                     SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
                                     //SendIPTaskCommand(mPanelClient, 0, 0, 0, (ushort)mTaskType);
 
@@ -714,6 +720,62 @@ namespace MaviSoftServerV1._0
 
                         }
                         break;
+                    case CommandConstants.CMD_RCV_LOGS:
+                        {
+                            if (!mPanelClient.Client.Connected)
+                            {
+                                mPanelProc = CommandConstants.CMD_PORT_CLOSE;
+                                break;
+                            }
+
+                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
+                            mTransferCompleted = true;
+                            mReadStep = 0;
+                            while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            {
+                                mRetryCnt = 0;
+                                mTransferCompleted = false;
+
+                                while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                                {
+                                    mStartTime = DateTime.Now;
+                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
+                                    do
+                                    {
+                                        Thread.Sleep(20);
+                                        mStartTime = DateTime.Now;
+                                    } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
+
+                                    if (mProcessTerminated == true)
+                                        break;
+
+                                    if (mStartTime >= mEndTime)
+                                    {
+                                        //Display Timeout&Retrying Message
+                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
+                                        mRetryCnt++;
+                                    }
+                                    else
+                                    {
+                                        if (GAReciveGenericDBData(mPanelClient, ref mReturnStr, (CommandConstants)mTaskType))
+                                        {
+                                            if (!ProcessReceivedData(mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (CommandConstants)mTaskType, mTaskSource, mTaskUpdateTable, mReturnStr))
+                                            {
+                                                break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                mReadStep += 1;
+                            }
+                            mTaskTimeOut = 3;
+                        }
+                        break;
                     default:
                         {
                             mPanelProc = CommandConstants.CMD_PORT_DISABLED;
@@ -729,7 +791,16 @@ namespace MaviSoftServerV1._0
         }
 
 
-        //TODO:Veritabanından Gelen Görevi Panele Gönderme
+        /// <summary>
+        /// Veritabanından Gelen Görevi Panele Gönderme
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <param name="TmpIntParam1"></param>
+        /// <param name="TmpIntParam2"></param>
+        /// <param name="TmpIntParam3"></param>
+        /// <param name="TmpStrParam1"></param>
+        /// <param name="TmpTaskType"></param>
+        /// <returns></returns>
         public bool SendGenericDBData(TcpClient TClient, int TmpIntParam1, int TmpIntParam2, int TmpIntParam3, string TmpStrParam1, ushort TmpTaskType)
         {
             byte[] TSndBytes;
@@ -757,7 +828,15 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        //TODO:Gelen Görev Tipine Göre Panele Gönderilecek Olan Komutu Oluşturma
+        /// <summary>
+        /// Gelen Görev Tipine Göre Panel'e Gönderilecek Olan Komut Oluşturma 
+        /// </summary>
+        /// <param name="DBIntParam1"></param>
+        /// <param name="DBIntParam2"></param>
+        /// <param name="DBIntParam3"></param>
+        /// <param name="DBStrParam1"></param>
+        /// <param name="DBTaskType"></param>
+        /// <returns></returns>
         public string BuiltDBCommandString(int DBIntParam1, int DBIntParam2, int DBIntParam3, string DBStrParam1, ushort DBTaskType)
         {
 
@@ -2569,7 +2648,12 @@ namespace MaviSoftServerV1._0
             return TSndStr.ToString();
         }
 
-        //TODO:Panele Gönderilen Görevlerden Dönen Sonuçları Alma
+        /// <summary>
+        /// Panel'e Gönderilen Görevlerden Dönen Sonuçları Alma
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <param name="TmpTaskType"></param>
+        /// <returns></returns>
         public bool ReceiveGenericAnswerData(TcpClient TClient, CommandConstants TmpTaskType)
         {
             int TSize = (int)GetAnswerSize(TmpTaskType);
@@ -2612,7 +2696,12 @@ namespace MaviSoftServerV1._0
 
         }
 
-        //TODO:Beklenen Boyutla Gelen Boyutu Kıyaslama Yapıyor
+        /// <summary>
+        /// Beklenen Boyutla Gelen Boyutu Kıyaslama Yapıyor
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <param name="TWaitSize"></param>
+        /// <returns></returns>
         public bool CheckSize(TcpClient TClient, int TWaitSize)
         {
             try
@@ -2635,11 +2724,16 @@ namespace MaviSoftServerV1._0
 
         }
 
-        //TODO:Veritabanından Gelen Görevin Durumunu Güncelleme
-        public bool SyncUpdateTaskStatus(int tTaskNo, ushort tTaskStatus)
+        /// <summary>
+        /// Yapılan Görevin Durumunu Görev Tablosunda Güncelleme
+        /// </summary>
+        /// <param name="tTaskNo"></param>
+        /// <param name="tTaskStatus"></param>
+        /// <param name="TaskTypeCode"></param>
+        /// <returns></returns>
+        public bool SyncUpdateTaskStatus(int tTaskNo, ushort tTaskStatus, CommandConstants TaskTypeCode)
         {
             object TLockObj = new object();
-            ushort TTaskOk = 0;
             int TRetInt;
             if (tTaskNo <= 0)
             {
@@ -2654,11 +2748,11 @@ namespace MaviSoftServerV1._0
                     mDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + tTaskStatus + " WHERE [Kayit No]=" + tTaskNo;
                     mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
                     TRetInt = mDBCmd.ExecuteNonQuery();
-                    var status = mDBConn.State;
 
                     if (TRetInt > 0)
                     {
-
+                        if (TaskTypeCode == CommandConstants.CMD_RCV_LOGS)
+                            CheckDeleteAfterReceiving(tTaskNo);
                         return true;
                     }
                     else
@@ -2670,11 +2764,18 @@ namespace MaviSoftServerV1._0
 
         }
 
-        //TODO:Dönen verinin parçalanması için değişkene atıyor
+        /// <summary>
+        /// Panel'den Gelen Verinin Parçalanması İçin Değişkene Atama
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <param name="TReturnStr"></param>
+        /// <param name="TmpTaskType"></param>
+        /// <returns></returns>
         public bool GAReciveGenericDBData(TcpClient TClient, ref string TReturnStr, CommandConstants TmpTaskType)
         {
             int TSize = GetAnswerSize(TmpTaskType);
             byte[] RcvBuffer = new byte[TSize];
+
             string TRcvData = null;
             int TPos;
             try
@@ -2696,8 +2797,19 @@ namespace MaviSoftServerV1._0
                 }
                 else
                 {
-                    return false;
+                    TPos = TRcvData.IndexOf("$FD");
+                    if (TPos > -1)
+                    {
+                        TReturnStr = TRcvData;
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
+
+
             }
             catch (Exception)
             {
@@ -2707,6 +2819,13 @@ namespace MaviSoftServerV1._0
 
         }
 
+        /// <summary>
+        /// Panel'den Log Data'larını Almak İçin Kullanılan Metot
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <param name="TReturnLogStr"></param>
+        /// <param name="TmpLogTaskType"></param>
+        /// <returns></returns>
         public bool ReveiveLogData(TcpClient TClient, ref string TReturnLogStr, CommandConstants TmpLogTaskType)
         {
             int TSize = GetAnswerSize(TmpLogTaskType);
@@ -2741,12 +2860,20 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
-        //TODO:Değişkendeki dönen verinin veritabanına kayıt işlemlerini gerçekleştiriyor
+        /// <summary>
+        /// Panel'den Dönen Verinin Veritabanına kayıt işlemleri gerçekleştiriliyor.
+        /// </summary>
+        /// <param name="DBIntParam1"></param>
+        /// <param name="DBIntParam2"></param>
+        /// <param name="DBIntParam3"></param>
+        /// <param name="TmpTaskType"></param>
+        /// <param name="TmpTaskSoruce"></param>
+        /// <param name="TmpTaskUpdateTable"></param>
+        /// <param name="TmpReturnStr"></param>
+        /// <returns></returns>
         public bool ProcessReceivedData(int DBIntParam1, int DBIntParam2, int DBIntParam3, CommandConstants TmpTaskType, ushort TmpTaskSoruce, bool TmpTaskUpdateTable, string TmpReturnStr)
         {
             StringBuilder TSndStr = new StringBuilder();
-            ushort TDataInt;
             object TLockObj = new object();
             string tDBSQLStr;
             SqlCommand tDBCmd;
@@ -2756,19 +2883,42 @@ namespace MaviSoftServerV1._0
             int TRetInt;
             int TPos;
             byte TByte1;
-            byte TByte2;
             int TLong;
             int SI;
-            int TInt;
 
-            TPos = TmpReturnStr.IndexOf("$" + GetCommandPrefix((ushort)TmpTaskType));
-            if (TPos < 0)
+            if (TmpTaskType == CommandConstants.CMD_RCV_LOGS)
             {
-                if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16) != mPanelSerialNo || Convert.ToInt32(TmpReturnStr.Substring(TPos + 7, 3)) != mPanelNo)
+                TPos = TmpReturnStr.IndexOf("$" + GetCommandPrefix((ushort)TmpTaskType));
+                if (TPos < 0)
                 {
-                    return false;
+                    TPos = TmpReturnStr.IndexOf("$FD");
+                    if (TPos < 0)
+                    {
+                        SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, TmpTaskType);
+                        mPanelProc = CommandConstants.CMD_TASK_LIST;
+                        return false;
+                    }
+                    else
+                    {
+                        SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED, TmpTaskType);
+                        mPanelProc = CommandConstants.CMD_TASK_LIST;
+                        return true;
+                    }
+
                 }
             }
+            else
+            {
+                TPos = TmpReturnStr.IndexOf("$" + GetCommandPrefix((ushort)TmpTaskType));
+                if (TPos < 0)
+                {
+                    if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16) != mPanelSerialNo || Convert.ToInt32(TmpReturnStr.Substring(TPos + 7, 3)) != mPanelNo)
+                    {
+                        return false;
+                    }
+                }
+            }
+
 
             switch (TmpTaskType)
             {
@@ -4503,18 +4653,446 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_RCV_LOGS:
                     {
 
+                        string TmpStr;
+                        int TLocalBolgeNo = 1;
+                        int TGlobalBolgeNo = 1;
+                        int TMacSerial = 0;
+                        int TPanel = 1;
+                        int TReader = 1;
+                        int TAccessResult = 0;
+                        int TDoorType = 1;
+                        long TUsersID = 0;
+                        string TCardID = "";
+                        string TLPR = "";
+                        int TUserType = 1;
+                        long TUserKayitNo = 0;
+                        long TVisitorKayitNo = 0;
+                        DateTime TDate = new DateTime();
+                        string TmpName = "";
+                        string TmpSurname = "";
+                        string TmpTelefon = "";
+                        int year = 0;
+                        int month = 0;
+                        int day = 0;
+                        int hour = 0;
+                        int minute = 0;
+                        int second = 0;
+
+                        if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16) == mPanelSerialNo)
+                        {
+                            TMacSerial = Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16);
+                            TPanel = Convert.ToInt32(TmpReturnStr.Substring(TPos + 7, 3));
+                            if (TPanel > (int)TCONST.MAX_PANEL || TPanel < 1)
+                                break;
+
+
+                            TReader = Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 2));
+                            TDoorType = Convert.ToInt32(TmpReturnStr.Substring(TPos + 12, 1));
+                            TAccessResult = Convert.ToInt32(TmpReturnStr.Substring(TPos + 13, 2));
+                            TUsersID = Convert.ToInt64(TmpReturnStr.Substring(TPos + 15, 6));
+                            TCardID = FindUserCardID(TUsersID);
+                            day = Convert.ToInt32(TmpReturnStr.Substring(TPos + 21, 2));
+                            month = Convert.ToInt32(TmpReturnStr.Substring(TPos + 23, 2));
+                            year = Convert.ToInt32(TmpReturnStr.Substring(TPos + 25, 2));
+                            hour = Convert.ToInt32(TmpReturnStr.Substring(TPos + 27, 2));
+                            minute = Convert.ToInt32(TmpReturnStr.Substring(TPos + 29, 2));
+                            second = Convert.ToInt32(TmpReturnStr.Substring(TPos + 31, 2));
+                            TDate = new DateTime(int.Parse("20" + year), month, day, hour, minute, second);
+
+                            if (TUsersID > 100000 || TUsersID < 0)
+                                break;
+
+                            if (TAccessResult == 4)
+                            {
+                                TUsersID = 0;
+                            }
+
+                            if (TAccessResult <= 10)
+                            {
+                                if (TReader > 16 || TReader < 1)
+                                    break;
+                            }
+
+                            if (TAccessResult < 0)
+                            {
+                                break;
+                            }
+
+                            if (TAccessResult > 13 && TAccessResult < 20)
+                            {
+                                break;
+                            }
+
+                            if (TAccessResult < 20)
+                            {
+                                if (TDoorType > 2 || TDoorType < 1)
+                                    break;
+                            }
+
+                            if (TAccessResult >= 26 && TAccessResult <= 27)
+                            {
+                                if (int.Parse(TCardID) == 0 || TCardID.Trim() == "")
+                                {
+                                    TCardID = FindUserCardID(TUsersID);
+                                }
+                            }
+
+                            if (IsDate(TDate.ToString()) == false)
+                            {
+                                break;
+                            }
+
+                            lock (TLockObj)
+                            {
+                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                {
+                                    mDBConn.Open();
+                                    tDBSQLStr = "SELECT TOP 1 * FROM ProgInit ";
+                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                    tDBReader = tDBCmd.ExecuteReader();
+                                    if (tDBReader.Read())
+                                    {
+                                        if (TAccessResult == 2)
+                                            if ((tDBReader["LiveAPBInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
+
+                                        if (TAccessResult == 0)
+                                            if ((tDBReader["LiveDeniedInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
+
+                                        if (TAccessResult == 4)
+                                            if ((tDBReader["LiveUnknownInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
+
+                                        if (TAccessResult == 5 || TAccessResult == 6 || TAccessResult == 7 || TAccessResult == 13)
+                                            if ((tDBReader["LiveManuelInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
+
+                                        if (TAccessResult == 8)
+                                            if ((tDBReader["LiveButtonInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
+
+                                        if (TAccessResult == 9 || TAccessResult == 10)
+                                            if ((tDBReader["LiveProgrammedInvalid"] as bool? ?? default(bool)) == true)
+                                                break;
+                                    }
+                                    tDBReader.Close();
+                                }
+                            }
+
+
+                            if (TAccessResult < 4)
+                            {
+                                TUserType = 0;
+                                TUserKayitNo = 0;
+
+                                lock (TLockObj)
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        tDBSQLStr = @"SELECT * FROM Users " +
+                                      "WHERE [Kart ID] = '" + TCardID + "' " +
+                                      "ORDER BY [Kayit No]";
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        tDBReader = tDBCmd.ExecuteReader();
+                                        if (tDBReader.Read())
+                                        {
+                                            TUserType = tDBReader["Kullanici Tipi"] as int? ?? default(int);
+                                            TUserKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
+                                            TmpTelefon = tDBReader["Telefon"].ToString();
+                                            TmpName = tDBReader["Adi"].ToString();
+                                            TmpSurname = tDBReader["Soyadi"].ToString();
+                                        }
+                                        tDBReader.Close();
+                                    }
+                                }
+
+                                TVisitorKayitNo = 0;
+                                if (TUserType == 1)
+                                {
+                                    lock (TLockObj)
+                                    {
+                                        using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                        {
+                                            mDBConn.Open();
+                                            tDBSQLStr = @"SELECT * FROM Visitors " +
+                                              "WHERE Visitors.[Kart ID] = '" + TCardID + "' " +
+                                              "AND Visitors.Tarih = CONVERT(SMALLDATETIME,'" + TDate.ToString("MM/dd/yyyy HH:mm:ss") + "',101) " +
+                                              "ORDER BY [Kayit No]";
+
+                                            tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                            tDBReader = tDBCmd.ExecuteReader();
+                                            if (tDBReader.Read())
+                                            {
+                                                TVisitorKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
+                                            }
+
+                                            tDBReader.Close();
+                                        }
+                                    }
+                                }
+
+                            }
+
+                            TLocalBolgeNo = LokalBolgeNo(TMacSerial, TReader);
+                            if (TLocalBolgeNo < 1 && TLocalBolgeNo > 8)
+                            {
+                                TLocalBolgeNo = 1;
+                            }
+                            TGlobalBolgeNo = GlobalBolgeNo(TMacSerial, TLocalBolgeNo);
+                            if (TGlobalBolgeNo < 1 && TGlobalBolgeNo > 999)
+                            {
+                                TGlobalBolgeNo = 1;
+                            }
+                        }
+                        lock (TLockObj)
+                        {
+                            using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                            {
+                                mDBConn.Open();
+                                tDBSQLStr = "SELECT * FROM AccessDatas WHERE [Kart ID] = " + TCardID + " AND [Panel ID] = " + TPanel + " AND [Kapi ID] = " + TReader + " AND [Tarih] = '" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'";
+                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                tDBReader = tDBCmd.ExecuteReader();
+                                if (!tDBReader.Read())
+                                {
+                                    if (TAccessResult == 4)
+                                        TUserKayitNo = 1;
+
+                                    tDBSQLStr2 = @"INSERT INTO AccessDatas " +
+                                       "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
+                                       "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
+                                       "[User Kayit No],Kontrol,[Canli Resim])" +
+                                       "VALUES " +
+                                       "(" +
+                                       TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
+                                       TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
+                                       (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
+                                       TUserKayitNo + "," + 0 + "," + "'user_1.jpg'" + ")";
+                                    tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                    TRetInt = tDBCmd2.ExecuteNonQuery();
+                                    if (TRetInt <= 0)
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        mPanelProc = CommandConstants.CMD_RCV_LOGS;
+                        break;
+
                     }
-                    break;
                 default:
                     break;
             }
-
-
-
             return false;
         }
 
-        //TODO:Görev Tipine Göre Komut Prefixini Getiriyor
+        /// <summary>
+        /// Veritabanında kullanıcı ID'sine göre Kart ID bulma
+        /// </summary>
+        /// <param name="TempUser"></param>
+        /// <returns></returns>
+        public string FindUserCardID(long TempUser)
+        {
+            string FindUserCardID = "0";
+            string FindUserBString = "";
+            SqlCommand FindUserDBCommand;
+            SqlDataReader FindUserDBReader;
+            object TLockObj = new object();
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    FindUserBString = @"SELECT Users.ID, Users.[Kart ID] FROM Users " +
+               "WHERE  Users.ID = " + TempUser + " " +
+               "ORDER BY Users.ID";
+                    FindUserDBCommand = new SqlCommand(FindUserBString, mDBConn);
+                    FindUserDBReader = FindUserDBCommand.ExecuteReader();
+                    if (FindUserDBReader.Read())
+                    {
+                        FindUserCardID = FindUserDBReader["Kart ID"].ToString().Trim();
+                    }
+                    else
+                    {
+                        FindUserCardID = "0";
+                    }
+                }
+            }
+            return FindUserCardID;
+        }
+
+        /// <summary>
+        /// Geçiş verileri ekleme işlemlerinde kullanıcının lokal bölgesini bulma
+        /// </summary>
+        /// <param name="MacSerial"></param>
+        /// <param name="Reader"></param>
+        /// <returns></returns>
+        public int LokalBolgeNo(int MacSerial, int Reader)
+        {
+            string LBNDBString = "";
+            SqlCommand LBNDBCommand;
+            SqlDataReader LBNDBReader;
+            object TLockObj = new object();
+            int TLokalBolgeNo = 1;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    LBNDBString = "SELECT * FROM ReaderSettingsNew WHERE [Seri No]=" + MacSerial + " AND [WKapi ID]=" + Reader;
+                    LBNDBCommand = new SqlCommand(LBNDBString, mDBConn);
+                    LBNDBReader = LBNDBCommand.ExecuteReader();
+                    if (LBNDBReader.Read())
+                    {
+                        TLokalBolgeNo = LBNDBReader["WKapi Lokal Bolge"] as int? ?? default(int);
+                    }
+                }
+            }
+
+            return TLokalBolgeNo;
+        }
+
+        /// <summary>
+        /// Geçiş verileri ekleme işlemlerinde kullanıcının global bölgesini bulma
+        /// </summary>
+        /// <param name="MacSerial"></param>
+        /// <param name="LokalBolgeNo"></param>
+        /// <returns></returns>
+        public int GlobalBolgeNo(int MacSerial, int LokalBolgeNo)
+        {
+            string GBNDBString = "";
+            SqlCommand GBNDBCommand;
+            SqlDataReader GBNDBReader;
+            object TLockObj = new object();
+            int TGlobalBolgeNo = 1;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    GBNDBString = "SELECT * FROM PanelSettings WHERE [Seri No]=" + MacSerial;
+                    GBNDBCommand = new SqlCommand(GBNDBString, mDBConn);
+                    GBNDBReader = GBNDBCommand.ExecuteReader();
+                    if (GBNDBReader.Read())
+                    {
+                        if (LokalBolgeNo == 1)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge1"] as int? ?? default(int);
+                        if (LokalBolgeNo == 2)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge2"] as int? ?? default(int);
+                        if (LokalBolgeNo == 3)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge3"] as int? ?? default(int);
+                        if (LokalBolgeNo == 4)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge4"] as int? ?? default(int);
+                        if (LokalBolgeNo == 5)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge5"] as int? ?? default(int);
+                        if (LokalBolgeNo == 6)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge6"] as int? ?? default(int);
+                        if (LokalBolgeNo == 7)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge7"] as int? ?? default(int);
+                        if (LokalBolgeNo == 8)
+                            TGlobalBolgeNo = GBNDBReader["Panel Global Bolge8"] as int? ?? default(int);
+                    }
+                }
+            }
+
+            return TGlobalBolgeNo;
+        }
+
+        /// <summary>
+        /// Kullanıcının Kart ID değerinin 0'lardan arındırılması
+        /// </summary>
+        /// <param name="CardID"></param>
+        /// <returns></returns>
+        public string ClearPreZeros(string CardID)
+        {
+            string TSortStr;
+            int TLen;
+            TSortStr = CardID.Trim();
+            TLen = CardID.Length;
+            if (TLen > 0 && TSortStr != "0")
+            {
+                for (int i = 0; i <= TLen - 1; i++)
+                {
+                    if (TSortStr.Substring(0, 1) == "0")
+                    {
+                        if (i < (TLen - 1))
+                        {
+                            TSortStr = TSortStr.Substring(1);
+                        }
+                    }
+                }
+            }
+
+            if (TSortStr == "")
+                TSortStr = "0";
+
+            return TSortStr;
+        }
+
+        /// <summary>
+        /// Olay Geçiş Hafızası Alındıktan Sonra Panel Hafızası Silme Görevi Oluşturuyor.
+        /// </summary>
+        /// <param name="KayitNo">Görev tablosunda ki başarılı olan görevin kayıt numarası</param>
+        public void CheckDeleteAfterReceiving(int KayitNo)
+        {
+            object TLockObj = new object();
+            int TDataInt;
+            string tDBSQLStr = "";
+            string tDBSQLStr2 = "";
+            string tDBSQLStr3 = "";
+            SqlCommand tDBCmd;
+            SqlCommand tDBCmd2;
+            SqlCommand tDBCmd3;
+            SqlDataReader tDBReader;
+            SqlDataReader tDBReader2;
+            bool DeleteAfterRcv = false;
+            int DurumKodu = 0;
+            int GorevKodu = 0;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT TOP 1 [DeleteAfterReceiving] FROM ProgInit";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        DeleteAfterRcv = tDBReader[0] as bool? ?? default(bool);
+                    }
+                    if (DeleteAfterRcv == true)
+                    {
+                        tDBSQLStr2 = "SELECT TOP 1 [Durum Kodu],[Gorev Kodu] FROM TaskList WHERE [Kayit No] = " + KayitNo;
+                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                        tDBReader2 = tDBCmd2.ExecuteReader();
+                        if (tDBReader2.Read())
+                        {
+                            DurumKodu = tDBReader2[0] as int? ?? default(int);
+                            GorevKodu = tDBReader2[1] as int? ?? default(int);
+                        }
+                        if (GorevKodu == (int)CommandConstants.CMD_RCV_LOGS && DurumKodu == 2)
+                        {
+                            tDBSQLStr3 += "INSERT INTO TaskList ([Gorev Kodu], [IntParam 1], [Panel No], [Durum Kodu], Tarih, [Kullanici Adi], [Tablo Guncelle])" +
+                          " VALUES(" +
+                           (int)CommandConstants.CMD_ERS_LOGCOUNT + "," + 1 + "," + mPanelNo + "," + 1 + "," + "'" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "'," + "'System'," + 0 + ") ";
+
+                            tDBCmd3 = new SqlCommand(tDBSQLStr3, mDBConn);
+                            TDataInt = tDBCmd3.ExecuteNonQuery();
+                        }
+
+                    }
+                }
+            }
+
+        }
+
+        /// <summary>
+        /// Görev Tipine Göre Komut Prefixi Getiriyor.
+        /// </summary>
+        /// <param name="DBTaskType"></param>
+        /// <returns></returns>
         public string GetCommandPrefix(ushort DBTaskType)
         {
             switch (DBTaskType)
@@ -4540,8 +5118,6 @@ namespace MaviSoftServerV1._0
                     return "EC";
                 case (ushort)CommandConstants.CMD_ERS_ACCESSGROUP:
                     return "MS";
-                //case (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP:
-                //    return "ES";
                 case (ushort)CommandConstants.CMD_ERS_ACCESSCOUNTERS:
                     return "EP";
                 case (ushort)CommandConstants.CMD_ERSALL_ACCESSCOUNTERS:
@@ -4621,7 +5197,11 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        //TODO:Görev Tipine Göre Beklenen Cevap Boyutunu Getiriyor
+        /// <summary>
+        /// Görev Tipine Göre Beklenen Cevap Boyutu Dönderiyor.
+        /// </summary>
+        /// <param name="TmpTaskType"></param>
+        /// <returns></returns>
         public int GetAnswerSize(CommandConstants TmpTaskType)
         {
 
@@ -4715,14 +5295,17 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_ERSALL_TIMEGROUP:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 case CommandConstants.CMD_RCV_LOGS:
-                    return (int)SizeConstants.SIZE_STATUS_DATA;
+                    return (int)SizeConstants.SIZE_RCV_LOGS;
                 default:
                     return 0;
             }
         }
 
-        //TODO:Ekrandaki Label Text'lerini Güncelleme
-
+        /// <summary>
+        /// Ekranda ki Label Text'lerini Güncelleme
+        /// </summary>
+        /// <param name="TMsg"></param>
+        /// <param name="color"></param>
         delegate void TextDegisDelegate(string TMsg, System.Drawing.Color color);
         public void SyncUpdateScreen(string TMsg, System.Drawing.Color color)
         {
@@ -4751,7 +5334,11 @@ namespace MaviSoftServerV1._0
             }
         }
 
-        //TODO:Görev Tipine Göre String Mesaj Dönderiyor
+        /// <summary>
+        /// Görev Tipine Göre String Mesaj Dönderiyor
+        /// </summary>
+        /// <param name="TmpTaskType"></param>
+        /// <returns></returns>
         public string GetScreenMessage(CommandConstants TmpTaskType)
         {
             switch (TmpTaskType)
@@ -4913,9 +5500,7 @@ namespace MaviSoftServerV1._0
         }
 
 
-
-        //TODO:Kendi Yazdığım Kodlar*************************Kendi Yazdığım Kodlar**********************************
-
+        /********************Kendi Yazdığım Kodlar********************Kendi Yazdığım Kodlar********************/
         public string ConvertToTypeInt(int reader, string Type)
         {
             if (reader != -1)
@@ -4996,31 +5581,32 @@ namespace MaviSoftServerV1._0
             }
         }
 
+
         /***************************************************************************/
 
-        public bool ClearSocketBuffers(TcpClient TClient/*, TcpClient TClientLog*/)
+        public bool ClearSocketBuffers(TcpClient TClient, int? Size/*, TcpClient TClientLog*/)
         {
             byte[] DummyBuffer;
-            byte[] DummyBufferLog;
             StringBuilder sBuilder = new StringBuilder();
-            //string TRcvData=null;
-            //string TRcvDataTr = null;
             int TSize;
-            int TSizeLog;
             try
             {
-                if (TClient.Available > 0 /*&& TClientLog.Available > 0*/)
+                if (TClient.Available > 0)
                 {
                     var netStream = TClient.GetStream();
-                    //var netStreamLog = TClientLog.GetStream();
-                    if (netStream.CanRead/* && netStreamLog.CanRead*/)
+                    if (netStream.CanRead)
                     {
-                        TSize = TClient.Available;
+                        if (Size == null)
+                        {
+                            TSize = TClient.Available;
+                        }
+                        else
+                        {
+                            TSize = (int)Size;
+                        }
+
                         DummyBuffer = new byte[TSize];
                         netStream.Read(DummyBuffer, 0, TSize);
-                        //TSizeLog = TClientLog.Available;
-                        //DummyBufferLog = new byte[TSizeLog];
-                        //netStreamLog.Read(DummyBufferLog, 0, TSizeLog);
                     }
                     else
                     {
@@ -5212,9 +5798,5 @@ namespace MaviSoftServerV1._0
 
         }
 
-        public static implicit operator Panel(PanelLog v)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

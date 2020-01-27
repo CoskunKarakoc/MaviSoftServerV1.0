@@ -151,6 +151,8 @@ namespace MaviSoftServerV1._0
         CMD_RCV_LOGS = CMD_BASE + 182,
         CMD_SND_LOGSETTINGS = CMD_BASE + 183,
         CMD_RCV_LOGSETTINGS = CMD_BASE + 184,
+        CMD_RCV_TRANSITION = CMD_BASE + 185,
+
 
         CMD_RCV_NEWACCESS = CMD_BASE + 190,
         CMD_SND_AUTH = CMD_BASE + 191,
@@ -233,7 +235,8 @@ namespace MaviSoftServerV1._0
         SIZE_RCV_USER = 64,
         SIZE_RCV_ACCESSGROUP = 127,
         SIZE_ERSALL_USER = 13,
-        SIZE_RCV_LOCALINTERLOCK = 29
+        SIZE_RCV_LOCALINTERLOCK = 29,
+        SIZE_RCV_LOGS = 37
     }
 
 

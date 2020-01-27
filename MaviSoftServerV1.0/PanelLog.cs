@@ -374,8 +374,6 @@ namespace MaviSoftServerV1._0
 
         }
 
-
-
         /// <summary>
         /// Panel'den veri alma ve gelen verinin prefixine göre görev atama 
         /// </summary>
@@ -434,8 +432,6 @@ namespace MaviSoftServerV1._0
                 return false;
             }
         }
-
-
 
         /// <summary>
         /// Değişkendeki dönen verinin veritabanına kayıt işlemlerini gerçekleştiriyor
@@ -867,7 +863,6 @@ namespace MaviSoftServerV1._0
             }
             return false;
         }
-      
         
         /// <summary>
         /// Başlangıçta o panele ait kapı durumlarını doldurma
@@ -913,7 +908,6 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
-
 
         /// <summary>
         /// Mail gönderme rutini
@@ -964,7 +958,6 @@ namespace MaviSoftServerV1._0
             return result;
         }
 
-
         /// <summary>
         /// Veritabanından gelen görevi panele gönderme
         /// </summary>
@@ -996,7 +989,6 @@ namespace MaviSoftServerV1._0
                 return false;
             }
         }
-
 
         /// <summary>
         /// Veritabanından mail ayarlarını alma
@@ -1043,7 +1035,11 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
+        /// <summary>
+        /// Geçiş Kayıtları Alınırken Kullanıcının Kart ID'sini 0'lardan Arındırmak
+        /// </summary>
+        /// <param name="CardID"></param>
+        /// <returns></returns>
         public string ClearPreZeros(string CardID)
         {
             string TSortStr;
@@ -1069,7 +1065,6 @@ namespace MaviSoftServerV1._0
 
             return TSortStr;
         }
-
       
         /// <summary>
         /// Veritabanında kullanıcı ID'sine göre Kart ID bulma
@@ -1106,7 +1101,12 @@ namespace MaviSoftServerV1._0
             return FindUserCardID;
         }
 
-
+        /// <summary>
+        /// Geçiş Kayıtları Alınırken Kullanıcıya Ait Loak Bölgenin Alındığı Yer.
+        /// </summary>
+        /// <param name="MacSerial"></param>
+        /// <param name="Reader"></param>
+        /// <returns></returns>
         public int LokalBolgeNo(int MacSerial, int Reader)
         {
             string LBNDBString = "";
@@ -1132,7 +1132,12 @@ namespace MaviSoftServerV1._0
             return TLokalBolgeNo;
         }
 
-
+        /// <summary>
+        /// Geçiş Kayıtları Alınırken Kullanıcıya Ait Global Bölgenin Alındığı Yer.
+        /// </summary>
+        /// <param name="MacSerial"></param>
+        /// <param name="LokalBolgeNo"></param>
+        /// <returns></returns>
         public int GlobalBolgeNo(int MacSerial, int LokalBolgeNo)
         {
             string GBNDBString = "";
@@ -1172,8 +1177,6 @@ namespace MaviSoftServerV1._0
 
             return TGlobalBolgeNo;
         }
-
-
 
         /// <summary>
         /// Görev tipine göre komut prefixini getiriyor.
@@ -1290,7 +1293,6 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
         /// <summary>
         /// Görev tipine göre beklenen cevap boyutunu getiriyor.
         /// </summary>
@@ -1395,7 +1397,6 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
         /// <summary>
         /// Ekranda ki Label Text'lerini güncelliyor.
         /// </summary>
@@ -1428,7 +1429,6 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
-
 
         /// <summary>
         /// Görev tipine göre string mesaj gönderiyor.
@@ -1594,7 +1594,6 @@ namespace MaviSoftServerV1._0
                     return "BILINMEYEN İŞLEM";
             }
         }
-
 
         /// <summary>
         /// Girilen değerin tarih tipi mi olduğuna bakıyor.
