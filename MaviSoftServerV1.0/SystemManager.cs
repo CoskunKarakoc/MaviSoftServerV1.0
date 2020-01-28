@@ -62,6 +62,12 @@ namespace MaviSoftServerV1._0
 
         public DateTime mMailSendTime { get; set; }
 
+        public DateTime mYemekhaneMailStartTime { get; set; }
+
+        public DateTime mYemekhaneMailEndTime { get; set; }
+
+        public DateTime mYemekhaneMailSendTime { get; set; }
+
         private DateTime mTaskListStartTime { get; set; }
 
         private DateTime mTaskListEndTime { get; set; }
@@ -116,6 +122,9 @@ namespace MaviSoftServerV1._0
                 mMailSendTime = ReceiveceMailTime();
                 mMailStartTime = DateTime.Now;
                 mMailEndTime = mMailStartTime.AddHours(mTimeOut);
+                mYemekhaneMailStartTime = DateTime.Now;
+                mYemekhaneMailEndTime = mYemekhaneMailStartTime.AddHours(mTimeOut);
+                mYemekhaneMailSendTime = ReceiveceYemekhaneMailTime();
                 mStartTime = DateTime.Now;
                 mEndTime = mStartTime.AddMilliseconds(500);
                 mPeriodeAccessStartTime = DateTime.Now;
@@ -142,23 +151,51 @@ namespace MaviSoftServerV1._0
                         {
                             SyncGetNewTask();
 
-                            /*Mail gönderme kontrolü*/
+                            /*Genel Mail gönderme kontrolü*/
                             mMailStartTime = DateTime.Now;
                             if (mMailStartTime.ToShortTimeString() == mMailEndTime.ToShortTimeString())
                             {
                                 if (mMailStartTime.ToShortTimeString() == mMailSendTime.ToShortTimeString() && mMailStartTime.Second == 0)
                                 {
-                                    mPanelProc = CommandConstants.CMD_SND_MAIL;
-                                    break;
+                                    if (CheckMailSend() == true)
+                                    {
+                                        SendMail("Fora Teknoloji",GelmeyenlerReport(),true);
+                                    }
                                 }
                                 mMailSendTime = ReceiveceMailTime();
                                 mMailEndTime = mMailStartTime.AddHours(mTimeOut);
                             }
                             else if (mMailStartTime.ToShortTimeString() == mMailSendTime.ToShortTimeString() && mMailStartTime.Second == 0)
                             {
-                                mPanelProc = CommandConstants.CMD_SND_MAIL;
-                                break;
+                                if (CheckMailSend() == true)
+                                {
+                                    SendMail("Fora Teknoloji", GelmeyenlerReport(), true);
+                                }
                             }
+
+
+                            /*Yemekhane Mail Gönderme Kontrolü*/
+                            mYemekhaneMailStartTime = DateTime.Now;
+                            if (mYemekhaneMailStartTime.ToShortTimeString() == mYemekhaneMailEndTime.ToShortTimeString())
+                            {
+                                if (mYemekhaneMailStartTime.ToShortTimeString() == mYemekhaneMailSendTime.ToShortTimeString() && mYemekhaneMailStartTime.Second == 0)
+                                {
+                                    if (CheckMailSendForYemekhane() == true)
+                                    {
+                                        SendMail("Fora Teknoloji", YemekhaneReport(), true);
+                                    }
+                                }
+                                mYemekhaneMailSendTime = ReceiveceYemekhaneMailTime();
+                                mYemekhaneMailEndTime = mYemekhaneMailStartTime.AddHours(mTimeOut);
+                            }
+                            else if (mYemekhaneMailStartTime.ToShortTimeString() == mYemekhaneMailSendTime.ToShortTimeString() && mYemekhaneMailStartTime.Second == 0)
+                            {
+                                if (CheckMailSendForYemekhane() == true)
+                                {
+                                    SendMail("Fora Teknoloji", YemekhaneReport(), true);
+                                }
+                            }
+
 
                             /*Her gün saat 03:00' da TaskList Table temizleme kontrolü*/
                             mTaskListStartTime = DateTime.Now;
@@ -189,19 +226,6 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                        }
-                        break;
-                    case CommandConstants.CMD_SND_MAIL:
-                        {
-                            if (CheckMailSend() == true)
-                            {
-                                SendMail("Fora Teknoloji", null, true);
-                                mPanelProc = CommandConstants.CMD_TASK_LIST;
-                            }
-                            else
-                            {
-                                mPanelProc = CommandConstants.CMD_TASK_LIST;
-                            }
                         }
                         break;
                     case CommandConstants.CMD_RCV_LOGS:
@@ -259,35 +283,44 @@ namespace MaviSoftServerV1._0
                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
                     mDBConn.Open();
-                    tDBSQLStr = "SELECT * FROM EMailSettings";
+                    tDBSQLStr = "SELECT [E-Mail Adres], [Kullanici Adi], [Sifre], [SMPT Server], [SMPT Server Port]," +
+                        " [SSL Kullan], [Authentication], [Gonderme Saati], [Gelmeyenler Raporu], [Yemekhane Raporu]," +
+                        " [Kapi Grup No], [Kapi Grup Baslangic Saati], [Kapi Grup Bitis Saati], [Kapi Grup Gonderme Saati]," +
+                        " [Alici 1 E-Mail Adres], [Alici 1 E-Mail Gonder], [Alici 2 E-Mail Adres], [Alici 2 E-Mail Gonder]," +
+                        " [Alici 3 E-Mail Adres], [Alici 3 E-Mail Gonder] FROM EMailSettings";
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
                     if (tDBReader.Read())
                     {
                         mailSettings = new MailSettings
                         {
-                            EMail_Adres = tDBReader[1].ToString(),
-                            Kullanici_Adi = tDBReader[2].ToString(),
-                            Password = tDBReader[3].ToString(),
-                            MailHost = tDBReader[4].ToString(),
-                            MailPort = tDBReader[5] as int? ?? default(int),
-                            SSL = tDBReader[6] as bool? ?? default(bool),
-                            Authentication = tDBReader[7] as int? ?? default(int),
-                            Gonderme_Saati = tDBReader[8] as DateTime? ?? default(DateTime),
-                            Gelmeyenler_Raporu = tDBReader[9] as bool? ?? default(bool),
-                            Alici_1_EmailAdress = tDBReader[10].ToString(),
-                            Alici_1_EmailGonder = tDBReader[11] as bool? ?? default(bool),
-                            Alici_2_EmailAdress = tDBReader[12].ToString(),
-                            Alici_2_EmailGonder = tDBReader[13] as bool? ?? default(bool),
-                            Alici_3_EmailAdress = tDBReader[14].ToString(),
-                            Alici_3_EmailGonder = tDBReader[15] as bool? ?? default(bool),
+                            EMail_Adres = tDBReader[0].ToString(),
+                            Kullanici_Adi = tDBReader[1].ToString(),
+                            Password = tDBReader[2].ToString(),
+                            MailHost = tDBReader[3].ToString(),
+                            MailPort = tDBReader[4] as int? ?? default(int),
+                            SSL = tDBReader[5] as bool? ?? default(bool),
+                            Authentication = tDBReader[6] as int? ?? default(int),
+                            Gonderme_Saati = tDBReader[7] as DateTime? ?? default(DateTime),
+                            Gelmeyenler_Raporu = tDBReader[8] as bool? ?? default(bool),
+                            Yemekhane_Raporu = tDBReader[9] as bool? ?? default(bool),
+                            Kapi_Grup_No = tDBReader[10] as int? ?? default(int),
+                            Kapi_Grup_Baslangic_Saati = tDBReader[11] as DateTime? ?? default(DateTime),
+                            Kapi_Grup_Bitis_Saati = tDBReader[12] as DateTime? ?? default(DateTime),
+                            Kapi_Grup_Gonderme_Saati = tDBReader[13] as DateTime? ?? default(DateTime),
+                            Alici_1_EmailAdress = tDBReader[14].ToString(),
+                            Alici_1_EmailGonder = tDBReader[15] as bool? ?? default(bool),
+                            Alici_2_EmailAdress = tDBReader[16].ToString(),
+                            Alici_2_EmailGonder = tDBReader[17] as bool? ?? default(bool),
+                            Alici_3_EmailAdress = tDBReader[18].ToString(),
+                            Alici_3_EmailGonder = tDBReader[19] as bool? ?? default(bool),
                         };
                     }
                     return mailSettings;
                 }
             }
         }
-        
+
         /// <summary>
         /// Mail Gönderme Rutin
         /// Not:'Body boş bırakılırsa Gelmeyenler Raporu HTML Çıktısı Olarak Dolduruluyor.'
@@ -298,9 +331,6 @@ namespace MaviSoftServerV1._0
         /// <returns></returns>
         public bool SendMail(string subject, string body = null, bool isHtml = true)
         {
-            if (body == null)
-                body = GelmeyenlerReport();
-
             bool result = false;
             MailSettings mailSettings = ReceiveMailSettings();
             try
@@ -358,6 +388,38 @@ namespace MaviSoftServerV1._0
                 {
                     mDBConn.Open();
                     tDBSQLStr = "SELECT TOP 1 [Gonderme Saati] FROM EMailSettings";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        time = tDBReader[0] as DateTime? ?? default(DateTime);
+                        return time;
+                    }
+                    else
+                    {
+                        return DateTime.Now;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Yemekhane Mail Gönderme Saatinin Alındığı Yer
+        /// </summary>
+        /// <returns></returns>
+        public DateTime ReceiveceYemekhaneMailTime()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            object TLockObj = new object();
+            DateTime time = new DateTime();
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT TOP 1 [Kapi Grup Gonderme Saati] FROM EMailSettings";
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
                     if (tDBReader.Read())
@@ -475,6 +537,47 @@ namespace MaviSoftServerV1._0
         }
 
         /// <summary>
+        /// Yemekhane Mail'inin Gönderilip-Gönderilmeyeceğinin Kontrolünün Yapıldığı Methot
+        /// </summary>
+        /// <returns></returns>
+        public bool CheckMailSendForYemekhane()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            object TLockObj = new object();
+            bool Alici1 = false;
+            bool Alici2 = false;
+            bool Alici3 = false;
+            bool YemekhaneRaporGonder = false;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT [Alici 1 E-Mail Gonder],[Alici 2 E-Mail Gonder],[Alici 3 E-Mail Gonder],[Yemekhane Raporu] FROM EMailSettings";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    while (tDBReader.Read())
+                    {
+                        Alici1 = tDBReader[0] as bool? ?? default(bool);
+                        Alici2 = tDBReader[1] as bool? ?? default(bool);
+                        Alici3 = tDBReader[2] as bool? ?? default(bool);
+                        YemekhaneRaporGonder = tDBReader[3] as bool? ?? default(bool);
+                        if (YemekhaneRaporGonder == true && (Alici1 == true || Alici2 == true || Alici3 == true))
+                            return true;
+                        else
+                            return false;
+
+                    }
+
+                    return false;
+
+                }
+            }
+        }
+
+        /// <summary>
         /// Mail İşlemi İçin Gelmeyenler Raporu
         /// </summary>
         /// <returns></returns>
@@ -528,11 +631,123 @@ namespace MaviSoftServerV1._0
                     }
                     else
                     {
-                        return "<!DOCTYPE html><html><head><title>Page Title</title></head><body><h1>Gelmeyenler Raporu-Geçiş Kontrol Sistemleri</h1><p>Kritere Uygun Kayıt Bulunamadı.</p></body></html>";
+                        return "<!DOCTYPE html><html><head><title>Gelmeyenler</title></head><body><h1>Gelmeyenler Raporu-Geçiş Kontrol Sistemleri</h1><p>Kritere Uygun Kayıt Bulunamadı.</p></body></html>";
                     }
                 }
 
             }
+        }
+
+        /// <summary>
+        /// Mail İşlemi İçin Yemekhane Raporu
+        /// </summary>
+        /// <returns></returns>
+        public string YemekhaneReport()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            DateTime Baslangic_Tarihi = DateTime.Now;
+            object TLockObj = new object();
+            StringBuilder builder = new StringBuilder();
+            MailSettings mailSettings = ReceiveMailSettings();
+            List<int> PanelListesi = new List<int>();
+            PanelListesi = DoorGroupsDetailList();
+            if (mailSettings.Kapi_Grup_No != null)
+            {
+                lock (TLockObj)
+                {
+                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                    {
+                        mDBConn.Open();
+                        var BaslangicTarihSaat = DateTime.Now.ToShortDateString() + " " + mailSettings.Kapi_Grup_Baslangic_Saati.Value.ToLongTimeString();
+                        var BitisTarihSaat = DateTime.Now.ToShortDateString() + " " + mailSettings.Kapi_Grup_Bitis_Saati.Value.ToLongTimeString();
+                        tDBSQLStr = @"SELECT COUNT(*),PanelSettings.[Panel ID],
+                        PanelSettings.[Panel Name],AccessDatas.[Kapi ID] FROM AccessDatas
+				        LEFT JOIN PanelSettings ON AccessDatas.[Panel ID]=PanelSettings.[Panel ID]
+				        WHERE AccessDatas.[Gecis Tipi] = 0 AND AccessDatas.[Kart ID]>0";
+                        tDBSQLStr += " AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + BaslangicTarihSaat + "',103) ";
+                        tDBSQLStr += " AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + BitisTarihSaat + "',103) AND AccessDatas.Kod=1";
+                        if (PanelListesi.Count > 0)
+                        {
+                            var sayac = 0;
+                            var count = PanelListesi.Count();
+                            tDBSQLStr += " AND (";
+                            foreach (var item in PanelListesi)
+                            {
+                                sayac++;
+                                if (sayac == count)
+                                {
+                                    tDBSQLStr += " (AccessDatas.[Panel ID]= " + item + " AND AccessDatas.[Kapi ID] IN(SELECT DoorGroupsDetail.[Kapi ID] FROM DoorGroupsDetail WHERE DoorGroupsDetail.[Kapi Grup No]=" + mailSettings.Kapi_Grup_No + " AND DoorGroupsDetail.[Panel ID]=" + item + "))";
+                                    break;
+                                }
+                                else
+                                {
+                                    tDBSQLStr += " (AccessDatas.[Panel ID]= " + item + " AND AccessDatas.[Kapi ID] IN(SELECT DoorGroupsDetail.[Kapi ID] FROM DoorGroupsDetail WHERE DoorGroupsDetail.[Kapi Grup No]=" + mailSettings.Kapi_Grup_No + " AND DoorGroupsDetail.[Panel ID]=" + item + "))";
+                                    tDBSQLStr += " OR ";
+                                }
+                            }
+
+                            tDBSQLStr += ")";
+                        }
+                        tDBSQLStr += " GROUP BY PanelSettings.[Panel ID],PanelSettings.[Panel Name],AccessDatas.[Kapi ID]";
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBReader = tDBCmd.ExecuteReader();
+                        builder.Append("<!DOCTYPE html><html><head><style>.base-table { border: solid 1px #DDEEEE;border-collapse: collapse;border-spacing: 0;font: normal 13px Arial, sans-serif;}.base-table thead th {background-color: #DDEFEF;border: solid 1px #DDEEEE;color: #336B6B;padding: 10px;text-align: left;text-shadow: 1px 1px 1px #fff;}.base-table tbody td {border: solid 1px #DDEEEE;color: #333;padding: 10px;text-shadow: 1px 1px 1px #fff;}</style><title>Gelmeyenler Raporu</title></head><body><h4>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h4></br><h6>" + DateTime.Now.ToLongDateString() + "</h6>");
+                        builder.Append("<table class='base-table'><thead><tr><th>Panel ID</th><th>Panel Adı</th><th>Kapı ID</th><th>Geçiş Sayısı</th></tr></thead><tbody>");
+                        bool result = false;
+                        while (tDBReader.Read())
+                        {
+                            result = true;
+                            builder.Append("<tr><td>" + (tDBReader[1] as int? ?? default(int)) + "</td><td>" + (tDBReader[2].ToString()) + "</td><td>" + (tDBReader[3] as int? ?? default(int)) + "</td><td>" + (tDBReader[0] as int? ?? default(int)) + "</td></tr>");
+                        }
+                        builder.Append("</tbody></table></body></html>");
+                        if (result == true)
+                        {
+                            return builder.ToString();
+                        }
+                        else
+                        {
+                            return "<!DOCTYPE html><html><head><title>Yemekhane</title></head><body><h1>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h1><p>Kritere Uygun Kayıt Bulunamadı.</p></body></html>";
+                        }
+                    }
+                }
+            }
+            else
+            {
+                return "<!DOCTYPE html><html><head><title>Yemekhane</title></head><body><h1>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h1><p>Kritere Uygun Kayıt Bulunamadı.</p></body></html>";
+            }
+        }
+
+        /// <summary>
+        /// Yemekhane Raporu İçin DoorGroupsDetail Panel Listesi
+        /// </summary>
+        /// <returns></returns>
+        public List<int> DoorGroupsDetailList()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            DateTime Baslangic_Tarihi = DateTime.Now;
+            object TLockObj = new object();
+            StringBuilder builder = new StringBuilder();
+            MailSettings mailSettings = ReceiveMailSettings();
+            List<int> panelListesi = new List<int>();
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT DISTINCT [Panel ID] FROM DoorGroupsDetail WHERE DoorGroupsDetail.[Kapi Grup No] = " + mailSettings.Kapi_Grup_No;
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    while (tDBReader.Read())
+                    {
+                        panelListesi.Add(tDBReader[0] as int? ?? default(int));
+                    }
+                }
+            }
+            return panelListesi;
         }
 
         /// <summary>
