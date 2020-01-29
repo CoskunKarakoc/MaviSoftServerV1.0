@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
-using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data;
 namespace MaviSoftServerV1._0
 {
     public class Panel
@@ -3084,7 +3081,7 @@ namespace MaviSoftServerV1._0
                                     using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                     {
                                         mDBConn.Open();
-                                        for (int i = 0; i <= /*(int)TCONST.MAX_READER*/ 7; i++)
+                                        for (int i = 0; i <=7; i++)
                                         {
 
                                             tDBSQLStr = "SELECT * FROM GroupsDetail " +
@@ -3621,10 +3618,7 @@ namespace MaviSoftServerV1._0
                     break;
                 case CommandConstants.CMD_RCV_GENERALSETTINGS:
                     {
-                        int Aktif;
                         int ID;
-                        int TCPPort;
-                        string IPAdress;
                         int[] LocalGateway = new int[4];
                         int[] LocalIPAddress = new int[4];
                         int LocalTCPPort;
@@ -3638,11 +3632,6 @@ namespace MaviSoftServerV1._0
                         int[] LocalCapacityActive = new int[8];
                         int[] LocalCapacityClear = new int[8];
                         long[] LocalCapacityValue = new long[8];
-                        int PanelCapacityGroupNo;
-                        int PanelCapacityNumber;
-                        int PanelCapacityControlActive;
-                        int ClearPanelCapacityAtNight;
-                        int ButtonActive;
                         int StatusDataUpdate;
                         int StatusDataUpdateType;
                         int StatusDataUpdateTime;
@@ -3700,14 +3689,11 @@ namespace MaviSoftServerV1._0
                         int[] WIGReaderButtonDetectorFunction = new int[16];
                         int[] WIGReaderDoorPushDelay = new int[16];
                         int[] WIGReaderUserCount = new int[16];
-                        int PanelLocalAPB;
                         int[] PanelLocalAPBs = new int[8];
                         int[] PanelMasterRelayTime = new int[8];
                         int PanelAlarmRelayTime;
                         int PanelMACAddress;
-                        long SeriNo;
                         int PanelGlobalAPB;
-                        int PanelGroupNo;
 
                         //Panel MAC Address
                         SI = 3;
@@ -4473,15 +4459,6 @@ namespace MaviSoftServerV1._0
                                             tDBSQLStr2 += WIGReaderUserCount[i].ToString() + ",";
 
 
-
-
-
-
-
-
-
-
-
                                             tDBSQLStr2 = tDBSQLStr2.Substring(0, tDBSQLStr2.Length - 1);
                                             tDBSQLStr2 += ")";
                                             tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
@@ -4653,7 +4630,6 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_RCV_LOGS:
                     {
 
-                        string TmpStr;
                         int TLocalBolgeNo = 1;
                         int TGlobalBolgeNo = 1;
                         int TMacSerial = 0;

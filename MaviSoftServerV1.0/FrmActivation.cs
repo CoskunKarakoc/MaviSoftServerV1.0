@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Configuration;
 using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Management;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Management;
+using System.Windows.Forms;
 
 namespace MaviSoftServerV1._0
 {
@@ -43,7 +38,6 @@ namespace MaviSoftServerV1._0
             txtActivationKey.Font = font;
 
         }
-
 
         private string ProduceActivationKey()
         {
@@ -281,7 +275,6 @@ namespace MaviSoftServerV1._0
             }
             return Code;
         }
-
 
         private void FrmActivation_FormClosing(object sender, FormClosingEventArgs e)
         {

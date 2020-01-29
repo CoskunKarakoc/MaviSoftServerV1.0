@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace MaviSoftServerV1._0
@@ -24,25 +19,6 @@ namespace MaviSoftServerV1._0
         public SqlCommand Comnd { get; set; }
 
         public SqlDataReader MReader { get; set; }
-
-        public FrmMain()
-        {
-            InitializeComponent();
-            AktifPanelListesi = new List<Panel>();
-            AktifPanelLogListesi = new List<PanelLog>();
-        }
-
-
-        public struct S_PORTS
-        {
-            public ushort Active;
-            public int TCPPortNo;
-            public string IPAdress;
-            public int MACAddress;
-            public ushort ConnTimeout;
-            public ushort SndRcvTimeout;
-            public int PanelNo;
-        }
 
         public Label[] lblIP = new Label[201];
 
@@ -63,6 +39,24 @@ namespace MaviSoftServerV1._0
         public SystemManager PanelOuther;
 
         public Queue<KeyValuePair<int, string>> APBList = new Queue<KeyValuePair<int, string>>();
+
+        public struct S_PORTS
+        {
+            public ushort Active;
+            public int TCPPortNo;
+            public string IPAdress;
+            public int MACAddress;
+            public ushort ConnTimeout;
+            public ushort SndRcvTimeout;
+            public int PanelNo;
+        }
+
+        public FrmMain()
+        {
+            InitializeComponent();
+            AktifPanelListesi = new List<Panel>();
+            AktifPanelLogListesi = new List<PanelLog>();
+        }
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -113,16 +107,13 @@ namespace MaviSoftServerV1._0
 
             }
 
-            //MConn.ConnectionString = SqlServerAdress.GetAdress();
-            SQLStr = "SELECT * FROM PanelSettings ORDER BY [Sira No]";
+           
             try
             {
-
-
                 using (MConn = new SqlConnection(SqlServerAdress.Adres))
                 {
                     MConn.Open();
-
+                    SQLStr = "SELECT * FROM PanelSettings ORDER BY [Sira No]";
                     Comnd = new SqlCommand(SQLStr, MConn);
                     MReader = Comnd.ExecuteReader();
 

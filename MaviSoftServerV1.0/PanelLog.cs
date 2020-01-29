@@ -1,19 +1,13 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Mail;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data;
-using System.Diagnostics;
-using System.Collections;
 
 namespace MaviSoftServerV1._0
 {
@@ -469,7 +463,6 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_RCV_LOGS:
                     {
 
-                        string TmpStr;
                         int TLocalBolgeNo = 1;
                         int TGlobalBolgeNo = 1;
                         int TMacSerial = 0;
@@ -484,9 +477,6 @@ namespace MaviSoftServerV1._0
                         long TUserKayitNo = 0;
                         long TVisitorKayitNo = 0;
                         DateTime TDate = new DateTime();
-                        int TK = 0;
-                        int TDCount = 0;
-                        int TDIX = 0;
                         string TmpName = "";
                         string TmpSurname = "";
                         string TmpTelefon = "";
@@ -873,10 +863,7 @@ namespace MaviSoftServerV1._0
             object TLockObj = new object();
             string tDBSQLStr;
             SqlCommand tDBCmd;
-            string tDBSQLStr2;
-            SqlCommand tDBCmd2;
             SqlDataReader tDBReader;
-            int TRetInt;
             lock (TLockObj)
             {
                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
@@ -950,7 +937,7 @@ namespace MaviSoftServerV1._0
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 result = false;
             }
