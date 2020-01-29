@@ -151,15 +151,15 @@ namespace MaviSoftServerV1._0
                         {
                             SyncGetNewTask();
 
-                            /*Genel Mail gönderme kontrolü*/
+                            /*Gelmeyenler Raporu Mail Gönderme Kontrolü*/
                             mMailStartTime = DateTime.Now;
                             if (mMailStartTime.ToShortTimeString() == mMailEndTime.ToShortTimeString())
                             {
                                 if (mMailStartTime.ToShortTimeString() == mMailSendTime.ToShortTimeString() && mMailStartTime.Second == 0)
                                 {
-                                    if (CheckMailSend() == true)
+                                    if (CheckMailSendForGelmeyenler() == true)
                                     {
-                                        SendMail("Fora Teknoloji",GelmeyenlerReport(),true);
+                                        SendMail("Fora Teknoloji", GelmeyenlerReport(), true);
                                     }
                                 }
                                 mMailSendTime = ReceiveceMailTime();
@@ -167,7 +167,7 @@ namespace MaviSoftServerV1._0
                             }
                             else if (mMailStartTime.ToShortTimeString() == mMailSendTime.ToShortTimeString() && mMailStartTime.Second == 0)
                             {
-                                if (CheckMailSend() == true)
+                                if (CheckMailSendForGelmeyenler() == true)
                                 {
                                     SendMail("Fora Teknoloji", GelmeyenlerReport(), true);
                                 }
@@ -499,7 +499,7 @@ namespace MaviSoftServerV1._0
         /// Mail'in Gönderilip-Gönderilmeyeceğinin Kontrolünün Yapıldığı Methot
         /// </summary>
         /// <returns></returns>
-        public bool CheckMailSend()
+        public bool CheckMailSendForGelmeyenler()
         {
             string tDBSQLStr;
             SqlCommand tDBCmd;
@@ -508,12 +508,13 @@ namespace MaviSoftServerV1._0
             bool Alici1 = false;
             bool Alici2 = false;
             bool Alici3 = false;
+            bool GelmeyenRapor = false;
             lock (TLockObj)
             {
                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
                     mDBConn.Open();
-                    tDBSQLStr = "SELECT [Alici 1 E-Mail Gonder],[Alici 2 E-Mail Gonder],[Alici 3 E-Mail Gonder] FROM EMailSettings";
+                    tDBSQLStr = "SELECT [Alici 1 E-Mail Gonder],[Alici 2 E-Mail Gonder],[Alici 3 E-Mail Gonder],[Gelmeyenler Raporu] FROM EMailSettings";
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
                     while (tDBReader.Read())
@@ -521,15 +522,13 @@ namespace MaviSoftServerV1._0
                         Alici1 = tDBReader[0] as bool? ?? default(bool);
                         Alici2 = tDBReader[1] as bool? ?? default(bool);
                         Alici3 = tDBReader[2] as bool? ?? default(bool);
-                        if (Alici1 == true || Alici2 == true || Alici3 == true)
+                        GelmeyenRapor = tDBReader[3] as bool? ?? default(bool);
+                        if (GelmeyenRapor == true && (Alici1 == true || Alici2 == true || Alici3 == true))
                             return true;
                         else
                             return false;
-
                     }
-
                     return false;
-
                 }
             }
 
