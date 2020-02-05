@@ -213,9 +213,7 @@ namespace MaviSoftServerV1._0
                 Thread.Sleep(5);
 
                 if (mActive == 0)
-                {
                     mPanelProc = CommandConstants.CMD_PORT_DISABLED;
-                }
 
                 switch (mPanelProc)
                 {
@@ -227,7 +225,7 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_INIT:
                         {
-                            SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.Yellow);
+                            SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.SkyBlue);
                             mPanelClient = new TcpClient();
                             mPanelClient.ReceiveBufferSize = 65536;
                             mPanelClient.SendBufferSize = 65536;
@@ -245,7 +243,7 @@ namespace MaviSoftServerV1._0
                             }
                             catch (Exception)
                             {
-                                mPanelProc = CommandConstants.CMD_PORT_DISABLED;
+                                mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                             }
 
                         }
@@ -273,7 +271,7 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
-                            SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Red);
+                            SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
                             if (mPanelClient.Connected == true)
                             {
                                 mPanelClient.Close();
@@ -339,7 +337,7 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_TASK_LIST:
                         {
-                            if (mPanelClient.Connected == false)
+                            if (mPanelClient.Connected == false && mPanelClient.LingerState.Enabled==false)
                             {
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
