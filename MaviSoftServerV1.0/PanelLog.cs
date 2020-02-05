@@ -2,6 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Net;
 using System.Net.Mail;
 using System.Net.Sockets;
@@ -125,8 +129,15 @@ namespace MaviSoftServerV1._0
 
         public List<PanelLog> LogPanelListesi = new List<PanelLog>();
 
+        private List<Cameras> Camera = new List<Cameras>();
+
         public Queue SndQueue = new Queue();
 
+        public DateTime snapShotTime { get; set; }
+
+        public string snapShotCardID { get; set; }
+
+        public int CaptureCount { get; set; }
         public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, List<Panel> Panels, FrmMain parentForm)
         {
             mMemIX = MemIX;
@@ -140,6 +151,9 @@ namespace MaviSoftServerV1._0
             mParentForm = parentForm;
             PanelListesi = Panels;
             mReceiveTimeStart = DateTime.Now;
+            snapShotTime = DateTime.Now;
+            snapShotCardID = "0";
+            CaptureCount = 0;
             if (mTimeOut < 3 && mTimeOut > 60)
             {
                 mTimeOut = 3;
@@ -201,7 +215,7 @@ namespace MaviSoftServerV1._0
                 {
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
-
+                            ClearDoorStatus();
                             SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
                             if (mMailRetryCount == 0)
                             {
@@ -230,6 +244,7 @@ namespace MaviSoftServerV1._0
                             }
                             catch (Exception)
                             {
+                                ClearDoorStatus();
                                 mLogProc = CommandConstants.CMD_PORT_CLOSE;
                             }
                         }
@@ -339,7 +354,7 @@ namespace MaviSoftServerV1._0
             }
         }
 
-      
+
         /// <summary>
         /// Boyut kontrolü
         /// </summary>
@@ -486,7 +501,8 @@ namespace MaviSoftServerV1._0
                         int hour = 0;
                         int minute = 0;
                         int second = 0;
-
+                        bool TPictureOk = false;
+                        string Snapshot = "";
                         if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16) == PanelSerialNo)
                         {
                             TMacSerial = Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16);
@@ -659,6 +675,49 @@ namespace MaviSoftServerV1._0
 
                             }
 
+                            if (CaptureCount < 3)
+                            {
+                                //Canlı Resim Kayıt İşlemi
+                                if (TAccessResult >= 0 && TAccessResult <= 4)
+                                {
+                                    var cameraSettings = CameraList().Find(x => x.Panel_ID == TPanel && x.Kapi_ID == TReader);
+                                    if (cameraSettings != null)
+                                    {
+                                        TPictureOk = false;
+                                        if (TAccessResult == 0 && cameraSettings.Engellenen_Resim_Kayit == true)
+                                            TPictureOk = true;
+                                        if (TAccessResult == 1 && cameraSettings.Geciste_Resim_Kayit == true)
+                                            TPictureOk = true;
+                                        if (TAccessResult == 2 && cameraSettings.Antipassback_Resim_Kayit == true)
+                                            TPictureOk = true;
+                                        if (TAccessResult == 3 && cameraSettings.Geciste_Resim_Kayit == true)
+                                            TPictureOk = true;
+                                        if (TAccessResult == 4 && cameraSettings.Tanimsiz_Resim_Kayit == true)
+                                            TPictureOk = true;
+                                    }
+
+                                    if (TPictureOk == true)
+                                    {
+                                        //Zavio
+                                        if (cameraSettings.Kamera_Tipi == 1)
+                                        {
+                                            if (cameraSettings.Kamera_Admin == null || cameraSettings.Kamera_Admin == "")
+                                                cameraSettings.Kamera_Admin = "admin";
+                                            if (cameraSettings.Kamera_Password == null || cameraSettings.Kamera_Password == "")
+                                                cameraSettings.Kamera_Password = "admin";
+                                            snapShotTime = DateTime.Now;
+                                            snapShotCardID = TCardID;
+                                            Capture(cameraSettings);
+                                            Snapshot = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2") + "-" +
+                                                snapShotTime.Hour.ToString("D2") + "" + snapShotTime.Minute.ToString("D2") + "" + snapShotTime.Second.ToString("D2") + ".jpeg";
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Snapshot = "BaseUser.jpg";
+                            }
                             TLocalBolgeNo = LokalBolgeNo(TMacSerial, TReader);
                             if (TLocalBolgeNo < 1 && TLocalBolgeNo > 8)
                             {
@@ -687,7 +746,7 @@ namespace MaviSoftServerV1._0
                                    TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
                                    TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
                                    (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
-                                   TUserKayitNo + "," + 0 + "," + "'user_1.jpg'" + ")";
+                                   TUserKayitNo + "," + 0 + "," + "'" + Snapshot + "'" + ")";
                                 tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                                 TRetInt = tDBCmd.ExecuteNonQuery();
                                 if (TRetInt <= 0)
@@ -853,7 +912,7 @@ namespace MaviSoftServerV1._0
             }
             return false;
         }
-        
+
         /// <summary>
         /// Başlangıçta o panele ait kapı durumlarını doldurma
         /// </summary>
@@ -1052,7 +1111,7 @@ namespace MaviSoftServerV1._0
 
             return TSortStr;
         }
-      
+
         /// <summary>
         /// Veritabanında kullanıcı ID'sine göre Kart ID bulma
         /// </summary>
@@ -1605,6 +1664,301 @@ namespace MaviSoftServerV1._0
                 return false;
             }
         }
+
+        /// <summary>
+        /// Panel Bağlantısı Yapılamadığında Kapı Durumlarını Siliyor.
+        /// </summary>
+        /// <returns></returns>
+        private bool ClearDoorStatus()
+        {
+            int TDataInt;
+            object TLockObj = new object();
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+            {
+                mDBConn.Open();
+                tDBSQLStr = "UPDATE DoorStatus " +
+                                         "SET " +
+                                         "[Panel ID] = " + mPanelNo.ToString() + "," +
+                                         "[Seri No] = " + mPanelSerialNo.ToString() + "," +
+                                         "[Hirsiz Alarm Durumu] = " + 0 + "," +
+                                         "[Yangin Alarm Durumu] = " + 0 + "," +
+                                         "[Kapi Alarm Durumu] = " + 0 + "," +
+                                         "[Kapi 1 Baglanti] = " + 0 + "," +
+                                         "[Kapi 2 Baglanti] = " + 0 + "," +
+                                         "[Kapi 3 Baglanti] = " + 0 + "," +
+                                         "[Kapi 4 Baglanti] = " + 0 + "," +
+                                         "[Kapi 5 Baglanti] = " + 0 + "," +
+                                         "[Kapi 6 Baglanti] = " + 0 + "," +
+                                         "[Kapi 7 Baglanti] = " + 0 + "," +
+                                         "[Kapi 8 Baglanti] = " + 0 + "," +
+                                         "[Kapi 9 Baglanti] = " + 0 + "," +
+                                         "[Kapi 10 Baglanti] = " + 0 + "," +
+                                         "[Kapi 11 Baglanti] = " + 0 + "," +
+                                         "[Kapi 12 Baglanti] = " + 0 + "," +
+                                         "[Kapi 13 Baglanti] = " + 0 + "," +
+                                         "[Kapi 14 Baglanti] = " + 0 + "," +
+                                         "[Kapi 15 Baglanti] = " + 0 + "," +
+                                         "[Kapi 16 Baglanti] = " + 0 + "," +
+                                         "[Kapi 1 Sensor] = " + 0 + "," +
+                                         "[Kapi 2 Sensor] = " + 0 + "," +
+                                         "[Kapi 3 Sensor] = " + 0 + "," +
+                                         "[Kapi 4 Sensor] = " + 0 + "," +
+                                         "[Kapi 5 Sensor] = " + 0 + "," +
+                                         "[Kapi 6 Sensor] = " + 0 + "," +
+                                         "[Kapi 7 Sensor] = " + 0 + "," +
+                                         "[Kapi 8 Sensor] = " + 0 + "," +
+                                         "[Kapi 9 Sensor] = " + 0 + "," +
+                                         "[Kapi 10 Sensor] = " + 0 + "," +
+                                         "[Kapi 11 Sensor] = " + 0 + "," +
+                                         "[Kapi 12 Sensor] = " + 0 + "," +
+                                         "[Kapi 13 Sensor] = " + 0 + "," +
+                                         "[Kapi 14 Sensor] = " + 0 + "," +
+                                         "[Kapi 15 Sensor] = " + 0 + "," +
+                                         "[Kapi 16 Sensor] = " + 0 + "," +
+                                         "[Kapi 1 Button] = " + 0 + "," +
+                                         "[Kapi 2 Button] = " + 0 + "," +
+                                         "[Kapi 3 Button] = " + 0 + "," +
+                                         "[Kapi 4 Button] = " + 0 + "," +
+                                         "[Kapi 5 Button] = " + 0 + "," +
+                                         "[Kapi 6 Button] = " + 0 + "," +
+                                         "[Kapi 7 Button] = " + 0 + "," +
+                                         "[Kapi 8 Button] = " + 0 + "," +
+                                         "[Kapi 9 Button] = " + 0 + "," +
+                                         "[Kapi 10 Button] = " + 0 + "," +
+                                         "[Kapi 11 Button] = " + 0 + "," +
+                                         "[Kapi 12 Button] = " + 0 + "," +
+                                         "[Kapi 13 Button] = " + 0 + "," +
+                                         "[Kapi 14 Button] = " + 0 + "," +
+                                         "[Kapi 15 Button] = " + 0 + "," +
+                                         "[Kapi 16 Button] = " + 0 +
+                                         " WHERE [Panel ID] = " + mPanelNo.ToString() +
+                                         " AND [Seri No] = " + mPanelSerialNo.ToString();
+                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                TDataInt = tDBCmd.ExecuteNonQuery();
+                if (TDataInt > 0)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Aktif Kamera Listesi Gönderiyor
+        /// </summary>
+        /// <returns></returns>
+        private List<Cameras> CameraList()
+        {
+            StringBuilder TSndStr = new StringBuilder();
+            object TLockObj = new object();
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            lock (TLockObj)
+            {
+
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    try
+                    {
+                        tDBSQLStr = "SELECT [Kamera No],[Kayit No],[Kamera Adi],[Kamera Tipi],[IP Adres],[TCP Port],[UDP Port],[Kamera Admin],[Kamera Password],[Aciklama],[Geciste Resim Kayit],[Geciste Video Kayit],[Antipassback Resim Kayit],[Antipassback Video Kayit],[Engellenen Resim Kayit],[Engellenen Video Kayit],[Tanimsiz Resim Kayit],[Tanimsiz Video Kayit],[Panel ID],[Kapi ID] FROM [Cameras]";
+                        mDBConn.Open();
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBReader = tDBCmd.ExecuteReader();
+                        while (tDBReader.Read())
+                        {
+                            var camera = new Cameras
+                            {
+                                Kamera_No = tDBReader[0] as int? ?? default(int),
+                                Kayit_No = tDBReader[1] as int? ?? default(int),
+                                Kamera_Adi = tDBReader[2].ToString(),
+                                Kamera_Tipi = tDBReader[3] as int? ?? default(int),
+                                IP_Adres = tDBReader[4].ToString(),
+                                TCP_Port = tDBReader[5] as int? ?? default(int),
+                                UDP_Port = tDBReader[6] as int? ?? default(int),
+                                Kamera_Admin = tDBReader[7].ToString(),
+                                Kamera_Password = tDBReader[8].ToString(),
+                                Aciklama = tDBReader[9].ToString(),
+                                Geciste_Resim_Kayit = tDBReader[10] as bool? ?? default(bool),
+                                Geciste_Video_Kayit = tDBReader[11] as bool? ?? default(bool),
+                                Antipassback_Resim_Kayit = tDBReader[12] as bool? ?? default(bool),
+                                Antipassback_Video_Kayit = tDBReader[13] as bool? ?? default(bool),
+                                Engellenen_Resim_Kayit = tDBReader[14] as bool? ?? default(bool),
+                                Engellenen_Video_Kayit = tDBReader[15] as bool? ?? default(bool),
+                                Tanimsiz_Resim_Kayit = tDBReader[16] as bool? ?? default(bool),
+                                Tanimsiz_Video_Kayit = tDBReader[17] as bool? ?? default(bool),
+                                Panel_ID = tDBReader[18] as int? ?? default(int),
+                                Kapi_ID = tDBReader[19] as int? ?? default(int)
+                            };
+                            Camera.Add(camera);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+            }
+            return Camera;
+        }
+
+        /// <summary>
+        /// Canlı Kamera Ana Bağlantı Yeri
+        /// </summary>
+        /// <param name="cameras"></param>
+        private void Capture(Cameras cameras)
+        {
+            DateTime timeStart = DateTime.Now;
+            DateTime timeEnd = timeStart.AddSeconds(3);
+            StringBuilder url = new StringBuilder();
+            url.Append("http://");
+            url.Append(cameras.IP_Adres);
+            url.Append("/jpg/image.jpg");
+            Uri uri = new Uri(url.ToString());
+            Thread thread = new Thread(delegate ()
+            {
+                using (WebBrowser browser = new WebBrowser())
+                {
+
+                    browser.ScrollBarsEnabled = false;
+                    browser.AllowNavigation = true;
+                    string userName = cameras.Kamera_Admin;
+                    string password = cameras.Kamera_Password;
+                    string hdr = "Authorization: Basic " + Convert.ToBase64String(Encoding.ASCII.GetBytes(userName + ":" + password)) + System.Environment.NewLine;
+                    browser.Navigate(CredentialUri(uri, cameras.Kamera_Admin, cameras.Kamera_Password));
+                    browser.Width = 1024;
+                    browser.Height = 768;
+                    browser.DocumentCompleted += new WebBrowserDocumentCompletedEventHandler(DocumentCompleted);
+                    timeStart = DateTime.Now;
+                    timeEnd = timeStart.AddSeconds(3);
+                    while (browser.ReadyState != WebBrowserReadyState.Complete)
+                    {
+                        timeStart = DateTime.Now;
+                        if (timeStart > timeEnd)
+                        {
+                            CaptureCount++;
+                            break;
+                        }
+                        else
+                        {
+                            System.Windows.Forms.Application.DoEvents();
+                        }
+                    }
+                }
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+        }
+
+        /// <summary>
+        /// Resim Okuma ve Dizine Kayıt İşlemi
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
+        {
+            WebBrowser browser = sender as WebBrowser;
+            using (Bitmap bitmap = new Bitmap(browser.Width, browser.Height))
+            {
+                browser.DrawToBitmap(bitmap, new Rectangle(0, 0, browser.Width, browser.Height));
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+                    byte[] bytes = stream.ToArray();
+                    Bitmap bmp = (Bitmap)Bitmap.FromStream(new MemoryStream(bytes, 0, bytes.Length));
+                    bmp = ResizeBitmap(bmp, 512, 512);
+                    string imgName = @"" + GetRouteValue() + @"\" + ImageName();
+                    bmp.Save(imgName, ImageFormat.Jpeg);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Resim Boyutlandırma
+        /// </summary>
+        /// <param name="bmp"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        public Bitmap ResizeBitmap(Bitmap bmp, int width, int height)
+        {
+            Bitmap result = new Bitmap(width, height);
+            using (Graphics g = Graphics.FromImage(result))
+            {
+                g.DrawImage(bmp, 0, 0, width, height);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Canlı Resim İçin Kullanıcı Kimlik Bilgileri Oluşturma
+        /// </summary>
+        /// <param name="u"></param>
+        /// <param name="user"></param>
+        /// <param name="pass"></param>
+        /// <returns></returns>
+        public static Uri CredentialUri(Uri u, string user, string pass)
+        {
+            UriBuilder uriSite = new UriBuilder(u);
+            uriSite.UserName = user;
+            uriSite.Password = pass;
+            return uriSite.Uri;
+        }
+
+        /// <summary>
+        /// Canlı Resim İsim Verme
+        /// </summary>
+        /// <returns></returns>
+        private string ImageName()
+        {
+            string name = "";
+            return name = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2") + "-" +
+                      snapShotTime.Hour.ToString("D2") + "" + snapShotTime.Minute.ToString("D2") + "" + snapShotTime.Second.ToString("D2") + ".jpeg";
+        }
+
+        /// <summary>
+        /// SnapShot Route Value
+        /// </summary>
+        /// <returns></returns>
+        private string GetRouteValue()
+        {
+            StringBuilder TSndStr = new StringBuilder();
+            object TLockObj = new object();
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            string routeValue = "";
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    try
+                    {
+                        tDBSQLStr = "SELECT TOP 1 RouteValue FROM ProgInit";
+                        mDBConn.Open();
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBReader = tDBCmd.ExecuteReader();
+                        if (tDBReader.Read())
+                        {
+                            routeValue = tDBReader[0].ToString();
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        routeValue = "";
+                    }
+                }
+                return routeValue;
+            }
+
+        }
+
 
     }
 }

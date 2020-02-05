@@ -221,8 +221,8 @@ namespace MaviSoftServerV1._0
                 {
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
-
                             SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
+                            mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
                     case CommandConstants.CMD_PORT_INIT:
@@ -245,7 +245,7 @@ namespace MaviSoftServerV1._0
                             }
                             catch (Exception)
                             {
-                                mPanelProc = CommandConstants.CMD_PORT_CLOSE;
+                                mPanelProc = CommandConstants.CMD_PORT_DISABLED;
                             }
 
                         }
@@ -3081,7 +3081,7 @@ namespace MaviSoftServerV1._0
                                     using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                     {
                                         mDBConn.Open();
-                                        for (int i = 0; i <=7; i++)
+                                        for (int i = 0; i <= 7; i++)
                                         {
 
                                             tDBSQLStr = "SELECT * FROM GroupsDetail " +

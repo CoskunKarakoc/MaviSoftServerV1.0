@@ -791,17 +791,49 @@ namespace MaviSoftServerV1._0
                             var panelNo = mDBReader["Panel No"] as int? ?? default(int);
                             if (panel.mPanelNo == panelNo)
                             {
-                                panel.mTempTaskSource = DB_TASK;
-                                panel.mTempTaskNo = mTaskNo;
-                                panel.mTempTaskType = mTaskType;
-                                panel.mTempTaskIntParam1 = mTaskIntParam1;
-                                panel.mTempTaskIntParam2 = mTaskIntParam2;
-                                panel.mTempTaskIntParam3 = mTaskIntParam2;
-                                panel.mTempTaskIntParam4 = mTaskIntParam2;
-                                panel.mTempTaskIntParam5 = mTaskIntParam2;
-                                panel.mTempTaskStrParam1 = mTaskStrParam1;
-                                panel.mTempTaskUserName = mTaskUserName;
-                                panel.mTempTaskUpdateTable = mTaskUpdateTable;
+                                if (panel.mPanelClient.Connected == true)
+                                {
+                                    panel.mTempTaskSource = DB_TASK;
+                                    panel.mTempTaskNo = mTaskNo;
+                                    panel.mTempTaskType = mTaskType;
+                                    panel.mTempTaskIntParam1 = mTaskIntParam1;
+                                    panel.mTempTaskIntParam2 = mTaskIntParam2;
+                                    panel.mTempTaskIntParam3 = mTaskIntParam2;
+                                    panel.mTempTaskIntParam4 = mTaskIntParam2;
+                                    panel.mTempTaskIntParam5 = mTaskIntParam2;
+                                    panel.mTempTaskStrParam1 = mTaskStrParam1;
+                                    panel.mTempTaskUserName = mTaskUserName;
+                                    panel.mTempTaskUpdateTable = mTaskUpdateTable;
+                                }
+                               else
+                               {
+                                   string tDBSQLStr;
+                                   string tDBSQLStr2;
+                                   SqlCommand tDBCmd;
+                                   SqlCommand tDBCmd2;
+                                   object TLockObjj = new object();
+                                   int TRetInt = 0;
+                                   lock (TLockObjj)
+                                   {
+                                       try
+                                       {
+                                           tDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + 4 + " WHERE [Kayit No]=" + mTaskNo;
+                                           tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                           TRetInt = tDBCmd.ExecuteNonQuery();
+                                           if (TRetInt < 0)
+                                           {
+                                               tDBSQLStr2 = "DELETE FROM TaskList WHERE [Kayit No]=" + mTaskNo;
+                                               tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                               TRetInt = tDBCmd2.ExecuteNonQuery();
+                                           }
+                                       }
+                                       catch (Exception)
+                                       {
+                                           throw;
+                                       }
+                                   }
+
+                               }
                             }
                         }
                     }
@@ -849,6 +881,49 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
+        /// <summary>
+        /// Panel Bağlı Değilse Görev Zaman Aşımına Uğruyor
+        /// </summary>
+        /// <param name="taskNo">TaskList No</param>
+        /// <returns></returns>
+        private bool NotConnectedPanel(int taskNo)
+        {
+            string tDBSQLStr;
+            string tDBSQLStr2;
+            SqlCommand tDBCmd;
+            SqlCommand tDBCmd2;
+            object TLockObj = new object();
+            int TRetInt = 0;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + 4 + " WHERE [Kayit No]=" + taskNo;
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    TRetInt = mDBCmd.ExecuteNonQuery();
+                    if (TRetInt > 0)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        tDBSQLStr2 = "DELETE FROM TaskList WHERE [Kayit No]=" + taskNo;
+                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                        TRetInt = tDBCmd2.ExecuteNonQuery();
+                        if (TRetInt > 0)
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
 
     }
 }
