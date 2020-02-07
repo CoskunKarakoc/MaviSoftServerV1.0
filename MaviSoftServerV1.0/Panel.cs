@@ -337,7 +337,7 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_TASK_LIST:
                         {
-                            if (mPanelClient.Connected == false && mPanelClient.LingerState.Enabled==false)
+                            if (mPanelClient.Connected == false && mPanelClient.LingerState.Enabled == false)
                             {
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
@@ -1637,7 +1637,7 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append(mPanelSerialNo.ToString("X4"));
                             TSndStr.Append(mPanelNo.ToString("D3"));
                             TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No"] as int? ?? default(int), "D4"));
-                            for (int i = 1; i < 9; i++)
+                            for (int i = 1; i <= 8; i++)
                             {
                                 tDBSQLStr2 = "SELECT * FROM GroupsDetailNew WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " AND [Kapi No]=" + i + " ORDER BY [Kayit No]";
                                 tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
@@ -1673,13 +1673,13 @@ namespace MaviSoftServerV1._0
                             {
                                 TSndStr.Append("00000");
                             }
-                            if ((tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) >= 0 && (tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) < 1000)
+                            if ((tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) > 0 && (tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)) < 1000)
                             {
                                 TSndStr.Append(ConvertToTypeInt((tDBReader["Grup Gecis Sayisi Global Bolge No"] as int? ?? default(int)), "D3"));
                             }
                             else
                             {
-                                TSndStr.Append("000");
+                                TSndStr.Append("001");
                             }
                             //Access Counter Periode (Daily Or Monthly)
                             TSndStr.Append(ConvertToTypeInt((tDBReader["Gunluk Aylik"] as int? ?? default(int)), "D1"));
@@ -1697,9 +1697,9 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
-                                TSndStr.Append("000");
+                                TSndStr.Append("001");
                             }
-                            for (int i = 1; i < 17; i++)
+                            for (int i = 1; i <= 16; i++)
                             {
                                 tDBSQLStr2 = "SELECT * FROM GroupsDetailNew WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " AND [Kapi No]=" + i + " ORDER BY [Kayit No]";
                                 tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
@@ -1754,7 +1754,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("0");
                             }
 
-                            for (int i = 1; i < 9; i++)
+                            for (int i = 1; i <= 8; i++)
                             {
                                 tDBSQLStr2 = "SELECT * FROM GroupsDetailNew WHERE [Panel No]=" + mPanelNo + " AND [Grup No]=" + DBIntParam1 + " AND [Kapi No]=" + i + " ORDER BY [Kayit No]";
                                 tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
@@ -1773,9 +1773,6 @@ namespace MaviSoftServerV1._0
 
                                 }
                             }
-
-
-
                             TSndStr.Append("**\r");
                             mTaskTimeOut = 3;
                         }

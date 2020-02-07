@@ -708,7 +708,7 @@ namespace MaviSoftServerV1._0
                                             snapShotTime = DateTime.Now;
                                             snapShotCardID = TCardID;
                                             Capture(cameraSettings);
-                                            Snapshot = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2") + "-" +
+                                            Snapshot = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2").Substring(2,2) + "-" +
                                                 snapShotTime.Hour.ToString("D2") + "" + snapShotTime.Minute.ToString("D2") + "" + snapShotTime.Second.ToString("D2") + ".jpeg";
                                         }
                                     }
@@ -1918,7 +1918,7 @@ namespace MaviSoftServerV1._0
         private string ImageName()
         {
             string name = "";
-            return name = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2") + "-" +
+            return name = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2").Substring(2, 2) + "-" +
                       snapShotTime.Hour.ToString("D2") + "" + snapShotTime.Minute.ToString("D2") + "" + snapShotTime.Second.ToString("D2") + ".jpeg";
         }
 
