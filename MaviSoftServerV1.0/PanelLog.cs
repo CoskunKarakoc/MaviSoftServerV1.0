@@ -639,7 +639,7 @@ namespace MaviSoftServerV1._0
                                         if (tDBReader.Read())
                                         {
                                             TUserType = tDBReader["Kullanici Tipi"] as int? ?? default(int);
-                                            TUserKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
+                                            TUserKayitNo = tDBReader["Kayit No"] as int? ?? default(int);
                                             TmpTelefon = tDBReader["Telefon"].ToString();
                                             TmpName = tDBReader["Adi"].ToString();
                                             TmpSurname = tDBReader["Soyadi"].ToString();
