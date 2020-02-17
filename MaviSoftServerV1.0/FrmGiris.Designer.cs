@@ -76,6 +76,7 @@
             this.txtSifre.Name = "txtSifre";
             this.txtSifre.Size = new System.Drawing.Size(146, 20);
             this.txtSifre.TabIndex = 1;
+            this.txtSifre.UseSystemPasswordChar = true;
             // 
             // groupBox1
             // 
