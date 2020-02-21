@@ -526,6 +526,8 @@ namespace MaviSoftServerV1._0
                             minute = Convert.ToInt32(TmpReturnStr.Substring(TPos + 39, 2));
                             second = Convert.ToInt32(TmpReturnStr.Substring(TPos + 41, 2));
                             TDate = new DateTime(int.Parse("20" + year), month, day, hour, minute, second);
+                            if (!IsDate(TDate.ToString("yyyy-MM-dd HH:mm:ss")))
+                                TDate = DateTime.Now;
 
                             if (TUsersID > 100000 || TUsersID < 0)
                                 break;
@@ -711,7 +713,7 @@ namespace MaviSoftServerV1._0
                                             snapShotTime = DateTime.Now;
                                             snapShotCardID = TCardID;
                                             Capture(cameraSettings);
-                                            Snapshot = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2").Substring(2,2) + "-" +
+                                            Snapshot = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2").Substring(2, 2) + "-" +
                                                 snapShotTime.Hour.ToString("D2") + "" + snapShotTime.Minute.ToString("D2") + "" + snapShotTime.Second.ToString("D2") + ".jpeg";
                                         }
                                     }
