@@ -105,6 +105,8 @@ namespace MaviSoftServerV1._0
 
         public int mPanelNo { get; set; }
 
+        public int mPanelModel { get; set; }
+
         public string mPanelName { get; set; }
 
         public bool mInTime { get; set; }
@@ -138,7 +140,7 @@ namespace MaviSoftServerV1._0
         public string snapShotCardID { get; set; }
 
         public int CaptureCount { get; set; }
-        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, List<Panel> Panels, FrmMain parentForm)
+        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, int TPanelModel, List<Panel> Panels, FrmMain parentForm)
         {
             mMemIX = MemIX;
             mActive = TActive;
@@ -150,6 +152,7 @@ namespace MaviSoftServerV1._0
             mPanelNo = TPanelNo;
             mParentForm = parentForm;
             PanelListesi = Panels;
+            mPanelModel = TPanelModel;
             mReceiveTimeStart = DateTime.Now;
             snapShotTime = DateTime.Now;
             snapShotCardID = "0";
@@ -658,14 +661,14 @@ namespace MaviSoftServerV1._0
                                             mDBConn.Open();
                                             tDBSQLStr = @"SELECT * FROM Visitors " +
                                               "WHERE Visitors.[Kart ID] = '" + TCardID + "' " +
-                                              "AND Visitors.Tarih = CONVERT(SMALLDATETIME,'" + TDate.ToString("MM/dd/yyyy HH:mm:ss") + "',101) " +
-                                              "ORDER BY [Kayit No]";
+                                              "AND Visitors.Tarih <= CONVERT(SMALLDATETIME,'" + TDate.ToString("MM/dd/yyyy HH:mm:ss") + "',101) " +
+                                              "ORDER BY [Kayit No] DESC";
 
                                             tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                                             tDBReader = tDBCmd.ExecuteReader();
                                             if (tDBReader.Read())
                                             {
-                                                TVisitorKayitNo = tDBReader["Kayit No"] as long? ?? default(long);
+                                                TVisitorKayitNo = tDBReader["Kayit No"] as int? ?? default(int);
                                             }
 
                                             tDBReader.Close();
