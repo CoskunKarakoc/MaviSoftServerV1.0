@@ -42,16 +42,6 @@ namespace MaviSoftServerV1._0
 
     }
 
-    public enum PANELMODELS
-    {
-        MW_305 = 0,
-        MW_305_OP = 1,
-        MW_301_V3 = 4,
-        MW_301_V4 = 5,
-        MW_304_V4 = 6,
-        MW_302_V4 = 7
-    }
-
     //COMMAND CONSTANTS
     public enum CommandConstants
     {
@@ -236,7 +226,8 @@ namespace MaviSoftServerV1._0
         SIZE_RCV_ACCESSGROUP = 127,
         SIZE_ERSALL_USER = 13,
         SIZE_RCV_LOCALINTERLOCK = 29,
-        SIZE_RCV_LOGS = 37
+        SIZE_RCV_LOGS = 37,
+        SIZE_RCV_DEVICE_SETTINGS_MS1010 = 155
     }
 
 

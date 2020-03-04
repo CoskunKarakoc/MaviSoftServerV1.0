@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Globalization;
+using System.Net;
+using System.Net.Mail;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -80,7 +83,7 @@ namespace MaviSoftServerV1._0
 
         private ushort mRetryCnt { get; set; }
 
-        private const ushort RETRY_COUNT = 1;
+        private const ushort RETRY_COUNT = 2;
 
         private string mReturnStr;
 
@@ -150,7 +153,7 @@ namespace MaviSoftServerV1._0
 
         public string TSndStr = "";
 
-
+        int mMailRetryCount = 0;
 
 
         public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, int TPanelModel, FrmMain parentForm)
@@ -275,6 +278,12 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
                             SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
+                            if (mMailRetryCount == 0)
+                            {
+                                SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
+                                mMailRetryCount++;
+                            }
+
                             if (mPanelClient.Connected == true)
                             {
                                 mPanelClient.Close();
@@ -287,50 +296,42 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_TEST:
                         {
                             //Port Test (Read RTC Command)
-                            SyncUpdateScreen("PORT TEST", System.Drawing.Color.RoyalBlue);//, Color.Yellow)
+                            SyncUpdateScreen("PORT TEST", System.Drawing.Color.RoyalBlue);
+                            mRetryCnt = 0;
+                            mTransferCompleted = false;
 
-                            mTransferCompleted = true;
-                            mReadStep = 0;
-                            while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                             {
-                                mRetryCnt = 0;
-                                mTransferCompleted = false;
 
-                                while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                                ClearSocketBuffers(mPanelClient, null);
+
+                                SendTestCommand(mPanelClient);
+
+                                mStartTime = DateTime.Now;
+                                mEndTime = mStartTime.AddSeconds(mTimeOut);
+                                do
                                 {
-
-                                    ClearSocketBuffers(mPanelClient, null);
-
-                                    SendTestCommand(mPanelClient);
-
+                                    Thread.Sleep(20);
                                     mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTimeOut);
-                                    do
-                                    {
-                                        Thread.Sleep(20);
-                                        mStartTime = DateTime.Now;
-                                    } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
+                                } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
 
-                                    if (mProcessTerminated == true)
+                                if (mProcessTerminated == true)
+                                    break;
+
+                                if (mStartTime >= mEndTime)
+                                {
+                                    SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                }
+                                else
+                                {
+                                    if (!ReceiveTestCommand(mPanelClient))
                                         break;
-
-                                    if (mStartTime >= mEndTime)
-                                    {
-                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
-                                        mRetryCnt++;
-                                    }
                                     else
-                                    {
-                                        if (!ReceiveTestCommand(mPanelClient))
-                                            break;
-                                        else
-                                            mTransferCompleted = true;
-                                    }
+                                        mTransferCompleted = true;
                                 }
 
-                                mReadStep += 1;
+                                mRetryCnt++;
                             }
-
                             if (mTransferCompleted == true)
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             else
@@ -340,15 +341,15 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_TASK_LIST:
                         {
+                            mMailRetryCount = 0;//Panel Bağlantısı Kesildiğinde Mail Atma Sayısı Kontrolü
                             if (mPanelClient.Connected == false && mPanelClient.LingerState.Enabled == false)
                             {
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-
                             ClearSocketBuffers(mPanelClient, null);
                             SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
-                            Thread.Sleep(250);
+                            Thread.Sleep(50);//TODO:250'den 50 ye düşürüldü test amaçlı 03032020 tarihinde
                             mTaskSource = mTempTaskSource;
                             mTaskNo = mTempTaskNo;
                             mTaskType = mTempTaskType;
@@ -361,7 +362,6 @@ namespace MaviSoftServerV1._0
                             mTaskStrParam2 = mTempTaskStrParam2;
                             mTaskUserName = mTempTaskUserName;
                             mTaskUpdateTable = mTempTaskUpdateTable;
-                            //mTaskSource = SyncGetNewTask();
                             if (mTaskSource == IP_TASK)
                             {
                                 TProc = TaskList[mMemIX, TaskPIX[mMemIX]].CmdID;
@@ -387,6 +387,7 @@ namespace MaviSoftServerV1._0
                             {
                                 SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
                             }
+
                         }
                         break;
                     case CommandConstants.CMD_RCV_USER:
@@ -412,59 +413,75 @@ namespace MaviSoftServerV1._0
                             }
 
                             SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-                            mTransferCompleted = true;
-                            mReadStep = 0;
-                            while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            //  mTransferCompleted = true;
+                            //   mReadStep = 0;
+                            //    while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            //  {
+                            mRetryCnt = 0;
+                            mTransferCompleted = false;
+
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                             {
-                                mRetryCnt = 0;
-                                mTransferCompleted = false;
-
-                                while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                                ClearSocketBuffers(mPanelClient, null);
+                                SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+                                mStartTime = DateTime.Now;
+                                mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
+                                do
                                 {
-
-                                    ClearSocketBuffers(mPanelClient, null);
-
-                                    //ReciveGenericDBData(mPanelClient, mTaskIntParam1, 0, 0, (CommandConstants)mTaskType);
-                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+                                    Thread.Sleep(20);
                                     mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
-                                    do
+                                    if (!mPanelClient.Client.Connected)
                                     {
-                                        Thread.Sleep(20);
-                                        mStartTime = DateTime.Now;
-                                    } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
-
-                                    if (mProcessTerminated == true)
-                                        break;
-
-                                    if (mStartTime >= mEndTime)
-                                    {
-                                        //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
-                                        mRetryCnt++;
-                                    }
-                                    else
-                                    {
-                                        if (GAReciveGenericDBData(mPanelClient, ref mReturnStr, (CommandConstants)mTaskType))
+                                        try
                                         {
-                                            if (ProcessReceivedData(mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (CommandConstants)mTaskType, mTaskSource, mTaskUpdateTable, mReturnStr))
-                                            {
-                                                mTransferCompleted = true;
-                                            }
-                                            else
-                                            {
-                                                break;
-                                            }
+                                            mPanelClient.Close();
+                                            mPanelClient = new TcpClient();
+                                            mPanelClient.ReceiveBufferSize = 65536;
+                                            mPanelClient.SendBufferSize = 65536;
+                                            mPanelClient.ReceiveTimeout = mTimeOut;
+                                            mPanelClient.SendTimeout = mTimeOut;
+
+                                            mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
+                                        }
+                                        catch
+                                        {
+
+                                        }
+                                    }
+                                } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
+
+                                if (mProcessTerminated == true)
+                                    break;
+
+                                if (mStartTime >= mEndTime)
+                                {
+                                    SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                    //  mRetryCnt++;
+                                }
+                                else
+                                {
+                                    if (GAReciveGenericDBData(mPanelClient, ref mReturnStr, (CommandConstants)mTaskType))
+                                    {
+                                        if (ProcessReceivedData(mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (CommandConstants)mTaskType, mTaskSource, mTaskUpdateTable, mReturnStr))
+                                        {
+                                            mTransferCompleted = true;
                                         }
                                         else
                                         {
                                             break;
                                         }
                                     }
+                                    else
+                                    {
+                                        break;
+                                    }
                                 }
 
-                                mReadStep += 1;
+                                mRetryCnt++;
                             }
+
+                            //    mReadStep += 1;
+                            // }
 
                             if (mTransferCompleted == true)
                             {
@@ -548,52 +565,74 @@ namespace MaviSoftServerV1._0
                             }
 
                             SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-                            mTransferCompleted = true;
-                            mReadStep = 0;
-                            while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            //mTransferCompleted = true;
+                            //mReadStep = 0;
+                            //while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            //{
+                            mRetryCnt = 0;
+                            mTransferCompleted = false;
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                             {
-                                mRetryCnt = 0;
-                                mTransferCompleted = false;
 
-                                while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                                ClearSocketBuffers(mPanelClient, null);
+
+                                SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+
+                                mStartTime = DateTime.Now;
+                                mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
+                                do
+                                {
+                                    Thread.Sleep(20);
+                                    mStartTime = DateTime.Now;
+
+                                    if (!mPanelClient.Client.Connected)
+                                    {
+                                        try
+                                        {
+                                            mPanelClient.Close();
+                                            mPanelClient = new TcpClient();
+                                            mPanelClient.ReceiveBufferSize = 65536;
+                                            mPanelClient.SendBufferSize = 65536;
+                                            mPanelClient.ReceiveTimeout = mTimeOut;
+                                            mPanelClient.SendTimeout = mTimeOut;
+
+                                            mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
+                                        }
+                                        catch
+                                        {
+
+                                        }
+                                    }
+
+                                } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
+
+                                if (mProcessTerminated == true)
+                                    break;
+
+                                if (mStartTime >= mEndTime)
                                 {
 
-                                    ClearSocketBuffers(mPanelClient, null);
-
-                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
-
-                                    mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
-                                    do
+                                    //Display Timeout&Retrying Message
+                                    SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                    //mRetryCnt++;
+                                }
+                                else
+                                {
+                                    if (!ReceiveGenericAnswerData(mPanelClient, (CommandConstants)mTaskType))
                                     {
-                                        Thread.Sleep(20);
-                                        mStartTime = DateTime.Now;
-                                    } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
-
-                                    if (mProcessTerminated == true)
                                         break;
-
-                                    if (mStartTime >= mEndTime)
-                                    {
-                                        //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
-                                        mRetryCnt++;
                                     }
                                     else
                                     {
-                                        if (!ReceiveGenericAnswerData(mPanelClient, (CommandConstants)mTaskType))
-                                        {
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            mTransferCompleted = true;
-
-                                        }
+                                        mTransferCompleted = true;
                                     }
                                 }
-                                mReadStep += 1;
+
+                                mRetryCnt++;
                             }
+
+                            //mReadStep += 1;
+                            //}
 
                             if (mTransferCompleted == true)
                             {
@@ -633,65 +672,113 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_RCV_RTC:
                         {
-                            if (!mPanelClient.Connected)
+
+                            if (!mPanelClient.Client.Connected)
                             {
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-                            SyncUpdateScreen("SAAT OKUMA", System.Drawing.Color.Aquamarine);
-                            Thread.Sleep(250);
 
-                            mTransferCompleted = true;
-                            mReadStep = 0;
-                            while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
+                            mRetryCnt = 0;
+                            mTransferCompleted = false;
+
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                             {
-                                mRetryCnt = 0;
-                                mTransferCompleted = false;
-
-                                while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                                ClearSocketBuffers(mPanelClient, null);
+                                SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+                                mStartTime = DateTime.Now;
+                                mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
+                                do
                                 {
-
-                                    ClearSocketBuffers(mPanelClient, null);
-                                    SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
-                                    //SendIPTaskCommand(mPanelClient, 0, 0, 0, (ushort)mTaskType);
-
+                                    Thread.Sleep(20);
                                     mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
-                                    do
+                                    if (!mPanelClient.Client.Connected)
                                     {
-                                        Thread.Sleep(20);
-                                        mStartTime = DateTime.Now;
-                                    } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
+                                        try
+                                        {
+                                            mPanelClient.Close();
+                                            mPanelClient = new TcpClient();
+                                            mPanelClient.ReceiveBufferSize = 65536;
+                                            mPanelClient.SendBufferSize = 65536;
+                                            mPanelClient.ReceiveTimeout = mTimeOut;
+                                            mPanelClient.SendTimeout = mTimeOut;
 
-                                    if (mProcessTerminated == true)
-                                        break;
+                                            mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
+                                        }
+                                        catch
+                                        {
 
-                                    if (mStartTime >= mEndTime)
+                                        }
+                                    }
+                                } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
+
+                                if (mProcessTerminated == true)
+                                    break;
+
+                                if (mStartTime >= mEndTime)
+                                {
+                                    SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                }
+                                else
+                                {
+                                    if (GAReciveGenericDBData(mPanelClient, ref mReturnStr, (CommandConstants)mTaskType))
                                     {
-                                        //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
-                                        mRetryCnt++;
+                                        if (ProcessReceivedData(mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (CommandConstants)mTaskType, mTaskSource, mTaskUpdateTable, mReturnStr))
+                                        {
+                                            mTransferCompleted = true;
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
                                     }
                                     else
                                     {
-                                        if (ReceiveIPTaskCommand(mPanelClient, ref mReturnStr, (ushort)mTaskType))
-                                        {
-                                            SyncUpdateScreen(mReturnStr, System.Drawing.Color.RoyalBlue);
-                                            Thread.Sleep(1000);
-                                            break;
-                                        }
-                                        else
-                                            mTransferCompleted = true;
+                                        break;
                                     }
                                 }
 
-                                mReadStep += 1;
+                                mRetryCnt++;
                             }
 
                             if (mTransferCompleted == true)
+                            {
+                                if (mTaskSource == IP_TASK)
+                                {
+                                    TransferAnswer((ushort)CommandConstants.CMD_OK);
+                                    DeleteTaskFromTaskList();
+                                }
+                                else
+                                {
+
+                                    if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
+                                        break;
+
+                                    //DB Task
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED, mPanelProc);
+                                }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
+                            }
                             else
-                                mPanelProc = CommandConstants.CMD_PORT_CLOSE;
+                            {
+                                if (mTaskSource == IP_TASK)
+                                {
+                                    TransferAnswer((ushort)CommandConstants.CMD_NOTPROCESSED);
+                                    DeleteTaskFromTaskList();
+                                }
+                                else
+                                {
+
+                                    if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
+                                        break;
+
+                                    //DB Task
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, mPanelProc);
+                                }
+                                mPanelProc = CommandConstants.CMD_TASK_LIST;
+                            }
+                            mTaskTimeOut = 3;
                         }
                         break;
                     case CommandConstants.CMD_ZERO:
@@ -727,62 +814,87 @@ namespace MaviSoftServerV1._0
                             }
 
                             SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-                            mTransferCompleted = true;
-                            mReadStep = 0;
-                            while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            //  mTransferCompleted = true;
+                            //   mReadStep = 0;
+                            //   while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
+                            // {
+                            mRetryCnt = 0;
+                            mTransferCompleted = false;
+
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
                             {
-                                mRetryCnt = 0;
-                                mTransferCompleted = false;
-
-                                while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                                mStartTime = DateTime.Now;
+                                mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
+                                do
                                 {
+                                    Thread.Sleep(20);
                                     mStartTime = DateTime.Now;
-                                    mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
-                                    do
+                                    if (!mPanelClient.Client.Connected)
                                     {
-                                        Thread.Sleep(20);
-                                        mStartTime = DateTime.Now;
-                                    } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
-
-                                    if (mProcessTerminated == true)
-                                        break;
-
-                                    if (mStartTime >= mEndTime)
-                                    {
-                                        //Display Timeout&Retrying Message
-                                        SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);//, Color.LightPink)
-                                        mRetryCnt++;
-                                    }
-                                    else
-                                    {
-                                        if (GAReciveGenericDBData(mPanelClient, ref mReturnStr, (CommandConstants)mTaskType))
+                                        try
                                         {
-                                            if (!ProcessReceivedData(mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (CommandConstants)mTaskType, mTaskSource, mTaskUpdateTable, mReturnStr))
-                                            {
-                                                break;
-                                            }
+                                            mPanelClient.Close();
+                                            mPanelClient = new TcpClient();
+                                            mPanelClient.ReceiveBufferSize = 65536;
+                                            mPanelClient.SendBufferSize = 65536;
+                                            mPanelClient.ReceiveTimeout = mTimeOut;
+                                            mPanelClient.SendTimeout = mTimeOut;
+
+                                            mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
                                         }
-                                        else
+                                        catch
+                                        {
+
+                                        }
+                                    }
+                                } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
+
+                                if (mProcessTerminated == true)
+                                    break;
+
+                                if (mStartTime >= mEndTime)
+                                {
+                                    //Display Timeout&Retrying Message
+                                    SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                    //  mRetryCnt++;
+                                }
+                                else
+                                {
+                                    if (GAReciveGenericDBData(mPanelClient, ref mReturnStr, (CommandConstants)mTaskType))
+                                    {
+                                        if (!ProcessReceivedData(mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (CommandConstants)mTaskType, mTaskSource, mTaskUpdateTable, mReturnStr))
                                         {
                                             break;
                                         }
                                     }
+                                    else
+                                    {
+                                        break;
+                                    }
                                 }
 
-                                mReadStep += 1;
+                                mRetryCnt++;
                             }
+
+                            //  mReadStep += 1;
+                            //  }
                             mTaskTimeOut = 3;
                         }
                         break;
                     default:
                         {
-                            mPanelProc = CommandConstants.CMD_PORT_DISABLED;
+                            if (NoTaskDelete(mTaskNo))
+                            {
+                                mPanelProc = CommandConstants.CMD_TASK_LIST;
+                            }
+                            else
+                            {
+                                mPanelProc = CommandConstants.CMD_PORT_DISABLED;
+                            }
                             mTaskTimeOut = 3;
                             break;
                         }
-
                 }
-
 
             }
 
@@ -879,144 +991,214 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                                 TSndStr.Append(mPanelNo.ToString("D3"));
                                 tDBSQLStr2 = "SELECT * FROM ReaderSettingsNewMS " +
-                                    "WHERE [Panel ID] = " + DBIntParam1 + " AND [WKapi ID] = " + 1;
+                                    "WHERE [Panel ID] = " + DBIntParam1.ToString();
                                 tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
                                 tDBReader2 = tDBCmd2.ExecuteReader();
                                 if (tDBReader2.Read())
                                 {
-                                    if ((tDBReader2["Kullanici Modu"] as int? ?? default(int)) == 0)//RS
-                                        TSndStr.Append("0");
+                                    if ((tDBReader["Panel M1 Role"] as int? ?? default(int)) == 0)//PS
+                                    {
+                                        TSndStr.Append("01");
+                                    }
                                     else
-                                        TSndStr.Append("1");
-
+                                    {
+                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel M1 Role"] as int? ?? default(int), "D2"));//PS
+                                    }
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Kapi Tipi"] as int? ?? default(int), "D1"));//RS
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader2["New Device ID"] as int? ?? default(int), "D3"));//RS
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Kapi Kontrol Modu"] as int? ?? default(int), "D1"));//RS
                                     if ((tDBReader["Kontrol Modu"] as int? ?? default(int)) == 0)//PS
-                                        TSndStr.Append("0");
+                                        TSndStr.Append("0");// StanAlone
                                     else if ((tDBReader["Kontrol Modu"] as int? ?? default(int)) == 1)
-                                        TSndStr.Append("1");
+                                        TSndStr.Append("1");//Online
                                     else
                                         TSndStr.Append("2");
 
-                                    TSndStr.Append("0000");//RS
+                                    TSndStr.Append("0000");
 
-                                    if ((tDBReader2["Gecis Modu"] as int? ?? default(int)) == 0)//RS
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Kapi Gecis Modu"] as int? ?? default(int), "D1"));//RS
+
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Same Tag Block"] as int? ?? default(int), "D2"));//PS
+
+                                    if ((tDBReader2["RS485 Reader Type"] as int? ?? default(int)) == 0)//RS
+                                    {
                                         TSndStr.Append("0");
-                                    else if ((tDBReader2["Gecis Modu"] as int? ?? default(int)) == 1)
+                                    }
+                                    else
+                                    {
                                         TSndStr.Append("1");
-                                    else
-                                        TSndStr.Append("2");
-
-
-                                    if ((tDBReader["Panel Same Tag Block"] as int? ?? default(int)) > 0 && (tDBReader["Panel Same Tag Block"] as int? ?? default(int)) < 16)//PS
-                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Same Tag Block"] as int? ?? default(int), "D2"));
-                                    else
-                                        TSndStr.Append("00");
-
-                                    if ((tDBReader2["RS485 Type"] as int? ?? default(int)) == 0)//RS
-                                        TSndStr.Append("0");
-                                    else
-                                        TSndStr.Append("1");
-
-                                    TSndStr.Append("****************");//RS
-
-                                    for (int i = 1; i < 5; i++)
+                                    }
+                                    string LCDMessage = tDBReader2["LCD Row Message"].ToString();//RS
+                                    if (LCDMessage.Length > 16)
                                     {
-                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel GW" + i] as int? ?? default(int), "D3"));//PS
+                                        LCDMessage = LCDMessage.Substring(0, 16);
+                                    }
+                                    else if (LCDMessage.Length < 16)
+                                    {
+                                        int count = (16 - LCDMessage.Length);
+                                        for (int i = 0; i < count; i++)
+                                        {
+                                            LCDMessage += " ";
+                                        }
                                     }
 
-                                    for (int i = 1; i < 5; i++)
+                                    TSndStr.Append(LCDMessage);
+
+                                    for (int i = 1; i < 5; i++)//PS
                                     {
-                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel IP" + i] as int? ?? default(int), "D3"));//PS
+                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel GW" + i] as int? ?? default(int), "D3"));
                                     }
 
-                                    for (int i = 1; i < 5; i++)
+                                    for (int i = 1; i < 5; i++)//PS
                                     {
-                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Subnet" + i] as int? ?? default(int), "D3"));//PS
+                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel IP" + i] as int? ?? default(int), "D3"));
                                     }
 
+                                    for (int i = 1; i < 5; i++)//PS
+                                    {
+                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Subnet" + i] as int? ?? default(int), "D3"));
+                                    }
 
                                     TSndStr.Append(ConvertToTypeInt(tDBReader["Panel TCP Port"] as int? ?? default(int), "D5"));//PS
 
-                                    if (tDBReader2["Tus Takimi Durumu"] as bool? ?? default(bool) == true)//RS
+                                    if ((tDBReader2["WKapi Keypad Status"] as bool? ?? default(bool)) == true)
+                                    {
                                         TSndStr.Append("1");
+                                    }
                                     else
+                                    {
                                         TSndStr.Append("0");
+                                    }
 
-                                    if ((tDBReader2["Tus Takimi Sifresi"] as int? ?? default(int)) != 0)//RS
-                                        TSndStr.Append(ConvertToTypeInt(tDBReader2["Tus Takimi Sifresi"] as int? ?? default(int), "D8"));
-                                    else
+                                    if ((tDBReader2["WKapi Keypad Menu Password"] as int? ?? default(int)) == 0)//RS
+                                    {
                                         TSndStr.Append("00001234");
-
-
-                                    if (tDBReader2["RS485 Status"] as bool? ?? default(bool) == true)//RS
-                                        TSndStr.Append("1");
+                                    }
                                     else
-                                        TSndStr.Append("0");
+                                    {
+                                        TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Keypad Menu Password"] as int? ?? default(int), "D8"));
+                                    }
 
-                                    if (tDBReader2["Wiegand Status"] as bool? ?? default(bool) == true)//RS
+                                    if ((tDBReader2["RS485 Reader Status"] as bool? ?? default(bool)) == true)//RS
+                                    {
                                         TSndStr.Append("1");
+                                    }
                                     else
+                                    {
                                         TSndStr.Append("0");
+                                    }
 
-                                    if ((tDBReader2["Wiegand Type"] as int? ?? default(int)) == 0)//RS
-                                        TSndStr.Append("0");
-                                    else
+                                    if ((tDBReader2["Wiegand Reader Status"] as bool? ?? default(bool)) == true)//RS
+                                    {
                                         TSndStr.Append("1");
+                                    }
+                                    else
+                                    {
+                                        TSndStr.Append("0");
+                                    }
 
-                                    if (tDBReader2["Mifare Status"] as bool? ?? default(bool) == true)//RS
-                                        TSndStr.Append("1");
-                                    else
+                                    if ((tDBReader2["Wiegand Reader Type"] as int? ?? default(int)) == 0)//RS
+                                    {
                                         TSndStr.Append("0");
+                                    }
+                                    else
+                                    {
+                                        TSndStr.Append("1");
+                                    }
 
-                                    if ((tDBReader2["Mifare Type"] as int? ?? default(int)) == 0)//RS
-                                        TSndStr.Append("0");
-                                    else if ((tDBReader2["Mifare Type"] as int? ?? default(int)) == 1)
+                                    if ((tDBReader2["Mifare Reader Status"] as bool? ?? default(bool)) == true)//RS
+                                    {
                                         TSndStr.Append("1");
-                                    else if ((tDBReader2["Mifare Type"] as int? ?? default(int)) == 2)
-                                        TSndStr.Append("2");
+                                    }
                                     else
-                                        TSndStr.Append("3");
+                                    {
+                                        TSndStr.Append("0");
+                                    }
 
-                                    if (tDBReader2["UDP Haberlesme"] as bool? ?? default(bool) == true)//RS
-                                        TSndStr.Append("1");
-                                    else
-                                        TSndStr.Append("0");
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader2["Mifare Kart Data Type"] as int? ?? default(int), "D1"));//RS
 
-                                    if (tDBReader2["Coklu Saat Modu"] as bool? ?? default(bool) == true)//RS
+                                    if ((tDBReader2["UDP Haberlesme"] as bool? ?? default(bool)) == true)//RS
+                                    {
                                         TSndStr.Append("1");
+                                    }
                                     else
+                                    {
                                         TSndStr.Append("0");
+                                    }
 
-                                    if (tDBReader2["Gecis Sayaci Silme"] as bool? ?? default(bool) == true)//RS
+                                    if ((tDBReader2["Multiple Clock Mode Counter Usage"] as bool? ?? default(bool)) == true)//RS
+                                    {
                                         TSndStr.Append("1");
+                                    }
                                     else
+                                    {
                                         TSndStr.Append("0");
+                                    }
+
+                                    if ((tDBReader2["Pass Counter Auto Delete Cancel"] as bool? ?? default(bool)) == true)//RS
+                                    {
+                                        TSndStr.Append("1");
+                                    }
+                                    else
+                                    {
+                                        TSndStr.Append("0");
+                                    }
 
                                     if ((tDBReader["Panel Same Tag Block HourMinSec"] as int? ?? default(int)) == 0)//PS
+                                    {
                                         TSndStr.Append("0");
+                                    }
                                     else
+                                    {
                                         TSndStr.Append("1");
+                                    }
 
-
-                                    if (tDBReader2["Gecis Sayisi Kontrol"] as bool? ?? default(bool) == true)//RS
+                                    if ((tDBReader2["Access Counter Kontrol"] as bool? ?? default(bool)) == true)//RS
+                                    {
                                         TSndStr.Append("1");
+                                    }
                                     else
+                                    {
                                         TSndStr.Append("0");
+                                    }
 
+                                    for (int i = 1; i < 5; i++)//RS
+                                    {
+                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Remote IP" + i] as int? ?? default(int), "D3"));
+                                    }
 
-                                    if (tDBReader2["Turnike Status"] as bool? ?? default(bool) == true)//RS
+                                    TSndStr.Append(ConvertToTypeInt(5700, "D5"));//Remote TCP Port
+
+                                    if ((tDBReader2["Kart ID 32 Bit Clear"] as bool? ?? default(bool)) == true)
+                                    {
                                         TSndStr.Append("1");
+                                    }
                                     else
+                                    {
                                         TSndStr.Append("0");
+                                    }
 
-                                    TSndStr.Append("000000000000000000000000000000000000000000000000000");
+
+                                    if ((tDBReader2["Turnstile Arm Tracking"] as bool? ?? default(bool)) == true)//RS
+                                    {
+                                        TSndStr.Append("1");
+                                    }
+                                    else
+                                    {
+                                        TSndStr.Append("0");
+                                    }
+
+                                    TSndStr.Append("0");//Device Model
+
+
+                                    TSndStr.Append("00000000");//Ekleme Kartı
+                                    TSndStr.Append("00000000");//Silme Kartı Kartı
+
+                                    TSndStr.Append("00000000000000");
+
                                     TSndStr.Append("**\r");
+                                    mTaskTimeOut = 3;
                                 }
-                                else
-                                {
-                                    TSndStr.Remove(1, TSndStr.Length);
-                                    TSndStr.Append("ERR");
-                                }
-
                             }
                         }
                     }
@@ -1979,6 +2161,9 @@ namespace MaviSoftServerV1._0
                     string tDBSQLStr4 = "";
                     SqlCommand tDBCmd4;
                     SqlDataReader tDBReader4 = null;
+                    string tDBSQLStr5 = "";
+                    SqlCommand tDBCmd5;
+                    SqlDataReader tDBReader5 = null;
                     string PersonelAdiSoyadi = "";
                     lock (TLockObj)
                     {
@@ -1993,7 +2178,7 @@ namespace MaviSoftServerV1._0
                                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                                 TSndStr.Append(mPanelNo.ToString("D3"));
-                                TSndStr.Append(ConvertToTypeInt(tDBReader["ID"] as int? ?? default(int), "D6"));
+                                TSndStr.Append(ConvertToTypeInt(tDBReader["ID"] as int? ?? default(int), "D5"));
                                 TSndStr.Append(ConvertToTypeInt64(Convert.ToInt64(tDBReader["Kart ID"]), "D10"));
                                 if (tDBReader["Sifre"].ToString() != null && tDBReader["Sifre"].ToString() != "")
                                 {
@@ -2003,29 +2188,52 @@ namespace MaviSoftServerV1._0
                                 {
                                     TSndStr.Append("00000001");
                                 }
-                                PersonelAdiSoyadi = tDBReader["Adi"].ToString() + " " + tDBReader["Soyadi"].ToString();
-                                if (PersonelAdiSoyadi.Length > 15)
+                                string Adi = tDBReader["Adi"].ToString();
+                                if (Adi.Length < 7)
                                 {
-                                    PersonelAdiSoyadi = PersonelAdiSoyadi.Substring(0, 15);
-                                }
-                                TSndStr.Append(PersonelAdiSoyadi);
-                                TSndStr.Append("1");//Ana Okuyucu Geçiş İzni
-                                TSndStr.Append("0");//İkinci Okuyucu Geçiş İzni
-                                if (tDBReader["Grup No 1"].ToString() != null)
-                                {
-                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 1"] as int? ?? default(int), "D3"));
+                                    int count = 7 - Adi.Length;
+                                    for (int i = 0; i < count; i++)
+                                    {
+                                        Adi += " ";
+                                    }
                                 }
                                 else
                                 {
-                                    TSndStr.Append("000");
+                                    Adi = Adi.Substring(0, 7);
                                 }
-                                if (tDBReader["Grup No 1"].ToString() != null)
+                                string Soyadi = tDBReader["Soyadi"].ToString();
+                                if (Soyadi.Length < 7)
                                 {
-                                    tDBSQLStr2 = "SELECT TOP 1 * FROM GroupsDetailNew WHERE [Grup No]=" + tDBReader["Grup No 1"].ToString() + " AND [Panel No]=" + mPanelNo.ToString();
+                                    int count = 7 - Soyadi.Length;
+                                    for (int i = 0; i < count; i++)
+                                    {
+                                        Soyadi += " ";
+                                    }
+                                }
+                                else
+                                {
+                                    Soyadi = Soyadi.Substring(0, 7);
+                                }
+
+
+                                PersonelAdiSoyadi = Adi + " " + Soyadi;
+                                PersonelAdiSoyadi = ConvertNameSurname(PersonelAdiSoyadi);
+                                TSndStr.Append(PersonelAdiSoyadi);
+                                if (tDBReader["Grup No"].ToString() != null)
+                                {
+                                    tDBSQLStr2 = "SELECT TOP 1 * FROM GroupsDetailNew WHERE [Grup No]=" + tDBReader["Grup No"].ToString() + " AND [Panel No]=" + mPanelNo.ToString();
                                     tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
                                     tDBReader2 = tDBCmd2.ExecuteReader();
                                     if (tDBReader2.Read())
                                     {
+                                        if ((tDBReader2["Kapi Aktif"] as bool? ?? default(bool)) == true)
+                                            TSndStr.Append("1");
+                                        else
+                                            TSndStr.Append("0");
+
+                                        TSndStr.Append("1");//MS Ikinci Okuyu İzin Default 1
+                                        TSndStr.Append("000");//Default Grup No
+
                                         if (tDBReader2["Kapi Zaman Grup No"].ToString() != null && tDBReader2["Kapi Zaman Grup No"].ToString() != "")
                                         {
                                             tDBSQLStr3 = "SELECT TOP 1 * FROM  TimeGroups WHERE [Zaman Grup No]=" + tDBReader2["Kapi Zaman Grup No"].ToString();
@@ -2049,7 +2257,7 @@ namespace MaviSoftServerV1._0
                                                 {
                                                     TSndStr.Append("0");
                                                 }
-                                                tDBSQLStr4 = "SELECT * FROM GroupsMaster WHERE [Grup No]=" + tDBReader["Grup No 1"].ToString();
+                                                tDBSQLStr4 = "SELECT * FROM GroupsMaster WHERE [Grup No]=" + tDBReader["Grup No"].ToString();
                                                 tDBCmd4 = new SqlCommand(tDBSQLStr4, mDBConn);
                                                 tDBReader4 = tDBCmd4.ExecuteReader();
                                                 if (tDBReader4.Read())
@@ -2421,12 +2629,24 @@ namespace MaviSoftServerV1._0
             /*13*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERS_USER)
             {
-                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                TSndStr.Append(mPanelNo.ToString("D3"));
-                TSndStr.Append(DBIntParam1.ToString("D6"));
-                TSndStr.Append("**\r");
-                mTaskTimeOut = 3;
+                if (mPanelModel == (int)PanelModel.Panel_1010)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append(DBIntParam1.ToString("D5"));
+                    TSndStr.Append("**\r");
+                    mTaskTimeOut = 3;
+                }
+                else
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append(DBIntParam1.ToString("D6"));
+                    TSndStr.Append("**\r");
+                    mTaskTimeOut = 3;
+                }
             }
             /*14*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_USER)
@@ -2669,7 +2889,11 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                 TSndStr.Append(mPanelSerialNo.ToString("X4"));
                 TSndStr.Append(mPanelNo.ToString("D3"));
-                TSndStr.Append(DBIntParam1.ToString("D6"));
+                if (mPanelModel == (int)PanelModel.Panel_1010)
+                    TSndStr.Append(DBIntParam1.ToString("D5"));
+                else
+                    TSndStr.Append(DBIntParam1.ToString("D6"));
+
                 TSndStr.Append("**\r");
                 mTaskTimeOut = 3;
             }
@@ -3067,7 +3291,6 @@ namespace MaviSoftServerV1._0
                 mTaskTimeOut = 3;
             }
             /*DOOR CLOSE*/
-            //TODO: Gelen veri FC olması gerekirken FO geliyor
             else if (DBTaskType == (ushort)CommandConstants.CMD_SND_DOORFORCECLOSE)
             {
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
@@ -3115,17 +3338,52 @@ namespace MaviSoftServerV1._0
                     return false;
                 }
 
-                TPos = TRcvData.IndexOf("$" + GetCommandPrefix((ushort)TmpTaskType));
+                if (TmpTaskType == CommandConstants.CMD_SND_DOORFORCECLOSE)
+                    TPos = TRcvData.IndexOf("$FO");
+                else
+                    TPos = TRcvData.IndexOf("$" + GetCommandPrefix((ushort)TmpTaskType));
+
                 if (TPos > -1)
                 {
-                    if (TRcvData.Substring(TPos + 10, 1) == "O")
+
+                    if (mPanelModel == (int)PanelModel.Panel_1010)
                     {
-                        return true;
+                        if (TmpTaskType == CommandConstants.CMD_SND_GENERALSETTINGS)
+                        {
+                            if (TRcvData.Substring(TPos + 13, 1) == "O")
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            if (TRcvData.Substring(TPos + 10, 1) == "O")
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                return false;
+                            }
+                        }
                     }
                     else
                     {
-                        return false;
+                        if (TRcvData.Substring(TPos + 10, 1) == "O")
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
+
+
                 }
                 else
                 {
@@ -3365,7 +3623,6 @@ namespace MaviSoftServerV1._0
 
             switch (TmpTaskType)
             {
-
                 case CommandConstants.CMD_RCV_USER:
                 case CommandConstants.CMD_RCVALL_USER:
                     {
@@ -4064,924 +4321,1344 @@ namespace MaviSoftServerV1._0
                     break;
                 case CommandConstants.CMD_RCV_GENERALSETTINGS:
                     {
-                        int ID;
-                        int[] LocalGateway = new int[4];
-                        int[] LocalIPAddress = new int[4];
-                        int LocalTCPPort;
-                        int[] LocalSubnetMask = new int[4];
-                        int[] RemoteIPAddress = new int[4];
-                        int[] PanelGlobalGroups = new int[8];
-                        int GlobalAccessCountControl;
-                        int GlobalMaxInCountControl;
-                        int GlobalSequentalAccess;
-                        int GlobalCapacityControl;
-                        int[] LocalCapacityActive = new int[8];
-                        int[] LocalCapacityClear = new int[8];
-                        long[] LocalCapacityValue = new long[8];
-                        int StatusDataUpdate;
-                        int StatusDataUpdateType;
-                        int StatusDataUpdateTime;
-                        int GlobalZoneInterlockActive;
-                        int InterlockActive;
-                        int SameDoorMultipleReader;
-                        int LiftCapacity;
-                        int PanelExpansion;
-                        int PanelExpansion2;
-                        int PanelModel;
-                        string PanelName;
-                        int PanelSameTagBlockTime;
-                        int PanelSameTagBlockType;
-                        int PanelSameTagBlockMinSecHour;
-                        int PanelWorkingMode;
-                        int PanelCardCount;
-                        int PanelButtonDetector;
-                        int PanelButtonDetectorTime;
-                        int PanelAlarmModeRelayOk;
-                        int PanelAlarmMode;
-                        int PanelFireModeRelayOk;
-                        int PanelFireMode;
-                        int PanelDoorAlarmRelayOk;
-                        int PanelAlarmBroadcastOk;
-                        int PanelFireBroadcastOk;
-                        int PanelDoorAlarmBroadcastOk;
-                        int[] ReaderActive = new int[8];
-                        string[] ReaderName = new string[8];
-                        int[] ReaderModel = new int[8];
-                        int[] ReaderDoorType = new int[8];
-                        int[] ReaderRelayTime = new int[8];
-                        int[] ReaderWorkingMode = new int[8];
-                        int[] ReaderAccessControlMode = new int[8];
-                        int[] ReaderLocalGroup = new int[8];
-                        int[] WIGReaderActive = new int[16];
-                        string[] WIGReaderName = new string[16];
-                        int[] WIGReaderRelayNo = new int[16];
-                        int[] WIGReaderRelayTime = new int[16];
-                        int[] WIGReaderDoorType = new int[16];
-                        int[] WIGReaderWIGType = new int[16];
-                        int[] WIGReaderLocalGroup = new int[16];
-                        int[] WIGReaderAccessControlMode = new int[16];
-                        int[] WIGReaderSeqAccessMain = new int[16];
-                        int[] WIGReaderMultipleAuthorization = new int[16];
-                        int[] WIGReaderAlarmLock = new int[16];
-                        int[] WIGReaderFireUnlock = new int[16];
-                        int[] WIGReaderPINVerify = new int[16];
-                        int[] WIGReaderParkingGate = new int[16];
-                        int[] WIGReaderDoorOpenTime = new int[16];
-                        int[] WIGReaderDoorOpenTimeAlarm = new int[16];
-                        int[] WIGReaderDoorForcingAlarm = new int[16];
-                        int[] WIGReaderDoorOpenAlarm = new int[16];
-                        int[] WIGReaderDoorPanicButtonAlarm = new int[16];
-                        int[] WIGReaderDoorExternalAlarmRelay = new int[16];
-                        int[] WIGReaderButtonDetectorFunction = new int[16];
-                        int[] WIGReaderDoorPushDelay = new int[16];
-                        int[] WIGReaderUserCount = new int[16];
-                        int[] PanelLocalAPBs = new int[8];
-                        int[] PanelMasterRelayTime = new int[8];
-                        int PanelAlarmRelayTime;
-                        int PanelMACAddress;
-                        int PanelGlobalAPB;
-
-                        //Panel MAC Address
-                        SI = 3;
-                        PanelMACAddress = int.Parse(TmpReturnStr.Substring(SI, 4), NumberStyles.HexNumber);
-
-
-                        //Panel ID
-                        SI = SI + 4;
-                        ID = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
-
-                        //Panel Working Mode
-                        SI = SI + 3;
-                        if (TmpReturnStr.Substring(SI, 1) == "0")
-                            PanelWorkingMode = 0;
-                        else
-                            PanelWorkingMode = 1;
-
-                        //User Count
-                        SI = SI + 1;
-                        PanelCardCount = Convert.ToInt32(TmpReturnStr.Substring(SI, 6));
-
-                        //Master Relay Times
-                        SI = SI + 6;
-                        for (int i = 0; i < 8; i++)
+                        if (mPanelModel == (int)PanelModel.Panel_1010)
                         {
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 2), 2)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 2), 2)) <= 30)
+
+                            int ID;
+                            int NewID;
+                            int PanelMACAddress;
+                            int MasterRoleNo;
+                            int[] LocalGateway = new int[4];
+                            int[] LocalIPAddress = new int[4];
+                            int LocalTCPPort;
+                            int RemoteTCPPort;
+                            int[] LocalSubnetMask = new int[4];
+                            int[] RemoteIPAddress = new int[4];
+                            int WKapi_Kapi_Tipi;
+                            int WKapi_Kapi_Kontrol_Modu;
+                            int Kontrol_Modu;
+                            int WKapi_Kapi_Gecis_Modu;
+                            int RS485_Reader_Type;
+                            string LCD_Row_Message;
+                            int WKapi_Keypad_Status;
+                            int WKapi_Keypad_Menu_Password;
+                            int RS485_Reader_Status;
+                            int Wiegand_Reader_Status;
+                            int Wiegand_Reader_Type;
+                            int Mifare_Reader_Status;
+                            int Mifare_Kart_Data_Type;
+                            int UDP_Haberlesme;
+                            int Multiple_Clock_Mode_Counter_Usage;
+                            int Kart_ID_32_Bit_Clear;
+                            int Pass_Counter_Auto_Delete_Cancel;
+                            int Access_Counter_Kontrol;
+                            int Turnstile_Arm_Tracking;
+                            int Panel_Same_Tag_Block_HourMinSec;
+                            int Mukkerrer_Engelleme_Suresi;
+
+
+                            SI = 3;
+                            PanelMACAddress = int.Parse(TmpReturnStr.Substring(SI, 4), NumberStyles.HexNumber);
+
+                            SI = 7;
+                            ID = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+
+                            SI = 10;
+                            MasterRoleNo = Convert.ToInt32(TmpReturnStr.Substring(SI, 2));
+
+                            SI = 12;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                WKapi_Kapi_Tipi = 1;
+                            else
+                                WKapi_Kapi_Tipi = 0;
+
+
+                            SI = 13;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 3)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI, 3)) < 255)
                             {
-                                PanelMasterRelayTime[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 2), 2));
-                            }
-                        }
-
-                        //Alarm Relay Time
-                        SI = SI + 16;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 2)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI, 2)) <= 30)
-                            PanelAlarmRelayTime = Convert.ToInt32(TmpReturnStr.Substring(SI, 2));
-                        else
-                            PanelAlarmRelayTime = 0;
-                        //Panel TCP/IP Settings
-                        SI = SI + 2;
-                        LocalGateway[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
-                        LocalGateway[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
-                        LocalGateway[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
-                        LocalGateway[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
-
-                        SI = SI + 12;
-                        LocalIPAddress[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
-                        LocalIPAddress[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
-                        LocalIPAddress[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
-                        LocalIPAddress[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
-
-                        SI = SI + 12;
-                        LocalTCPPort = Convert.ToInt32(TmpReturnStr.Substring(SI, 5));
-
-
-                        SI = SI + 5;
-                        LocalSubnetMask[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
-                        LocalSubnetMask[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
-                        LocalSubnetMask[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
-                        LocalSubnetMask[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
-
-                        SI = SI + 12;
-                        RemoteIPAddress[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
-                        RemoteIPAddress[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
-                        RemoteIPAddress[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
-                        RemoteIPAddress[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
-
-                        //Panel Button Detector
-                        SI = SI + 12;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
-                            PanelButtonDetector = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-                        else
-                            PanelButtonDetector = 0;
-
-
-                        //Panel Button Detector Time
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 9)
-                            PanelButtonDetectorTime = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-                        else
-                            PanelButtonDetectorTime = 1;
-
-                        //Global Zone Interlock Active
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
-                            GlobalZoneInterlockActive = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-                        else
-                            GlobalZoneInterlockActive = 0;
-
-                        //Same Door Multiple Reader
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
-                            SameDoorMultipleReader = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-                        else
-                            SameDoorMultipleReader = 0;
-
-                        //Interlock Active
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
-                            InterlockActive = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-                        else
-                            InterlockActive = 0;
-
-                        //Lift Capacity
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 6)
-                            LiftCapacity = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-                        else
-                            LiftCapacity = 0;
-
-                        //Panel Expansion
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            PanelExpansion = 1;
-                        else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 2)
-                            PanelExpansion = 2;
-                        else
-                            PanelExpansion = 0;
-
-                        //Panel Expansion 2
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 2)
-                            PanelExpansion2 = 2;
-                        else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 3)
-                            PanelExpansion2 = 3;
-                        else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 4)
-                            PanelExpansion2 = 4;
-                        else
-                            PanelExpansion2 = 0;
-
-                        //Panel Model
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 5)
-                            PanelModel = 5;
-                        else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 6)
-                            PanelModel = 6;
-                        else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 7)
-                            PanelModel = 7;
-                        else
-                            PanelModel = 5;
-
-
-                        //Status Data Update Time
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            StatusDataUpdateTime = 1;
-                        else
-                            StatusDataUpdateTime = 0;
-
-
-                        //Status Data Update
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            StatusDataUpdate = 1;
-                        else
-                            StatusDataUpdate = 0;
-
-
-                        //Status Data Update Type
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            StatusDataUpdateType = 1;
-                        else
-                            StatusDataUpdateType = 0;
-
-                        //Local Antipassback
-                        SI = SI + 1;
-                        for (int i = 0; i < 8; i++)
-                        {
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + i, 1)) == 1)
-                                PanelLocalAPBs[i] = 1;
-                            else
-                                PanelLocalAPBs[i] = 0;
-                        }
-
-
-                        //Global Antipassback
-                        SI = SI + 8;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            PanelGlobalAPB = 1;
-                        else
-                            PanelGlobalAPB = 0;
-
-
-                        //Global MaxIn Count Control
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            GlobalMaxInCountControl = 1;
-                        else
-                            GlobalMaxInCountControl = 0;
-
-                        //Global Access Count Control
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            GlobalAccessCountControl = 1;
-                        else
-                            GlobalAccessCountControl = 0;
-
-
-                        //Global Capacity Control
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            GlobalCapacityControl = 1;
-                        else
-                            GlobalCapacityControl = 0;
-
-
-                        //Global Sequental Access Control
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
-                            GlobalSequentalAccess = 1;
-                        else
-                            GlobalSequentalAccess = 0;
-
-                        //Same Tag Block Time
-                        SI = SI + 1;
-                        PanelSameTagBlockTime = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
-
-                        //Same Tag Block Type
-                        SI = SI + 3;
-                        PanelSameTagBlockType = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-
-                        //Same Tag Block Second-Minute-Hour
-                        SI = SI + 1;
-                        PanelSameTagBlockMinSecHour = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
-
-                        //Alarm & Fire Modes
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelAlarmMode = 0;
-                        else
-                            PanelAlarmMode = 1;
-
-
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelAlarmModeRelayOk = 0;
-                        else
-                            PanelAlarmModeRelayOk = 1;
-
-
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelFireMode = 0;
-                        else
-                            PanelFireMode = 1;
-
-
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelFireModeRelayOk = 0;
-                        else
-                            PanelFireModeRelayOk = 1;
-
-
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelDoorAlarmRelayOk = 0;
-                        else
-                            PanelDoorAlarmRelayOk = 1;
-
-
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelAlarmBroadcastOk = 0;
-                        else
-                            PanelAlarmBroadcastOk = 1;
-
-
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelFireBroadcastOk = 0;
-                        else
-                            PanelFireBroadcastOk = 1;
-
-
-                        SI = SI + 1;
-                        if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
-                            PanelDoorAlarmBroadcastOk = 0;
-                        else
-                            PanelDoorAlarmBroadcastOk = 1;
-
-
-                        //Global Zones
-                        SI = SI + 1;
-                        for (int i = 0; i < 8; i++)
-                        {
-                            PanelGlobalGroups[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 3), 1));
-                        }
-
-
-                        //Capacity Values
-                        SI = SI + 24;
-                        for (int i = 0; i < 8; i++)
-                        {
-                            //Active
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 8), 1)) == 1)
-                                LocalCapacityActive[i] = 1;
-                            else
-                                LocalCapacityActive[i] = 0;
-
-                            LocalCapacityClear[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 8) + 1, 1));
-                            LocalCapacityValue[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 8) + 2, 6));
-                        }
-                        //LCD Line 1
-                        SI = SI + 64;
-                        PanelName = TmpReturnStr.Substring(SI, 16);
-
-
-                        //WIEGAND Reader Settings
-                        SI = SI + 16;
-                        int RFrm = 39;
-                        for (int i = 0; i < 16; i++)
-                        {
-                            //Active
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm), 1)) == 1)
-                                WIGReaderActive[i] = 1;
-                            else
-                                WIGReaderActive[i] = 0;
-
-                            //WIG Reader Relay No
-                            WIGReaderRelayNo[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 1, 2));
-
-
-                            //WIG Reader Door Type
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 3, 1)) == 1)
-                                WIGReaderDoorType[i] = 1; //Giriş
-                            else
-                                WIGReaderDoorType[i] = 2; //Çıkış
-
-
-                            //WIG Reader WIG Type
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 1)
-                                WIGReaderWIGType[i] = 1;
-                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 2)
-                                WIGReaderWIGType[i] = 2;
-                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 3)
-                                WIGReaderWIGType[i] = 3;
-                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 4)
-                                WIGReaderWIGType[i] = 4;
-                            else
-                                WIGReaderWIGType[i] = 0;
-
-
-                            //WIG Reader Local Group
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 5, 1)) <= 8)
-                                WIGReaderLocalGroup[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 5, 1));
-                            else
-                                WIGReaderLocalGroup[i] = 0;
-
-                            //WIG Reader Sequental Access Main Door
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 6, 1)) == 1)
-                                WIGReaderSeqAccessMain[i] = 1;
-                            else
-                                WIGReaderSeqAccessMain[i] = 0;
-
-                            //WIG Reader Multiple Authorization
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 7, 1)) == 1)
-                                WIGReaderMultipleAuthorization[i] = 1;
-                            else
-                                WIGReaderMultipleAuthorization[i] = 0;
-
-                            //WIG Reader Alarm Lock
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 8, 1)) == 1)
-                                WIGReaderAlarmLock[i] = 1;
-                            else
-                                WIGReaderAlarmLock[i] = 0;
-
-                            //WIG Reader Fire Unlock
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 9, 1)) == 1)
-                                WIGReaderFireUnlock[i] = 1;
-                            else
-                                WIGReaderFireUnlock[i] = 0;
-
-                            //WIG Reader Pin Verify
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 10, 1)) == 1)
-                                WIGReaderPINVerify[i] = 1;
-                            else
-                                WIGReaderPINVerify[i] = 0;
-
-                            //WIG Reader Lift Active
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 11, 1)) == 1)
-                                WIGReaderParkingGate[i] = 1;
-                            else
-                                WIGReaderParkingGate[i] = 0;
-
-                            //WIG Reader Door Open Time
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 12, 3)) >= 1 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 12, 3)) <= 999)
-                                WIGReaderDoorOpenTime[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 12, 3));
-                            else
-                                WIGReaderDoorOpenTime[i] = 20;
-
-                            //WIG Reader Door Open Time Alarm
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 15, 1)) == 1)
-                                WIGReaderDoorOpenTimeAlarm[i] = 1;
-                            else
-                                WIGReaderDoorOpenTimeAlarm[i] = 0;
-
-                            //WIG Reader Door Forcing Alarm
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 16, 1)) == 1)
-                                WIGReaderDoorForcingAlarm[i] = 1;
-                            else
-                                WIGReaderDoorForcingAlarm[i] = 0;
-
-                            //WIG Reader Door Open Alarm
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 17, 1)) == 1)
-                                WIGReaderDoorOpenAlarm[i] = 1;
-                            else
-                                WIGReaderDoorOpenAlarm[i] = 0;
-
-                            //WIG Reader Door Panic Button Alarm
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 18, 1)) == 1)
-                                WIGReaderDoorPanicButtonAlarm[i] = 1;
-                            else
-                                WIGReaderDoorPanicButtonAlarm[i] = 0;
-
-                            //WIG Reader External Alarm Relay
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 19, 2)) >= 1 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 19, 2)) <= 64)
-                                WIGReaderDoorExternalAlarmRelay[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 19, 2));
-                            else
-                                WIGReaderDoorExternalAlarmRelay[i] = 1;
-
-                            //WIG Reader Door Open Time 
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 21, 1)) >= 1 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 21, 1)) <= 9)
-                                WIGReaderDoorPushDelay[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 21, 1));
-                            else
-                                WIGReaderDoorPushDelay[i] = 3;
-
-                            //WIG Reader User Count
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 22, 1)) >= 2 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 22, 1)) <= 6)
-                                WIGReaderUserCount[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 22, 1));
-                            else
-                                WIGReaderUserCount[i] = 2;
-
-                            //WIG Reader Name
-                            if (TmpReturnStr.Substring(SI + (i * RFrm) + 23, 15).Contains("\0"))
-                            {
-                                WIGReaderName[i] = "";
+                                NewID = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
                             }
                             else
                             {
-                                WIGReaderName[i] = TmpReturnStr.Substring(SI + (i * RFrm) + 23, 15);
+                                NewID = 0;
+                            }
+
+                            SI = 16;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                WKapi_Kapi_Kontrol_Modu = 0;
+                            }
+                            else
+                            {
+                                WKapi_Kapi_Kontrol_Modu = 1;
+                            }
+
+                            SI = 17;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Kontrol_Modu = 0;
+                            }
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                            {
+                                Kontrol_Modu = 1;
+                            }
+                            else
+                            {
+                                Kontrol_Modu = 2;
+                            }
+
+                            SI = 22;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                WKapi_Kapi_Gecis_Modu = 0;
+                            }
+                            else
+                            {
+                                WKapi_Kapi_Gecis_Modu = 1;
                             }
 
 
-                            //WIG Reader Button Loop Function
-                            if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 38, 1)) == 1)
-                                WIGReaderButtonDetectorFunction[i] = 1;
-                            else
-                                WIGReaderButtonDetectorFunction[i] = 0;
-                        }
-                        if (TmpTaskUpdateTable)
-                        {
-                            lock (TLockObj)
+                            SI = 23;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 2)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI, 2)) <= 99)
                             {
-                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                Mukkerrer_Engelleme_Suresi = Convert.ToInt32(TmpReturnStr.Substring(SI, 2));
+                            }
+                            else
+                            {
+                                Mukkerrer_Engelleme_Suresi = 0;
+                            }
+
+                            SI = 25;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                RS485_Reader_Type = 0;
+                            }
+                            else
+                            {
+                                RS485_Reader_Type = 1;
+                            }
+                            SI = 26;
+                            LCD_Row_Message = TmpReturnStr.Substring(SI, 16);
+
+                            SI = 42;
+                            LocalGateway[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            LocalGateway[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            LocalGateway[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            LocalGateway[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            SI = 54;
+                            LocalIPAddress[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            LocalIPAddress[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            LocalIPAddress[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            LocalIPAddress[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            SI = 66;
+                            LocalSubnetMask[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            LocalSubnetMask[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            LocalSubnetMask[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            LocalSubnetMask[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            SI = 78;
+                            LocalTCPPort = Convert.ToInt32(TmpReturnStr.Substring(SI, 5));
+
+
+                            SI = 83;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                WKapi_Keypad_Status = 0;
+                            }
+                            else
+                            {
+                                WKapi_Keypad_Status = 1;
+                            }
+
+                            SI = 84;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 8)) != 0)
+                            {
+                                WKapi_Keypad_Menu_Password = Convert.ToInt32(TmpReturnStr.Substring(SI, 8));
+                            }
+                            else
+                            {
+                                WKapi_Keypad_Menu_Password = 1234;
+                            }
+
+
+
+
+
+
+                            SI = 92;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                RS485_Reader_Status = 0;
+                            }
+                            else
+                            {
+                                RS485_Reader_Status = 1;
+                            }
+
+                            SI = 93;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Wiegand_Reader_Status = 0;
+                            }
+                            else
+                            {
+                                Wiegand_Reader_Status = 1;
+                            }
+
+                            SI = 94;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Wiegand_Reader_Type = 0;
+                            }
+                            else
+                            {
+                                Wiegand_Reader_Type = 1;
+                            }
+                            SI = 95;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Mifare_Reader_Status = 0;
+                            }
+                            else
+                            {
+                                Mifare_Reader_Status = 1;
+                            }
+
+                            SI = 96;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Mifare_Kart_Data_Type = 0;
+                            }
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                            {
+                                Mifare_Kart_Data_Type = 1;
+                            }
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 2)
+                            {
+                                Mifare_Kart_Data_Type = 2;
+                            }
+                            else
+                            {
+                                Mifare_Kart_Data_Type = 3;
+                            }
+
+                            SI = 97;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                UDP_Haberlesme = 0;
+                            }
+                            else
+                            {
+                                UDP_Haberlesme = 1;
+                            }
+
+                            SI = 98;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Multiple_Clock_Mode_Counter_Usage = 0;
+                            }
+                            else
+                            {
+                                Multiple_Clock_Mode_Counter_Usage = 1;
+                            }
+
+                            SI = 99;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Pass_Counter_Auto_Delete_Cancel = 0;
+                            }
+                            else
+                            {
+                                Pass_Counter_Auto_Delete_Cancel = 1;
+                            }
+
+                            SI = 100;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Panel_Same_Tag_Block_HourMinSec = 0;
+                            }
+                            else
+                            {
+                                Panel_Same_Tag_Block_HourMinSec = 1;
+                            }
+
+                            SI = 101;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Access_Counter_Kontrol = 0;
+                            }
+                            else
+                            {
+                                Access_Counter_Kontrol = 1;
+                            }
+
+                            SI = 102;
+                            RemoteIPAddress[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            RemoteIPAddress[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            RemoteIPAddress[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            RemoteIPAddress[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            SI = 114;
+                            RemoteTCPPort = Convert.ToInt32(TmpReturnStr.Substring(SI, 5));
+
+                            SI = 119;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Kart_ID_32_Bit_Clear = 0;
+                            }
+                            else
+                            {
+                                Kart_ID_32_Bit_Clear = 1;
+                            }
+
+                            SI = 120;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                            {
+                                Turnstile_Arm_Tracking = 0;
+                            }
+                            else
+                            {
+                                Turnstile_Arm_Tracking = 1;
+                            }
+                            if (TmpTaskUpdateTable)
+                            {
+                                lock (TLockObj)
                                 {
-                                    mDBConn.Open();
-                                    tDBSQLStr = "SELECT * FROM PanelSettings " +
-                                        "WHERE [Seri No] = " + mPanelSerialNo.ToString() +
-                                        "AND [Panel ID] = " + mPanelNo.ToString();
-                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                    tDBReader = tDBCmd.ExecuteReader();
-                                    if (!tDBReader.Read())
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                     {
-                                        tDBSQLStr2 = "INSERT INTO PanelSettings " +
-                                            "(" +
-                                            "[Seri No],[Panel ID],[Panel Model],[Kontrol Modu]," +
-                                            "[Panel M1 Role],[Panel M2 Role],[Panel M3 Role],[Panel M4 Role],[Panel M5 Role],[Panel M6 Role],[Panel M7 Role],[Panel M8 Role],[Panel Alarm Role]," +
-                                            "[Panel Alarm Mode],[Panel Alarm Mode Role Ok],[Panel Fire Mode],[Panel Fire Mode Role Ok],[Panel Door Alarm Role Ok],[Panel Alarm Broadcast Ok],[Panel Fire Broadcast Ok],[Panel Door Alarm Broadcast Ok]," +
-                                            "[Panel GW1],[Panel GW2],[Panel GW3],[Panel GW4]," +
-                                            "[Panel IP1],[Panel IP2],[Panel IP3],[Panel IP4]," +
-                                            "[Panel TCP Port],[Panel Subnet1],[Panel Subnet2],[Panel Subnet3],[Panel Subnet4]," +
-                                            "[Panel Remote IP1],[Panel Remote IP2],[Panel Remote IP3],[Panel Remote IP4]," +
-                                            "[Panel Name],[Panel Same Tag Block],[Panel Same Tag Block Type],[Panel Same Tag Block HourMinSec],[Status Data Update]," +
-                                            "[Status Data Update Type],[Status Data Update Time],[Same Door Multiple Reader],[Interlock Active],[Global Zone Interlock Active]," +
-                                            "[Panel Button Detector],[Panel Button Detector Time],[Lift Capacity],[Panel Expansion],[Panel Expansion 2]," +
-                                            "[Lokal APB1],[Lokal APB2],[Lokal APB3],[Lokal APB4],[Lokal APB5],[Lokal APB6],[Lokal APB7],[Lokal APB8]," +
-                                            "[Global APB]," +
-                                            "[Global MaxIn Count Control],[Global Access Count Control],[Global Capacity Control],[Global Sequental Access Control]," +
-                                            "[Panel Global Bolge1],[Panel Global Bolge2],[Panel Global Bolge3],[Panel Global Bolge4],[Panel Global Bolge5],[Panel Global Bolge6],[Panel Global Bolge7],[Panel Global Bolge8]," +
-                                            "[Panel Local Capacity1],[Panel Local Capacity2],[Panel Local Capacity3],[Panel Local Capacity4],[Panel Local Capacity5],[Panel Local Capacity6],[Panel Local Capacity7],[Panel Local Capacity8]," +
-                                            "[Panel Local Capacity Clear1],[Panel Local Capacity Clear2],[Panel Local Capacity Clear3],[Panel Local Capacity Clear4],[Panel Local Capacity Clear5],[Panel Local Capacity Clear6],[Panel Local Capacity Clear7],[Panel Local Capacity Clear8]," +
-                                            "[Panel Local Capacity Value1],[Panel Local Capacity Value2],[Panel Local Capacity Value3],[Panel Local Capacity Value4],[Panel Local Capacity Value5],[Panel Local Capacity Value6],[Panel Local Capacity Value7],[Panel Local Capacity Value8]" +
-                                            ")" +
-                                            "VALUES " +
-                                            "(" +
-                                            PanelMACAddress + "," + ID + "," + PanelModel + "," + PanelWorkingMode + "," +
-                                            PanelMasterRelayTime[0] + "," + PanelMasterRelayTime[1] + "," + PanelMasterRelayTime[2] + "," + PanelMasterRelayTime[3] + "," +
-                                            PanelMasterRelayTime[4] + "," + PanelMasterRelayTime[5] + "," + PanelMasterRelayTime[6] + "," + PanelMasterRelayTime[7] + "," +
-                                            PanelAlarmRelayTime + "," + PanelAlarmMode + "," + PanelAlarmModeRelayOk + "," + PanelFireMode + "," + PanelFireModeRelayOk + "," + PanelDoorAlarmRelayOk + "," +
-                                            PanelAlarmBroadcastOk + "," + PanelFireBroadcastOk + "," + PanelDoorAlarmBroadcastOk + "," +
-                                            LocalGateway[0] + "," + LocalGateway[1] + "," + LocalGateway[2] + "," + LocalGateway[3] + "," +
-                                            LocalIPAddress[0] + "," + LocalIPAddress[1] + "," + LocalIPAddress[2] + "," + LocalIPAddress[3] + "," +
-                                            LocalTCPPort + "," + LocalSubnetMask[0] + "," + LocalSubnetMask[1] + "," + LocalSubnetMask[2] + "," + LocalSubnetMask[3] + "," +
-                                            RemoteIPAddress[0] + "," + RemoteIPAddress[1] + "," + RemoteIPAddress[2] + "," + RemoteIPAddress[3] + "," +
-                                            "'" + PanelName + "'," + PanelSameTagBlockTime + "," + PanelSameTagBlockType + "," + PanelSameTagBlockMinSecHour + "," + StatusDataUpdate + "," +
-                                            StatusDataUpdateType + "," + StatusDataUpdateTime + "," + SameDoorMultipleReader + "," + InterlockActive + "," + GlobalZoneInterlockActive + "," + PanelButtonDetector + "," +
-                                            PanelButtonDetectorTime + "," + LiftCapacity + "," + PanelExpansion + "," + PanelExpansion2 + "," +
-                                            PanelLocalAPBs[0] + "," + PanelLocalAPBs[1] + "," + PanelLocalAPBs[2] + "," + PanelLocalAPBs[3] + "," + PanelLocalAPBs[4] + "," + PanelLocalAPBs[5] + "," + PanelLocalAPBs[6] + "," + PanelLocalAPBs[7] + "," +
-                                            PanelGlobalAPB + "," + GlobalMaxInCountControl + "," + GlobalAccessCountControl + "," + GlobalCapacityControl + "," + GlobalSequentalAccess + "," +
-                                            PanelGlobalGroups[0] + "," + PanelGlobalGroups[1] + "," + PanelGlobalGroups[2] + "," + PanelGlobalGroups[3] + "," + PanelGlobalGroups[4] + "," + PanelGlobalGroups[5] + "," + PanelGlobalGroups[6] + "," + PanelGlobalGroups[7] + "," +
-                                            LocalCapacityActive[0] + "," + LocalCapacityActive[1] + "," + LocalCapacityActive[2] + "," + LocalCapacityActive[3] + "," + LocalCapacityActive[4] + "," + LocalCapacityActive[5] + "," + LocalCapacityActive[6] + "," + LocalCapacityActive[7] + "," +
-                                            LocalCapacityClear[0] + "," + LocalCapacityClear[1] + "," + LocalCapacityClear[2] + "," + LocalCapacityClear[3] + "," + LocalCapacityClear[4] + "," + LocalCapacityClear[5] + "," + LocalCapacityClear[6] + "," + LocalCapacityClear[7] + "," +
-                                            LocalCapacityValue[0] + "," + LocalCapacityValue[1] + "," + LocalCapacityValue[2] + "," + LocalCapacityValue[3] + "," + LocalCapacityValue[4] + "," + LocalCapacityValue[5] + "," + LocalCapacityValue[6] + "," + LocalCapacityValue[7] +
-                                            ")";
-
-                                    }
-                                    else
-                                    {
-                                        tDBSQLStr2 = "UPDATE PanelSettings " +
-                                            "SET " +
-                                            "[Seri No] = " + PanelMACAddress + "," +
-                                            "[Panel ID] = " + ID + "," +
-                                            "[Panel Model] = " + PanelModel + "," +
-                                            "[Kontrol Modu] = " + PanelWorkingMode + "," +
-                                            "[Panel M1 Role] = " + PanelMasterRelayTime[0] + "," +
-                                            "[Panel M2 Role] = " + PanelMasterRelayTime[1] + "," +
-                                            "[Panel M3 Role] = " + PanelMasterRelayTime[2] + "," +
-                                            "[Panel M4 Role] = " + PanelMasterRelayTime[3] + "," +
-                                            "[Panel M5 Role] = " + PanelMasterRelayTime[4] + "," +
-                                            "[Panel M6 Role] = " + PanelMasterRelayTime[5] + "," +
-                                            "[Panel M7 Role] = " + PanelMasterRelayTime[6] + "," +
-                                            "[Panel M8 Role] = " + PanelMasterRelayTime[7] + "," +
-                                            "[Panel Alarm Role] = " + PanelAlarmRelayTime + "," +
-                                            "[Panel Alarm Mode] = " + PanelAlarmMode + "," +
-                                            "[Panel Alarm Mode Role Ok] = " + PanelAlarmModeRelayOk + "," +
-                                            "[Panel Fire Mode] = " + PanelFireMode + "," +
-                                            "[Panel Fire Mode Role Ok] = " + PanelFireModeRelayOk + "," +
-                                            "[Panel Door Alarm Role Ok] = " + PanelDoorAlarmRelayOk + "," +
-                                            "[Panel Alarm Broadcast Ok] = " + PanelAlarmBroadcastOk + "," +
-                                            "[Panel Fire Broadcast Ok] = " + PanelFireBroadcastOk + "," +
-                                            "[Panel Door Alarm Broadcast Ok] = " + PanelDoorAlarmBroadcastOk + "," +
-                                            "[Panel GW1] = " + LocalGateway[0] + "," +
-                                            "[Panel GW2] = " + LocalGateway[1] + "," +
-                                            "[Panel GW3] = " + LocalGateway[2] + "," +
-                                            "[Panel GW4] = " + LocalGateway[3] + "," +
-                                            "[Panel IP1] = " + LocalIPAddress[0] + "," +
-                                            "[Panel IP2] = " + LocalIPAddress[1] + "," +
-                                            "[Panel IP3] = " + LocalIPAddress[2] + "," +
-                                            "[Panel IP4] = " + LocalIPAddress[3] + "," +
-                                            "[Panel TCP Port] = " + LocalTCPPort + "," +
-                                            "[Panel Subnet1] = " + LocalSubnetMask[0] + "," +
-                                            "[Panel Subnet2] = " + LocalSubnetMask[1] + "," +
-                                            "[Panel Subnet3] = " + LocalSubnetMask[2] + "," +
-                                            "[Panel Subnet4] = " + LocalSubnetMask[3] + "," +
-                                            "[Panel Remote IP1] = " + RemoteIPAddress[0] + "," +
-                                            "[Panel Remote IP2] = " + RemoteIPAddress[1] + "," +
-                                            "[Panel Remote IP3] = " + RemoteIPAddress[2] + "," +
-                                            "[Panel Remote IP4] = " + RemoteIPAddress[3] + "," +
-                                            "[Panel Name] = '" + PanelName + "'," +
-                                            "[Panel Same Tag Block] = " + PanelSameTagBlockTime + "," +
-                                            "[Panel Same Tag Block Type] = " + PanelSameTagBlockType + "," +
-                                            "[Panel Same Tag Block HourMinSec] = " + PanelSameTagBlockMinSecHour + "," +
-                                            "[Status Data Update] = " + StatusDataUpdate + "," +
-                                            "[Status Data Update Type] = " + StatusDataUpdateType + "," +
-                                            "[Status Data Update Time] = " + StatusDataUpdateTime + "," +
-                                            "[Same Door Multiple Reader] = " + SameDoorMultipleReader + "," +
-                                            "[Interlock Active] = " + InterlockActive + "," +
-                                            "[Global Zone Interlock Active] = " + GlobalZoneInterlockActive + "," +
-                                            "[Panel Button Detector] = " + PanelButtonDetector + "," +
-                                            "[Panel Button Detector Time] = " + PanelButtonDetectorTime + "," +
-                                            "[Lift Capacity] = " + LiftCapacity + "," +
-                                            "[Panel Expansion] = " + PanelExpansion + "," +
-                                            "[Panel Expansion 2] = " + PanelExpansion2 + "," +
-                                            "[Lokal APB1] = " + PanelLocalAPBs[0] + "," +
-                                            "[Lokal APB2] = " + PanelLocalAPBs[1] + "," +
-                                            "[Lokal APB3] = " + PanelLocalAPBs[2] + "," +
-                                            "[Lokal APB4] = " + PanelLocalAPBs[3] + "," +
-                                            "[Lokal APB5] = " + PanelLocalAPBs[4] + "," +
-                                            "[Lokal APB6] = " + PanelLocalAPBs[5] + "," +
-                                            "[Lokal APB7] = " + PanelLocalAPBs[6] + "," +
-                                            "[Lokal APB8] = " + PanelLocalAPBs[7] + "," +
-                                            "[Global APB] = " + PanelGlobalAPB + "," +
-                                            "[Global MaxIn Count Control] = " + GlobalMaxInCountControl + "," +
-                                            "[Global Access Count Control] = " + GlobalAccessCountControl + "," +
-                                            "[Global Capacity Control] = " + GlobalCapacityControl + "," +
-                                            "[Global Sequental Access Control] = " + GlobalSequentalAccess + "," +
-                                            "[Panel Global Bolge1] = " + PanelGlobalGroups[0] + "," +
-                                            "[Panel Global Bolge2] = " + PanelGlobalGroups[1] + "," +
-                                            "[Panel Global Bolge3] = " + PanelGlobalGroups[2] + "," +
-                                            "[Panel Global Bolge4] = " + PanelGlobalGroups[3] + "," +
-                                            "[Panel Global Bolge5] = " + PanelGlobalGroups[4] + "," +
-                                            "[Panel Global Bolge6] = " + PanelGlobalGroups[5] + "," +
-                                            "[Panel Global Bolge7] = " + PanelGlobalGroups[6] + "," +
-                                            "[Panel Global Bolge8] = " + PanelGlobalGroups[7] + "," +
-                                            "[Panel Local Capacity1] = " + LocalCapacityActive[0] + "," +
-                                            "[Panel Local Capacity2] = " + LocalCapacityActive[1] + "," +
-                                            "[Panel Local Capacity3] = " + LocalCapacityActive[2] + "," +
-                                            "[Panel Local Capacity4] = " + LocalCapacityActive[3] + "," +
-                                            "[Panel Local Capacity5] = " + LocalCapacityActive[4] + "," +
-                                            "[Panel Local Capacity6] = " + LocalCapacityActive[5] + "," +
-                                            "[Panel Local Capacity7] = " + LocalCapacityActive[6] + "," +
-                                            "[Panel Local Capacity8] = " + LocalCapacityActive[7] + "," +
-                                            "[Panel Local Capacity Clear1] = " + LocalCapacityClear[0] + "," +
-                                            "[Panel Local Capacity Clear2] = " + LocalCapacityClear[1] + "," +
-                                            "[Panel Local Capacity Clear3] = " + LocalCapacityClear[2] + "," +
-                                            "[Panel Local Capacity Clear4] = " + LocalCapacityClear[3] + "," +
-                                            "[Panel Local Capacity Clear5] = " + LocalCapacityClear[4] + "," +
-                                            "[Panel Local Capacity Clear6] = " + LocalCapacityClear[5] + "," +
-                                            "[Panel Local Capacity Clear7] = " + LocalCapacityClear[6] + "," +
-                                            "[Panel Local Capacity Clear8] = " + LocalCapacityClear[7] + "," +
-                                            "[Panel Local Capacity Value1] = " + LocalCapacityValue[0] + "," +
-                                            "[Panel Local Capacity Value2] = " + LocalCapacityValue[1] + "," +
-                                            "[Panel Local Capacity Value3] = " + LocalCapacityValue[2] + "," +
-                                            "[Panel Local Capacity Value4] = " + LocalCapacityValue[3] + "," +
-                                            "[Panel Local Capacity Value5] = " + LocalCapacityValue[4] + "," +
-                                            "[Panel Local Capacity Value6] = " + LocalCapacityValue[5] + "," +
-                                            "[Panel Local Capacity Value7] = " + LocalCapacityValue[6] + "," +
-                                            "[Panel Local Capacity Value8] = " + LocalCapacityValue[7] + " " +
-                                            "WHERE [Panel ID] = " + ID + " " +
-                                            "AND [Seri No] = " + PanelMACAddress;
-                                    }
-                                    tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
-                                    TRetInt = tDBCmd2.ExecuteNonQuery();
-                                    if (TRetInt <= 0)
-                                    {
-                                        return false;
-                                    }
-                                }
-                            }
-
-                            lock (TLockObj)
-                            {
-                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
-                                {
-                                    mDBConn.Open();
-                                    bool Result = false;
-                                    for (int i = 0; i < 16; i++)
-                                    {
-                                        tDBSQLStr = "";
-                                        StringBuilder tVeriable = new StringBuilder();
-                                        tDBSQLStr = "SELECT * FROM ReaderSettingsNew " +
-                                            "WHERE [Seri No] = " + mPanelSerialNo.ToString();
-                                        tDBSQLStr += " AND [WKapi ID] =" + (i + 1).ToString();
+                                        mDBConn.Open();
+                                        tDBSQLStr = "SELECT * FROM ReaderSettingsNewMS " +
+                                            " WHERE [Seri No] = " + mPanelSerialNo.ToString() +
+                                            " AND [Panel ID] = " + mPanelNo.ToString();
                                         tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                                         tDBReader = tDBCmd.ExecuteReader();
                                         if (!tDBReader.Read())
                                         {
-                                            tVeriable.Append("INSERT INTO ReaderSettingsNew ");
-                                            tVeriable.Append("(");
-                                            tVeriable.Append("[Seri No],");
-                                            tVeriable.Append("[Sira No],");
-                                            tVeriable.Append("[Panel ID],");
-                                            tVeriable.Append("[Panel Name],");
-                                            tVeriable.Append("[WKapi ID],");
-                                            tVeriable.Append("[WKapi Aktif],");
-                                            tVeriable.Append("[WKapi Lift Aktif],");
-                                            tVeriable.Append("[WKapi Role No],");
-                                            tVeriable.Append("[WKapi Adi],");
-                                            tVeriable.Append("[WKapi Kapi Tipi],");
-                                            tVeriable.Append("[WKapi WIGType],");
-                                            tVeriable.Append("[WKapi Lokal Bolge],");
-                                            tVeriable.Append("[WKapi Gecis Modu],");
-                                            tVeriable.Append("[WKapi Alarm Modu],");
-                                            tVeriable.Append("[WKapi Yangin Modu],");
-                                            tVeriable.Append("[WKapi Pin Dogrulama],");
-                                            tVeriable.Append("[WKapi Ana Alarm Rolesi],");
-                                            tVeriable.Append("[WKapi Sirali Gecis Ana Kapi],");
-                                            tVeriable.Append("[WKapi Coklu Onay],");
-                                            tVeriable.Append("[WKapi Acik Sure],");
-                                            tVeriable.Append("[WKapi Acik Sure Alarmi],");
-                                            tVeriable.Append("[WKapi Zorlama Alarmi],");
-                                            tVeriable.Append("[WKapi Acilma Alarmi],");
-                                            tVeriable.Append("[WKapi Harici Alarm Rolesi],");
-                                            tVeriable.Append("[WKapi Panik Buton Alarmi],");
-                                            tVeriable.Append("[WKapi Itme Gecikmesi],");
-                                            tVeriable.Append("[WKapi User Count],");
+                                            tDBSQLStr2 = "INSERT INTO [ReaderSettingsNewMS]" +
+           "([Seri No],[Sira No],[Panel ID],[Panel Name],[WKapi ID],[New Device ID],[WKapi Kapi Tipi],[WKapi Kapi Kontrol Modu]," +
+            "[WKapi Kapi Gecis Modu],[RS485 Reader Type],[LCD Row Message],[WKapi Keypad Status],[WKapi Keypad Menu Password]," +
+            "[RS485 Reader Status],[Wiegand Reader Status],[Wiegand Reader Type],[Mifare Reader Status],[Mifare Kart Data Type]," +
+            "[UDP Haberlesme],[Multiple Clock Mode Counter Usage],[Kart ID 32 Bit Clear],[Pass Counter Auto Delete Cancel]," +
+            "[Access Counter Kontrol],[Turnstile Arm Tracking])" +
+            "VALUES(" +
+            PanelMACAddress + "," + ID + "," + ID + ",'MAVISOFT MS-1010'," + 1 + "," + NewID + "," +
+            "" + WKapi_Kapi_Tipi + "," + WKapi_Kapi_Kontrol_Modu + "," + WKapi_Kapi_Gecis_Modu + "," + RS485_Reader_Type + "," +
+            "'" + LCD_Row_Message + "'," + WKapi_Keypad_Status + "," + WKapi_Keypad_Menu_Password + "," + RS485_Reader_Status + "," +
+            "" + Wiegand_Reader_Status + "," + Wiegand_Reader_Type + "," + Mifare_Reader_Status + "," + Mifare_Kart_Data_Type + "," +
+            "" + UDP_Haberlesme + "," + Multiple_Clock_Mode_Counter_Usage + "," + Kart_ID_32_Bit_Clear + "," +
+            "" + Pass_Counter_Auto_Delete_Cancel + "," + Access_Counter_Kontrol + "," + Turnstile_Arm_Tracking + "";
+                                        }
+                                        else
+                                        {
+                                            tDBSQLStr2 = "UPDATE [ReaderSettingsNewMS]" +
+                                         " SET " +
+                                         "[Seri No] = " + PanelMACAddress + "," +
+                                         "[Sira No] = " + ID + "," +
+                                         "[Panel ID] = " + ID + "" +
+                                         ",[Panel Name] = 'MAVISOFT MS-1010'," +
+                                         "[WKapi ID] = " + 1 + "," +
+                                         "[New Device ID] = " + NewID + "," +
+                                         "[WKapi Kapi Tipi] = " + WKapi_Kapi_Tipi + "," +
+                                         "[WKapi Kapi Kontrol Modu] = " + WKapi_Kapi_Kontrol_Modu + "," +
+                                         "[WKapi Kapi Gecis Modu] = " + WKapi_Kapi_Gecis_Modu + "," +
+                                         "[RS485 Reader Type] = " + RS485_Reader_Type + "," +
+                                         "[LCD Row Message] = '" + LCD_Row_Message + "'," +
+                                         "[WKapi Keypad Status] = " + WKapi_Keypad_Status + "," +
+                                         "[WKapi Keypad Menu Password] = " + WKapi_Keypad_Menu_Password + "," +
+                                         "[RS485 Reader Status] = " + RS485_Reader_Status + "," +
+                                         "[Wiegand Reader Status] = " + Wiegand_Reader_Status + "," +
+                                         "[Wiegand Reader Type] = " + Wiegand_Reader_Type + "," +
+                                         "[Mifare Reader Status] = " + Mifare_Reader_Status + "," +
+                                         "[Mifare Kart Data Type] = " + Mifare_Kart_Data_Type + "," +
+                                         "[UDP Haberlesme] = " + UDP_Haberlesme + "," +
+                                         "[Multiple Clock Mode Counter Usage] = " + Multiple_Clock_Mode_Counter_Usage + "," +
+                                         "[Kart ID 32 Bit Clear] = " + Kart_ID_32_Bit_Clear + "," +
+                                         "[Pass Counter Auto Delete Cancel] = " + Pass_Counter_Auto_Delete_Cancel + "," +
+                                         "[Access Counter Kontrol] = " + Access_Counter_Kontrol + "," +
+                                         "[Turnstile Arm Tracking] = " + Turnstile_Arm_Tracking + "" +
+                                         " WHERE [Panel ID] = " + mPanelNo.ToString() +
+                                         " AND [Seri No] = " + mPanelSerialNo.ToString();
+                                        }
+                                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                        TRetInt = tDBCmd2.ExecuteNonQuery();
+                                        if (TRetInt <= 0)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                }
 
-                                            tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
-                                            tDBSQLStr2 += ")";
-                                            tDBSQLStr2 += "VALUES ";
-                                            tDBSQLStr2 += "(";
-                                            tDBSQLStr2 += mPanelSerialNo.ToString() + ",";
-                                            tDBSQLStr2 += ID.ToString() + ",";
-                                            tDBSQLStr2 += ID.ToString() + ",";
-                                            tDBSQLStr2 += "'" + PanelName + "',";
-                                            tDBSQLStr2 += (i + 1).ToString() + ",";
-
-                                            if (WIGReaderActive[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            if (WIGReaderParkingGate[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            tDBSQLStr2 += WIGReaderRelayNo[i].ToString() + ",";
-                                            tDBSQLStr2 += "'" + WIGReaderName[i] + "',";
-                                            tDBSQLStr2 += WIGReaderDoorType[i].ToString() + ",";
-                                            tDBSQLStr2 += WIGReaderWIGType[i].ToString() + ",";
-                                            tDBSQLStr2 += WIGReaderLocalGroup[i].ToString() + ",";
-                                            tDBSQLStr2 += WIGReaderAccessControlMode[i].ToString() + ",";
-                                            tDBSQLStr2 += WIGReaderAlarmLock[i] + ",";
-                                            tDBSQLStr2 += WIGReaderFireUnlock[i] + ",";
-                                            tDBSQLStr2 += WIGReaderPINVerify[i] + ",";
-                                            if (WIGReaderButtonDetectorFunction[i] == 1)//Ana Alarm Rolesi Yerine
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            if (WIGReaderSeqAccessMain[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            if (WIGReaderMultipleAuthorization[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            tDBSQLStr2 += WIGReaderDoorOpenTime[i] + ",";
-                                            if (WIGReaderDoorOpenTimeAlarm[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            if (WIGReaderDoorForcingAlarm[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            if (WIGReaderDoorOpenAlarm[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            tDBSQLStr2 += WIGReaderDoorExternalAlarmRelay[i].ToString() + ",";
-                                            if (WIGReaderDoorPanicButtonAlarm[i] == 1)
-                                            {
-                                                tDBSQLStr2 += "1,";
-                                            }
-                                            else
-                                            {
-                                                tDBSQLStr2 += "0,";
-                                            }
-                                            tDBSQLStr2 += WIGReaderDoorPushDelay[i].ToString() + ",";
-                                            tDBSQLStr2 += WIGReaderUserCount[i].ToString() + ",";
-
-
-                                            tDBSQLStr2 = tDBSQLStr2.Substring(0, tDBSQLStr2.Length - 1);
-                                            tDBSQLStr2 += ")";
+                                lock (TLockObj)
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        tDBSQLStr = "SELECT * FROM PanelSettings " +
+                                            "WHERE [Seri No] = " + mPanelSerialNo.ToString() +
+                                            "AND [Panel ID] = " + mPanelNo.ToString();
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        tDBReader = tDBCmd.ExecuteReader();
+                                        if (tDBReader.Read())
+                                        {
+                                            tDBSQLStr2 = "UPDATE PanelSettings " +
+                                                "SET " +
+                                                "[Panel M1 Role] = " + MasterRoleNo + "," +
+                                                 "[Panel GW1] = " + LocalGateway[0] + "," +
+                                                "[Panel GW2] = " + LocalGateway[1] + "," +
+                                                "[Panel GW3] = " + LocalGateway[2] + "," +
+                                                "[Panel GW4] = " + LocalGateway[3] + "," +
+                                                "[Panel IP1] = " + LocalIPAddress[0] + "," +
+                                                "[Panel IP2] = " + LocalIPAddress[1] + "," +
+                                                "[Panel IP3] = " + LocalIPAddress[2] + "," +
+                                                "[Panel IP4] = " + LocalIPAddress[3] + "," +
+                                                "[Panel TCP Port] = " + LocalTCPPort + "," +
+                                                "[Panel Subnet1] = " + LocalSubnetMask[0] + "," +
+                                                "[Panel Subnet2] = " + LocalSubnetMask[1] + "," +
+                                                "[Panel Subnet3] = " + LocalSubnetMask[2] + "," +
+                                                "[Panel Subnet4] = " + LocalSubnetMask[3] + "," +
+                                                "[Panel Remote IP1] = " + RemoteIPAddress[0] + "," +
+                                                "[Panel Remote IP2] = " + RemoteIPAddress[1] + "," +
+                                                "[Panel Remote IP3] = " + RemoteIPAddress[2] + "," +
+                                                "[Panel Remote IP4] = " + RemoteIPAddress[3] + "," +
+                                                "[Panel Same Tag Block HourMinSec] = " + Panel_Same_Tag_Block_HourMinSec +
+                                                " WHERE [Panel ID] = " + mPanelNo.ToString() +
+                                                " AND [Seri No] = " + PanelMACAddress;
                                             tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
                                             TRetInt = tDBCmd2.ExecuteNonQuery();
-                                            if (TRetInt > 0)
+                                            if (TRetInt <= 0)
                                             {
-                                                Result = true;
-                                                tVeriable = new StringBuilder();
-                                                tDBSQLStr2 = "";
+                                                return false;
                                             }
                                             else
                                             {
-                                                Result = false;
-                                                tVeriable = new StringBuilder();
-                                                tDBSQLStr2 = "";
+                                                return true;
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            int ID;
+                            int[] LocalGateway = new int[4];
+                            int[] LocalIPAddress = new int[4];
+                            int LocalTCPPort;
+                            int[] LocalSubnetMask = new int[4];
+                            int[] RemoteIPAddress = new int[4];
+                            int[] PanelGlobalGroups = new int[8];
+                            int GlobalAccessCountControl;
+                            int GlobalMaxInCountControl;
+                            int GlobalSequentalAccess;
+                            int GlobalCapacityControl;
+                            int[] LocalCapacityActive = new int[8];
+                            int[] LocalCapacityClear = new int[8];
+                            long[] LocalCapacityValue = new long[8];
+                            int StatusDataUpdate;
+                            int StatusDataUpdateType;
+                            int StatusDataUpdateTime;
+                            int GlobalZoneInterlockActive;
+                            int InterlockActive;
+                            int SameDoorMultipleReader;
+                            int LiftCapacity;
+                            int PanelExpansion;
+                            int PanelExpansion2;
+                            int PanelModel;
+                            string PanelName;
+                            int PanelSameTagBlockTime;
+                            int PanelSameTagBlockType;
+                            int PanelSameTagBlockMinSecHour;
+                            int PanelWorkingMode;
+                            int PanelCardCount;
+                            int PanelButtonDetector;
+                            int PanelButtonDetectorTime;
+                            int PanelAlarmModeRelayOk;
+                            int PanelAlarmMode;
+                            int PanelFireModeRelayOk;
+                            int PanelFireMode;
+                            int PanelDoorAlarmRelayOk;
+                            int PanelAlarmBroadcastOk;
+                            int PanelFireBroadcastOk;
+                            int PanelDoorAlarmBroadcastOk;
+                            int[] ReaderActive = new int[8];
+                            string[] ReaderName = new string[8];
+                            int[] ReaderModel = new int[8];
+                            int[] ReaderDoorType = new int[8];
+                            int[] ReaderRelayTime = new int[8];
+                            int[] ReaderWorkingMode = new int[8];
+                            int[] ReaderAccessControlMode = new int[8];
+                            int[] ReaderLocalGroup = new int[8];
+                            int[] WIGReaderActive = new int[16];
+                            string[] WIGReaderName = new string[16];
+                            int[] WIGReaderRelayNo = new int[16];
+                            int[] WIGReaderRelayTime = new int[16];
+                            int[] WIGReaderDoorType = new int[16];
+                            int[] WIGReaderWIGType = new int[16];
+                            int[] WIGReaderLocalGroup = new int[16];
+                            int[] WIGReaderAccessControlMode = new int[16];
+                            int[] WIGReaderSeqAccessMain = new int[16];
+                            int[] WIGReaderMultipleAuthorization = new int[16];
+                            int[] WIGReaderAlarmLock = new int[16];
+                            int[] WIGReaderFireUnlock = new int[16];
+                            int[] WIGReaderPINVerify = new int[16];
+                            int[] WIGReaderParkingGate = new int[16];
+                            int[] WIGReaderDoorOpenTime = new int[16];
+                            int[] WIGReaderDoorOpenTimeAlarm = new int[16];
+                            int[] WIGReaderDoorForcingAlarm = new int[16];
+                            int[] WIGReaderDoorOpenAlarm = new int[16];
+                            int[] WIGReaderDoorPanicButtonAlarm = new int[16];
+                            int[] WIGReaderDoorExternalAlarmRelay = new int[16];
+                            int[] WIGReaderButtonDetectorFunction = new int[16];
+                            int[] WIGReaderDoorPushDelay = new int[16];
+                            int[] WIGReaderUserCount = new int[16];
+                            int[] PanelLocalAPBs = new int[8];
+                            int[] PanelMasterRelayTime = new int[8];
+                            int PanelAlarmRelayTime;
+                            int PanelMACAddress;
+                            int PanelGlobalAPB;
+
+                            //Panel MAC Address
+                            SI = 3;
+                            PanelMACAddress = int.Parse(TmpReturnStr.Substring(SI, 4), NumberStyles.HexNumber);
+
+
+                            //Panel ID
+                            SI = SI + 4;
+                            ID = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+
+                            //Panel Working Mode
+                            SI = SI + 3;
+                            if (TmpReturnStr.Substring(SI, 1) == "0")
+                                PanelWorkingMode = 0;
+                            else
+                                PanelWorkingMode = 1;
+
+                            //User Count
+                            SI = SI + 1;
+                            PanelCardCount = Convert.ToInt32(TmpReturnStr.Substring(SI, 6));
+
+                            //Master Relay Times
+                            SI = SI + 6;
+                            for (int i = 0; i < 8; i++)
+                            {
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 2), 2)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 2), 2)) <= 30)
+                                {
+                                    PanelMasterRelayTime[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 2), 2));
+                                }
+                            }
+
+                            //Alarm Relay Time
+                            SI = SI + 16;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 2)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI, 2)) <= 30)
+                                PanelAlarmRelayTime = Convert.ToInt32(TmpReturnStr.Substring(SI, 2));
+                            else
+                                PanelAlarmRelayTime = 0;
+                            //Panel TCP/IP Settings
+                            SI = SI + 2;
+                            LocalGateway[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            LocalGateway[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            LocalGateway[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            LocalGateway[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            SI = SI + 12;
+                            LocalIPAddress[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            LocalIPAddress[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            LocalIPAddress[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            LocalIPAddress[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            SI = SI + 12;
+                            LocalTCPPort = Convert.ToInt32(TmpReturnStr.Substring(SI, 5));
+
+
+                            SI = SI + 5;
+                            LocalSubnetMask[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            LocalSubnetMask[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            LocalSubnetMask[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            LocalSubnetMask[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            SI = SI + 12;
+                            RemoteIPAddress[0] = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+                            RemoteIPAddress[1] = Convert.ToInt32(TmpReturnStr.Substring(SI + 3, 3));
+                            RemoteIPAddress[2] = Convert.ToInt32(TmpReturnStr.Substring(SI + 6, 3));
+                            RemoteIPAddress[3] = Convert.ToInt32(TmpReturnStr.Substring(SI + 9, 3));
+
+                            //Panel Button Detector
+                            SI = SI + 12;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
+                                PanelButtonDetector = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+                            else
+                                PanelButtonDetector = 0;
+
+
+                            //Panel Button Detector Time
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) > 0 && Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 9)
+                                PanelButtonDetectorTime = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+                            else
+                                PanelButtonDetectorTime = 1;
+
+                            //Global Zone Interlock Active
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
+                                GlobalZoneInterlockActive = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+                            else
+                                GlobalZoneInterlockActive = 0;
+
+                            //Same Door Multiple Reader
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
+                                SameDoorMultipleReader = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+                            else
+                                SameDoorMultipleReader = 0;
+
+                            //Interlock Active
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 1)
+                                InterlockActive = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+                            else
+                                InterlockActive = 0;
+
+                            //Lift Capacity
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) <= 6)
+                                LiftCapacity = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+                            else
+                                LiftCapacity = 0;
+
+                            //Panel Expansion
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                PanelExpansion = 1;
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 2)
+                                PanelExpansion = 2;
+                            else
+                                PanelExpansion = 0;
+
+                            //Panel Expansion 2
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 2)
+                                PanelExpansion2 = 2;
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 3)
+                                PanelExpansion2 = 3;
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 4)
+                                PanelExpansion2 = 4;
+                            else
+                                PanelExpansion2 = 0;
+
+                            //Panel Model
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 5)
+                                PanelModel = 5;
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 6)
+                                PanelModel = 6;
+                            else if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 7)
+                                PanelModel = 7;
+                            else
+                                PanelModel = 5;
+
+
+                            //Status Data Update Time
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                StatusDataUpdateTime = 1;
+                            else
+                                StatusDataUpdateTime = 0;
+
+
+                            //Status Data Update
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                StatusDataUpdate = 1;
+                            else
+                                StatusDataUpdate = 0;
+
+
+                            //Status Data Update Type
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                StatusDataUpdateType = 1;
+                            else
+                                StatusDataUpdateType = 0;
+
+                            //Local Antipassback
+                            SI = SI + 1;
+                            for (int i = 0; i < 8; i++)
+                            {
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + i, 1)) == 1)
+                                    PanelLocalAPBs[i] = 1;
+                                else
+                                    PanelLocalAPBs[i] = 0;
+                            }
+
+                            //Global Antipassback
+                            SI = SI + 8;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                PanelGlobalAPB = 1;
+                            else
+                                PanelGlobalAPB = 0;
+
+
+                            //Global MaxIn Count Control
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                GlobalMaxInCountControl = 1;
+                            else
+                                GlobalMaxInCountControl = 0;
+
+                            //Global Access Count Control
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                GlobalAccessCountControl = 1;
+                            else
+                                GlobalAccessCountControl = 0;
+
+
+                            //Global Capacity Control
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                GlobalCapacityControl = 1;
+                            else
+                                GlobalCapacityControl = 0;
+
+
+                            //Global Sequental Access Control
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 1)
+                                GlobalSequentalAccess = 1;
+                            else
+                                GlobalSequentalAccess = 0;
+
+                            //Same Tag Block Time
+                            SI = SI + 1;
+                            PanelSameTagBlockTime = Convert.ToInt32(TmpReturnStr.Substring(SI, 3));
+
+                            //Same Tag Block Type
+                            SI = SI + 3;
+                            PanelSameTagBlockType = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+
+                            //Same Tag Block Second-Minute-Hour
+                            SI = SI + 1;
+                            PanelSameTagBlockMinSecHour = Convert.ToInt32(TmpReturnStr.Substring(SI, 1));
+
+                            //Alarm & Fire Modes
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelAlarmMode = 0;
+                            else
+                                PanelAlarmMode = 1;
+
+
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelAlarmModeRelayOk = 0;
+                            else
+                                PanelAlarmModeRelayOk = 1;
+
+
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelFireMode = 0;
+                            else
+                                PanelFireMode = 1;
+
+
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelFireModeRelayOk = 0;
+                            else
+                                PanelFireModeRelayOk = 1;
+
+
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelDoorAlarmRelayOk = 0;
+                            else
+                                PanelDoorAlarmRelayOk = 1;
+
+
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelAlarmBroadcastOk = 0;
+                            else
+                                PanelAlarmBroadcastOk = 1;
+
+
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelFireBroadcastOk = 0;
+                            else
+                                PanelFireBroadcastOk = 1;
+
+
+                            SI = SI + 1;
+                            if (Convert.ToInt32(TmpReturnStr.Substring(SI, 1)) == 0)
+                                PanelDoorAlarmBroadcastOk = 0;
+                            else
+                                PanelDoorAlarmBroadcastOk = 1;
+
+
+                            //Global Zones
+                            SI = SI + 1;
+                            for (int i = 0; i < 8; i++)
+                            {
+                                PanelGlobalGroups[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 3), 1));
+                            }
+
+
+                            //Capacity Values
+                            SI = SI + 24;
+                            for (int i = 0; i < 8; i++)
+                            {
+                                //Active
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 8), 1)) == 1)
+                                    LocalCapacityActive[i] = 1;
+                                else
+                                    LocalCapacityActive[i] = 0;
+
+                                LocalCapacityClear[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 8) + 1, 1));
+                                LocalCapacityValue[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * 8) + 2, 6));
+                            }
+                            //LCD Line 1
+                            SI = SI + 64;
+                            PanelName = TmpReturnStr.Substring(SI, 16);
+
+
+                            //WIEGAND Reader Settings
+                            SI = SI + 16;
+                            int RFrm = 39;
+                            for (int i = 0; i < 16; i++)
+                            {
+                                //Active
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm), 1)) == 1)
+                                    WIGReaderActive[i] = 1;
+                                else
+                                    WIGReaderActive[i] = 0;
+
+                                //WIG Reader Relay No
+                                WIGReaderRelayNo[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 1, 2));
+
+
+                                //WIG Reader Door Type
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 3, 1)) == 1)
+                                    WIGReaderDoorType[i] = 1; //Giriş
+                                else
+                                    WIGReaderDoorType[i] = 2; //Çıkış
+
+
+                                //WIG Reader WIG Type
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 1)
+                                    WIGReaderWIGType[i] = 1;
+                                else if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 2)
+                                    WIGReaderWIGType[i] = 2;
+                                else if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 3)
+                                    WIGReaderWIGType[i] = 3;
+                                else if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 4, 1)) == 4)
+                                    WIGReaderWIGType[i] = 4;
+                                else
+                                    WIGReaderWIGType[i] = 0;
+
+
+                                //WIG Reader Local Group
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 5, 1)) <= 8)
+                                    WIGReaderLocalGroup[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 5, 1));
+                                else
+                                    WIGReaderLocalGroup[i] = 0;
+
+                                //WIG Reader Sequental Access Main Door
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 6, 1)) == 1)
+                                    WIGReaderSeqAccessMain[i] = 1;
+                                else
+                                    WIGReaderSeqAccessMain[i] = 0;
+
+                                //WIG Reader Multiple Authorization
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 7, 1)) == 1)
+                                    WIGReaderMultipleAuthorization[i] = 1;
+                                else
+                                    WIGReaderMultipleAuthorization[i] = 0;
+
+                                //WIG Reader Alarm Lock
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 8, 1)) == 1)
+                                    WIGReaderAlarmLock[i] = 1;
+                                else
+                                    WIGReaderAlarmLock[i] = 0;
+
+                                //WIG Reader Fire Unlock
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 9, 1)) == 1)
+                                    WIGReaderFireUnlock[i] = 1;
+                                else
+                                    WIGReaderFireUnlock[i] = 0;
+
+                                //WIG Reader Pin Verify
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 10, 1)) == 1)
+                                    WIGReaderPINVerify[i] = 1;
+                                else
+                                    WIGReaderPINVerify[i] = 0;
+
+                                //WIG Reader Lift Active
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 11, 1)) == 1)
+                                    WIGReaderParkingGate[i] = 1;
+                                else
+                                    WIGReaderParkingGate[i] = 0;
+
+                                //WIG Reader Door Open Time
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 12, 3)) >= 1 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 12, 3)) <= 999)
+                                    WIGReaderDoorOpenTime[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 12, 3));
+                                else
+                                    WIGReaderDoorOpenTime[i] = 20;
+
+                                //WIG Reader Door Open Time Alarm
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 15, 1)) == 1)
+                                    WIGReaderDoorOpenTimeAlarm[i] = 1;
+                                else
+                                    WIGReaderDoorOpenTimeAlarm[i] = 0;
+
+                                //WIG Reader Door Forcing Alarm
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 16, 1)) == 1)
+                                    WIGReaderDoorForcingAlarm[i] = 1;
+                                else
+                                    WIGReaderDoorForcingAlarm[i] = 0;
+
+                                //WIG Reader Door Open Alarm
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 17, 1)) == 1)
+                                    WIGReaderDoorOpenAlarm[i] = 1;
+                                else
+                                    WIGReaderDoorOpenAlarm[i] = 0;
+
+                                //WIG Reader Door Panic Button Alarm
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 18, 1)) == 1)
+                                    WIGReaderDoorPanicButtonAlarm[i] = 1;
+                                else
+                                    WIGReaderDoorPanicButtonAlarm[i] = 0;
+
+                                //WIG Reader External Alarm Relay
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 19, 2)) >= 1 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 19, 2)) <= 64)
+                                    WIGReaderDoorExternalAlarmRelay[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 19, 2));
+                                else
+                                    WIGReaderDoorExternalAlarmRelay[i] = 1;
+
+                                //WIG Reader Door Open Time 
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 21, 1)) >= 1 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 21, 1)) <= 9)
+                                    WIGReaderDoorPushDelay[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 21, 1));
+                                else
+                                    WIGReaderDoorPushDelay[i] = 3;
+
+                                //WIG Reader User Count
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 22, 1)) >= 2 && Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 22, 1)) <= 6)
+                                    WIGReaderUserCount[i] = Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 22, 1));
+                                else
+                                    WIGReaderUserCount[i] = 2;
+
+                                //WIG Reader Name
+                                if (TmpReturnStr.Substring(SI + (i * RFrm) + 23, 15).Contains("\0"))
+                                {
+                                    WIGReaderName[i] = "";
+                                }
+                                else
+                                {
+                                    WIGReaderName[i] = TmpReturnStr.Substring(SI + (i * RFrm) + 23, 15);
+                                }
+
+
+                                //WIG Reader Button Loop Function
+                                if (Convert.ToInt32(TmpReturnStr.Substring(SI + (i * RFrm) + 38, 1)) == 1)
+                                    WIGReaderButtonDetectorFunction[i] = 1;
+                                else
+                                    WIGReaderButtonDetectorFunction[i] = 0;
+                            }
+                            if (TmpTaskUpdateTable)
+                            {
+                                lock (TLockObj)
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        tDBSQLStr = "SELECT * FROM PanelSettings " +
+                                            "WHERE [Seri No] = " + mPanelSerialNo.ToString() +
+                                            "AND [Panel ID] = " + mPanelNo.ToString();
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        tDBReader = tDBCmd.ExecuteReader();
+                                        if (!tDBReader.Read())
+                                        {
+                                            tDBSQLStr2 = "INSERT INTO PanelSettings " +
+                                                "(" +
+                                                "[Seri No],[Panel ID],[Panel Model],[Kontrol Modu]," +
+                                                "[Panel M1 Role],[Panel M2 Role],[Panel M3 Role],[Panel M4 Role],[Panel M5 Role],[Panel M6 Role],[Panel M7 Role],[Panel M8 Role],[Panel Alarm Role]," +
+                                                "[Panel Alarm Mode],[Panel Alarm Mode Role Ok],[Panel Fire Mode],[Panel Fire Mode Role Ok],[Panel Door Alarm Role Ok],[Panel Alarm Broadcast Ok],[Panel Fire Broadcast Ok],[Panel Door Alarm Broadcast Ok]," +
+                                                "[Panel GW1],[Panel GW2],[Panel GW3],[Panel GW4]," +
+                                                "[Panel IP1],[Panel IP2],[Panel IP3],[Panel IP4]," +
+                                                "[Panel TCP Port],[Panel Subnet1],[Panel Subnet2],[Panel Subnet3],[Panel Subnet4]," +
+                                                "[Panel Remote IP1],[Panel Remote IP2],[Panel Remote IP3],[Panel Remote IP4]," +
+                                                "[Panel Name],[Panel Same Tag Block],[Panel Same Tag Block Type],[Panel Same Tag Block HourMinSec],[Status Data Update]," +
+                                                "[Status Data Update Type],[Status Data Update Time],[Same Door Multiple Reader],[Interlock Active],[Global Zone Interlock Active]," +
+                                                "[Panel Button Detector],[Panel Button Detector Time],[Lift Capacity],[Panel Expansion],[Panel Expansion 2]," +
+                                                "[Lokal APB1],[Lokal APB2],[Lokal APB3],[Lokal APB4],[Lokal APB5],[Lokal APB6],[Lokal APB7],[Lokal APB8]," +
+                                                "[Global APB]," +
+                                                "[Global MaxIn Count Control],[Global Access Count Control],[Global Capacity Control],[Global Sequental Access Control]," +
+                                                "[Panel Global Bolge1],[Panel Global Bolge2],[Panel Global Bolge3],[Panel Global Bolge4],[Panel Global Bolge5],[Panel Global Bolge6],[Panel Global Bolge7],[Panel Global Bolge8]," +
+                                                "[Panel Local Capacity1],[Panel Local Capacity2],[Panel Local Capacity3],[Panel Local Capacity4],[Panel Local Capacity5],[Panel Local Capacity6],[Panel Local Capacity7],[Panel Local Capacity8]," +
+                                                "[Panel Local Capacity Clear1],[Panel Local Capacity Clear2],[Panel Local Capacity Clear3],[Panel Local Capacity Clear4],[Panel Local Capacity Clear5],[Panel Local Capacity Clear6],[Panel Local Capacity Clear7],[Panel Local Capacity Clear8]," +
+                                                "[Panel Local Capacity Value1],[Panel Local Capacity Value2],[Panel Local Capacity Value3],[Panel Local Capacity Value4],[Panel Local Capacity Value5],[Panel Local Capacity Value6],[Panel Local Capacity Value7],[Panel Local Capacity Value8]" +
+                                                ")" +
+                                                "VALUES " +
+                                                "(" +
+                                                PanelMACAddress + "," + ID + "," + PanelModel + "," + PanelWorkingMode + "," +
+                                                PanelMasterRelayTime[0] + "," + PanelMasterRelayTime[1] + "," + PanelMasterRelayTime[2] + "," + PanelMasterRelayTime[3] + "," +
+                                                PanelMasterRelayTime[4] + "," + PanelMasterRelayTime[5] + "," + PanelMasterRelayTime[6] + "," + PanelMasterRelayTime[7] + "," +
+                                                PanelAlarmRelayTime + "," + PanelAlarmMode + "," + PanelAlarmModeRelayOk + "," + PanelFireMode + "," + PanelFireModeRelayOk + "," + PanelDoorAlarmRelayOk + "," +
+                                                PanelAlarmBroadcastOk + "," + PanelFireBroadcastOk + "," + PanelDoorAlarmBroadcastOk + "," +
+                                                LocalGateway[0] + "," + LocalGateway[1] + "," + LocalGateway[2] + "," + LocalGateway[3] + "," +
+                                                LocalIPAddress[0] + "," + LocalIPAddress[1] + "," + LocalIPAddress[2] + "," + LocalIPAddress[3] + "," +
+                                                LocalTCPPort + "," + LocalSubnetMask[0] + "," + LocalSubnetMask[1] + "," + LocalSubnetMask[2] + "," + LocalSubnetMask[3] + "," +
+                                                RemoteIPAddress[0] + "," + RemoteIPAddress[1] + "," + RemoteIPAddress[2] + "," + RemoteIPAddress[3] + "," +
+                                                "'" + PanelName + "'," + PanelSameTagBlockTime + "," + PanelSameTagBlockType + "," + PanelSameTagBlockMinSecHour + "," + StatusDataUpdate + "," +
+                                                StatusDataUpdateType + "," + StatusDataUpdateTime + "," + SameDoorMultipleReader + "," + InterlockActive + "," + GlobalZoneInterlockActive + "," + PanelButtonDetector + "," +
+                                                PanelButtonDetectorTime + "," + LiftCapacity + "," + PanelExpansion + "," + PanelExpansion2 + "," +
+                                                PanelLocalAPBs[0] + "," + PanelLocalAPBs[1] + "," + PanelLocalAPBs[2] + "," + PanelLocalAPBs[3] + "," + PanelLocalAPBs[4] + "," + PanelLocalAPBs[5] + "," + PanelLocalAPBs[6] + "," + PanelLocalAPBs[7] + "," +
+                                                PanelGlobalAPB + "," + GlobalMaxInCountControl + "," + GlobalAccessCountControl + "," + GlobalCapacityControl + "," + GlobalSequentalAccess + "," +
+                                                PanelGlobalGroups[0] + "," + PanelGlobalGroups[1] + "," + PanelGlobalGroups[2] + "," + PanelGlobalGroups[3] + "," + PanelGlobalGroups[4] + "," + PanelGlobalGroups[5] + "," + PanelGlobalGroups[6] + "," + PanelGlobalGroups[7] + "," +
+                                                LocalCapacityActive[0] + "," + LocalCapacityActive[1] + "," + LocalCapacityActive[2] + "," + LocalCapacityActive[3] + "," + LocalCapacityActive[4] + "," + LocalCapacityActive[5] + "," + LocalCapacityActive[6] + "," + LocalCapacityActive[7] + "," +
+                                                LocalCapacityClear[0] + "," + LocalCapacityClear[1] + "," + LocalCapacityClear[2] + "," + LocalCapacityClear[3] + "," + LocalCapacityClear[4] + "," + LocalCapacityClear[5] + "," + LocalCapacityClear[6] + "," + LocalCapacityClear[7] + "," +
+                                                LocalCapacityValue[0] + "," + LocalCapacityValue[1] + "," + LocalCapacityValue[2] + "," + LocalCapacityValue[3] + "," + LocalCapacityValue[4] + "," + LocalCapacityValue[5] + "," + LocalCapacityValue[6] + "," + LocalCapacityValue[7] +
+                                                ")";
 
                                         }
                                         else
                                         {
-                                            tVeriable.Append(" UPDATE ReaderSettingsNew ");
-                                            tVeriable.Append("SET ");
-                                            tVeriable.Append("[WKapi Aktif] = " + WIGReaderActive[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Adi] = '" + WIGReaderName[i] + "',");
-                                            tVeriable.Append("[WKapi Kapi Tipi] = " + WIGReaderDoorType[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Role No] = " + WIGReaderRelayNo[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi WIGType] = " + WIGReaderWIGType[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Lokal Bolge] = " + WIGReaderLocalGroup[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Gecis Modu] = " + WIGReaderAccessControlMode[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Sirali Gecis Ana Kapi] = " + WIGReaderSeqAccessMain[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Coklu Onay] = " + WIGReaderMultipleAuthorization[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Alarm Modu] = " + WIGReaderAlarmLock[i] + ",");
-                                            tVeriable.Append("[WKapi Yangin Modu] = " + WIGReaderFireUnlock[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Pin Dogrulama] = " + WIGReaderPINVerify[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Lift Aktif] = " + WIGReaderParkingGate[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Acik Sure] = " + WIGReaderDoorOpenTime[i] + ",");
-                                            tVeriable.Append("[WKapi Acik Sure Alarmi] = " + WIGReaderDoorOpenTimeAlarm[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Zorlama Alarmi] = " + WIGReaderDoorForcingAlarm[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Acilma Alarmi] = " + WIGReaderDoorOpenAlarm[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Panik Buton Alarmi] = " + WIGReaderDoorPanicButtonAlarm[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Harici Alarm Rolesi] = " + WIGReaderDoorExternalAlarmRelay[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Ana Alarm Rolesi] = " + WIGReaderButtonDetectorFunction[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi Itme Gecikmesi] = " + WIGReaderDoorPushDelay[i].ToString() + ",");
-                                            tVeriable.Append("[WKapi User Count] = " + WIGReaderUserCount[i].ToString() + ",");
-                                            tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
-                                            tDBSQLStr2 += " WHERE [Seri No] = " + mPanelSerialNo.ToString();
-                                            tDBSQLStr2 += " AND [Panel ID] = " + ID.ToString();
-                                            tDBSQLStr2 += " AND [WKapi ID] = " + (i + 1).ToString();
-                                            tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
-                                            TRetInt = tDBCmd2.ExecuteNonQuery();
-                                            if (TRetInt > 0)
+                                            tDBSQLStr2 = "UPDATE PanelSettings " +
+                                                "SET " +
+                                                "[Seri No] = " + PanelMACAddress + "," +
+                                                "[Panel ID] = " + ID + "," +
+                                                "[Panel Model] = " + PanelModel + "," +
+                                                "[Kontrol Modu] = " + PanelWorkingMode + "," +
+                                                "[Panel M1 Role] = " + PanelMasterRelayTime[0] + "," +
+                                                "[Panel M2 Role] = " + PanelMasterRelayTime[1] + "," +
+                                                "[Panel M3 Role] = " + PanelMasterRelayTime[2] + "," +
+                                                "[Panel M4 Role] = " + PanelMasterRelayTime[3] + "," +
+                                                "[Panel M5 Role] = " + PanelMasterRelayTime[4] + "," +
+                                                "[Panel M6 Role] = " + PanelMasterRelayTime[5] + "," +
+                                                "[Panel M7 Role] = " + PanelMasterRelayTime[6] + "," +
+                                                "[Panel M8 Role] = " + PanelMasterRelayTime[7] + "," +
+                                                "[Panel Alarm Role] = " + PanelAlarmRelayTime + "," +
+                                                "[Panel Alarm Mode] = " + PanelAlarmMode + "," +
+                                                "[Panel Alarm Mode Role Ok] = " + PanelAlarmModeRelayOk + "," +
+                                                "[Panel Fire Mode] = " + PanelFireMode + "," +
+                                                "[Panel Fire Mode Role Ok] = " + PanelFireModeRelayOk + "," +
+                                                "[Panel Door Alarm Role Ok] = " + PanelDoorAlarmRelayOk + "," +
+                                                "[Panel Alarm Broadcast Ok] = " + PanelAlarmBroadcastOk + "," +
+                                                "[Panel Fire Broadcast Ok] = " + PanelFireBroadcastOk + "," +
+                                                "[Panel Door Alarm Broadcast Ok] = " + PanelDoorAlarmBroadcastOk + "," +
+                                                "[Panel GW1] = " + LocalGateway[0] + "," +
+                                                "[Panel GW2] = " + LocalGateway[1] + "," +
+                                                "[Panel GW3] = " + LocalGateway[2] + "," +
+                                                "[Panel GW4] = " + LocalGateway[3] + "," +
+                                                "[Panel IP1] = " + LocalIPAddress[0] + "," +
+                                                "[Panel IP2] = " + LocalIPAddress[1] + "," +
+                                                "[Panel IP3] = " + LocalIPAddress[2] + "," +
+                                                "[Panel IP4] = " + LocalIPAddress[3] + "," +
+                                                "[Panel TCP Port] = " + LocalTCPPort + "," +
+                                                "[Panel Subnet1] = " + LocalSubnetMask[0] + "," +
+                                                "[Panel Subnet2] = " + LocalSubnetMask[1] + "," +
+                                                "[Panel Subnet3] = " + LocalSubnetMask[2] + "," +
+                                                "[Panel Subnet4] = " + LocalSubnetMask[3] + "," +
+                                                "[Panel Remote IP1] = " + RemoteIPAddress[0] + "," +
+                                                "[Panel Remote IP2] = " + RemoteIPAddress[1] + "," +
+                                                "[Panel Remote IP3] = " + RemoteIPAddress[2] + "," +
+                                                "[Panel Remote IP4] = " + RemoteIPAddress[3] + "," +
+                                                "[Panel Name] = '" + PanelName + "'," +
+                                                "[Panel Same Tag Block] = " + PanelSameTagBlockTime + "," +
+                                                "[Panel Same Tag Block Type] = " + PanelSameTagBlockType + "," +
+                                                "[Panel Same Tag Block HourMinSec] = " + PanelSameTagBlockMinSecHour + "," +
+                                                "[Status Data Update] = " + StatusDataUpdate + "," +
+                                                "[Status Data Update Type] = " + StatusDataUpdateType + "," +
+                                                "[Status Data Update Time] = " + StatusDataUpdateTime + "," +
+                                                "[Same Door Multiple Reader] = " + SameDoorMultipleReader + "," +
+                                                "[Interlock Active] = " + InterlockActive + "," +
+                                                "[Global Zone Interlock Active] = " + GlobalZoneInterlockActive + "," +
+                                                "[Panel Button Detector] = " + PanelButtonDetector + "," +
+                                                "[Panel Button Detector Time] = " + PanelButtonDetectorTime + "," +
+                                                "[Lift Capacity] = " + LiftCapacity + "," +
+                                                "[Panel Expansion] = " + PanelExpansion + "," +
+                                                "[Panel Expansion 2] = " + PanelExpansion2 + "," +
+                                                "[Lokal APB1] = " + PanelLocalAPBs[0] + "," +
+                                                "[Lokal APB2] = " + PanelLocalAPBs[1] + "," +
+                                                "[Lokal APB3] = " + PanelLocalAPBs[2] + "," +
+                                                "[Lokal APB4] = " + PanelLocalAPBs[3] + "," +
+                                                "[Lokal APB5] = " + PanelLocalAPBs[4] + "," +
+                                                "[Lokal APB6] = " + PanelLocalAPBs[5] + "," +
+                                                "[Lokal APB7] = " + PanelLocalAPBs[6] + "," +
+                                                "[Lokal APB8] = " + PanelLocalAPBs[7] + "," +
+                                                "[Global APB] = " + PanelGlobalAPB + "," +
+                                                "[Global MaxIn Count Control] = " + GlobalMaxInCountControl + "," +
+                                                "[Global Access Count Control] = " + GlobalAccessCountControl + "," +
+                                                "[Global Capacity Control] = " + GlobalCapacityControl + "," +
+                                                "[Global Sequental Access Control] = " + GlobalSequentalAccess + "," +
+                                                "[Panel Global Bolge1] = " + PanelGlobalGroups[0] + "," +
+                                                "[Panel Global Bolge2] = " + PanelGlobalGroups[1] + "," +
+                                                "[Panel Global Bolge3] = " + PanelGlobalGroups[2] + "," +
+                                                "[Panel Global Bolge4] = " + PanelGlobalGroups[3] + "," +
+                                                "[Panel Global Bolge5] = " + PanelGlobalGroups[4] + "," +
+                                                "[Panel Global Bolge6] = " + PanelGlobalGroups[5] + "," +
+                                                "[Panel Global Bolge7] = " + PanelGlobalGroups[6] + "," +
+                                                "[Panel Global Bolge8] = " + PanelGlobalGroups[7] + "," +
+                                                "[Panel Local Capacity1] = " + LocalCapacityActive[0] + "," +
+                                                "[Panel Local Capacity2] = " + LocalCapacityActive[1] + "," +
+                                                "[Panel Local Capacity3] = " + LocalCapacityActive[2] + "," +
+                                                "[Panel Local Capacity4] = " + LocalCapacityActive[3] + "," +
+                                                "[Panel Local Capacity5] = " + LocalCapacityActive[4] + "," +
+                                                "[Panel Local Capacity6] = " + LocalCapacityActive[5] + "," +
+                                                "[Panel Local Capacity7] = " + LocalCapacityActive[6] + "," +
+                                                "[Panel Local Capacity8] = " + LocalCapacityActive[7] + "," +
+                                                "[Panel Local Capacity Clear1] = " + LocalCapacityClear[0] + "," +
+                                                "[Panel Local Capacity Clear2] = " + LocalCapacityClear[1] + "," +
+                                                "[Panel Local Capacity Clear3] = " + LocalCapacityClear[2] + "," +
+                                                "[Panel Local Capacity Clear4] = " + LocalCapacityClear[3] + "," +
+                                                "[Panel Local Capacity Clear5] = " + LocalCapacityClear[4] + "," +
+                                                "[Panel Local Capacity Clear6] = " + LocalCapacityClear[5] + "," +
+                                                "[Panel Local Capacity Clear7] = " + LocalCapacityClear[6] + "," +
+                                                "[Panel Local Capacity Clear8] = " + LocalCapacityClear[7] + "," +
+                                                "[Panel Local Capacity Value1] = " + LocalCapacityValue[0] + "," +
+                                                "[Panel Local Capacity Value2] = " + LocalCapacityValue[1] + "," +
+                                                "[Panel Local Capacity Value3] = " + LocalCapacityValue[2] + "," +
+                                                "[Panel Local Capacity Value4] = " + LocalCapacityValue[3] + "," +
+                                                "[Panel Local Capacity Value5] = " + LocalCapacityValue[4] + "," +
+                                                "[Panel Local Capacity Value6] = " + LocalCapacityValue[5] + "," +
+                                                "[Panel Local Capacity Value7] = " + LocalCapacityValue[6] + "," +
+                                                "[Panel Local Capacity Value8] = " + LocalCapacityValue[7] + " " +
+                                                "WHERE [Panel ID] = " + ID + " " +
+                                                "AND [Seri No] = " + PanelMACAddress;
+                                        }
+                                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                        TRetInt = tDBCmd2.ExecuteNonQuery();
+                                        if (TRetInt <= 0)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                }
+
+                                lock (TLockObj)
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        bool Result = false;
+                                        for (int i = 0; i < 16; i++)
+                                        {
+                                            tDBSQLStr = "";
+                                            StringBuilder tVeriable = new StringBuilder();
+                                            tDBSQLStr = "SELECT * FROM ReaderSettingsNew " +
+                                                "WHERE [Seri No] = " + mPanelSerialNo.ToString();
+                                            tDBSQLStr += " AND [WKapi ID] =" + (i + 1).ToString();
+                                            tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                            tDBReader = tDBCmd.ExecuteReader();
+                                            if (!tDBReader.Read())
                                             {
-                                                Result = true;
-                                                tVeriable = new StringBuilder();
-                                                tDBSQLStr2 = "";
+                                                tVeriable.Append("INSERT INTO ReaderSettingsNew ");
+                                                tVeriable.Append("(");
+                                                tVeriable.Append("[Seri No],");
+                                                tVeriable.Append("[Sira No],");
+                                                tVeriable.Append("[Panel ID],");
+                                                tVeriable.Append("[Panel Name],");
+                                                tVeriable.Append("[WKapi ID],");
+                                                tVeriable.Append("[WKapi Aktif],");
+                                                tVeriable.Append("[WKapi Lift Aktif],");
+                                                tVeriable.Append("[WKapi Role No],");
+                                                tVeriable.Append("[WKapi Adi],");
+                                                tVeriable.Append("[WKapi Kapi Tipi],");
+                                                tVeriable.Append("[WKapi WIGType],");
+                                                tVeriable.Append("[WKapi Lokal Bolge],");
+                                                tVeriable.Append("[WKapi Gecis Modu],");
+                                                tVeriable.Append("[WKapi Alarm Modu],");
+                                                tVeriable.Append("[WKapi Yangin Modu],");
+                                                tVeriable.Append("[WKapi Pin Dogrulama],");
+                                                tVeriable.Append("[WKapi Ana Alarm Rolesi],");
+                                                tVeriable.Append("[WKapi Sirali Gecis Ana Kapi],");
+                                                tVeriable.Append("[WKapi Coklu Onay],");
+                                                tVeriable.Append("[WKapi Acik Sure],");
+                                                tVeriable.Append("[WKapi Acik Sure Alarmi],");
+                                                tVeriable.Append("[WKapi Zorlama Alarmi],");
+                                                tVeriable.Append("[WKapi Acilma Alarmi],");
+                                                tVeriable.Append("[WKapi Harici Alarm Rolesi],");
+                                                tVeriable.Append("[WKapi Panik Buton Alarmi],");
+                                                tVeriable.Append("[WKapi Itme Gecikmesi],");
+                                                tVeriable.Append("[WKapi User Count],");
+
+                                                tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
+                                                tDBSQLStr2 += ")";
+                                                tDBSQLStr2 += "VALUES ";
+                                                tDBSQLStr2 += "(";
+                                                tDBSQLStr2 += mPanelSerialNo.ToString() + ",";
+                                                tDBSQLStr2 += ID.ToString() + ",";
+                                                tDBSQLStr2 += ID.ToString() + ",";
+                                                tDBSQLStr2 += "'" + PanelName + "',";
+                                                tDBSQLStr2 += (i + 1).ToString() + ",";
+
+                                                if (WIGReaderActive[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                if (WIGReaderParkingGate[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                tDBSQLStr2 += WIGReaderRelayNo[i].ToString() + ",";
+                                                tDBSQLStr2 += "'" + WIGReaderName[i] + "',";
+                                                tDBSQLStr2 += WIGReaderDoorType[i].ToString() + ",";
+                                                tDBSQLStr2 += WIGReaderWIGType[i].ToString() + ",";
+                                                tDBSQLStr2 += WIGReaderLocalGroup[i].ToString() + ",";
+                                                tDBSQLStr2 += WIGReaderAccessControlMode[i].ToString() + ",";
+                                                tDBSQLStr2 += WIGReaderAlarmLock[i] + ",";
+                                                tDBSQLStr2 += WIGReaderFireUnlock[i] + ",";
+                                                tDBSQLStr2 += WIGReaderPINVerify[i] + ",";
+                                                if (WIGReaderButtonDetectorFunction[i] == 1)//Ana Alarm Rolesi Yerine
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                if (WIGReaderSeqAccessMain[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                if (WIGReaderMultipleAuthorization[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                tDBSQLStr2 += WIGReaderDoorOpenTime[i] + ",";
+                                                if (WIGReaderDoorOpenTimeAlarm[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                if (WIGReaderDoorForcingAlarm[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                if (WIGReaderDoorOpenAlarm[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                tDBSQLStr2 += WIGReaderDoorExternalAlarmRelay[i].ToString() + ",";
+                                                if (WIGReaderDoorPanicButtonAlarm[i] == 1)
+                                                {
+                                                    tDBSQLStr2 += "1,";
+                                                }
+                                                else
+                                                {
+                                                    tDBSQLStr2 += "0,";
+                                                }
+                                                tDBSQLStr2 += WIGReaderDoorPushDelay[i].ToString() + ",";
+                                                tDBSQLStr2 += WIGReaderUserCount[i].ToString() + ",";
+
+
+                                                tDBSQLStr2 = tDBSQLStr2.Substring(0, tDBSQLStr2.Length - 1);
+                                                tDBSQLStr2 += ")";
+                                                tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                                TRetInt = tDBCmd2.ExecuteNonQuery();
+                                                if (TRetInt > 0)
+                                                {
+                                                    Result = true;
+                                                    tVeriable = new StringBuilder();
+                                                    tDBSQLStr2 = "";
+                                                }
+                                                else
+                                                {
+                                                    Result = false;
+                                                    tVeriable = new StringBuilder();
+                                                    tDBSQLStr2 = "";
+                                                }
+
                                             }
                                             else
                                             {
-                                                Result = false;
-                                                tVeriable = new StringBuilder();
-                                                tDBSQLStr2 = "";
+                                                tVeriable.Append(" UPDATE ReaderSettingsNew ");
+                                                tVeriable.Append("SET ");
+                                                tVeriable.Append("[WKapi Aktif] = " + WIGReaderActive[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Adi] = '" + WIGReaderName[i] + "',");
+                                                tVeriable.Append("[WKapi Kapi Tipi] = " + WIGReaderDoorType[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Role No] = " + WIGReaderRelayNo[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi WIGType] = " + WIGReaderWIGType[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Lokal Bolge] = " + WIGReaderLocalGroup[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Gecis Modu] = " + WIGReaderAccessControlMode[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Sirali Gecis Ana Kapi] = " + WIGReaderSeqAccessMain[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Coklu Onay] = " + WIGReaderMultipleAuthorization[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Alarm Modu] = " + WIGReaderAlarmLock[i] + ",");
+                                                tVeriable.Append("[WKapi Yangin Modu] = " + WIGReaderFireUnlock[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Pin Dogrulama] = " + WIGReaderPINVerify[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Lift Aktif] = " + WIGReaderParkingGate[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Acik Sure] = " + WIGReaderDoorOpenTime[i] + ",");
+                                                tVeriable.Append("[WKapi Acik Sure Alarmi] = " + WIGReaderDoorOpenTimeAlarm[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Zorlama Alarmi] = " + WIGReaderDoorForcingAlarm[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Acilma Alarmi] = " + WIGReaderDoorOpenAlarm[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Panik Buton Alarmi] = " + WIGReaderDoorPanicButtonAlarm[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Harici Alarm Rolesi] = " + WIGReaderDoorExternalAlarmRelay[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Ana Alarm Rolesi] = " + WIGReaderButtonDetectorFunction[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi Itme Gecikmesi] = " + WIGReaderDoorPushDelay[i].ToString() + ",");
+                                                tVeriable.Append("[WKapi User Count] = " + WIGReaderUserCount[i].ToString() + ",");
+                                                tDBSQLStr2 = tVeriable.ToString().Substring(0, tVeriable.Length - 1);
+                                                tDBSQLStr2 += " WHERE [Seri No] = " + mPanelSerialNo.ToString();
+                                                tDBSQLStr2 += " AND [Panel ID] = " + ID.ToString();
+                                                tDBSQLStr2 += " AND [WKapi ID] = " + (i + 1).ToString();
+                                                tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                                TRetInt = tDBCmd2.ExecuteNonQuery();
+                                                if (TRetInt > 0)
+                                                {
+                                                    Result = true;
+                                                    tVeriable = new StringBuilder();
+                                                    tDBSQLStr2 = "";
+                                                }
+                                                else
+                                                {
+                                                    Result = false;
+                                                    tVeriable = new StringBuilder();
+                                                    tDBSQLStr2 = "";
+                                                }
                                             }
                                         }
-                                    }
-                                    if (Result)
-                                    {
-                                        return true;
-                                    }
-                                    else
-                                    {
-                                        return false;
+                                        if (Result)
+                                        {
+                                            return true;
+                                        }
+                                        else
+                                        {
+                                            return false;
+                                        }
                                     }
                                 }
+
                             }
-
                         }
-
                     }
                     break;
                 case CommandConstants.CMD_RCV_LOGSETTINGS:
@@ -5304,6 +5981,54 @@ namespace MaviSoftServerV1._0
                         break;
 
                     }
+                case CommandConstants.CMD_RCV_RTC:
+                    {
+                        int day;
+                        int month;
+                        int year;
+                        int hour;
+                        int minute;
+                        int second;
+                        if (TmpTaskUpdateTable)
+                        {
+                            lock (TLockObj)
+                            {
+                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                {
+                                    mDBConn.Open();
+                                    DateTime tDateTime;
+                                    if (TmpReturnStr.Substring(TPos + 10, 2) == "00" || TmpReturnStr.Substring(TPos + 12, 2) == "00")
+                                    {
+                                        tDateTime = Convert.ToDateTime("01/01/" + TmpReturnStr.Substring(TPos + 14, 2));
+                                    }
+                                    else
+                                    {
+                                        day = Convert.ToInt32(TmpReturnStr.Substring(10, 2));
+                                        month = Convert.ToInt32(TmpReturnStr.Substring(12, 2));
+                                        year = Convert.ToInt32(TmpReturnStr.Substring(14, 2));
+                                        hour = Convert.ToInt32(TmpReturnStr.Substring(16, 2));
+                                        minute = Convert.ToInt32(TmpReturnStr.Substring(18, 2));
+                                        second = Convert.ToInt32(TmpReturnStr.Substring(20, 2));
+                                        tDateTime = new DateTime(int.Parse("20" + year), month, day, hour, minute, second);
+                                    }
+
+                                    // tDBSQLStr = "UPDATE PanelSettings SET [Panel Saati] = '" + tDateTime + "' WHERE [Seri No] = " + mPanelSerialNo.ToString();
+                                    // tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                    //TRetInt = tDBCmd.ExecuteNonQuery();
+                                    //if (TRetInt > 0)
+                                    //{
+                                    //    return true;
+                                    //}
+                                    //else
+                                    //{
+                                    //    return false;
+                                    //}
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    break;
                 default:
                     break;
             }
@@ -5694,7 +6419,12 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_SND_RTC:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 case CommandConstants.CMD_RCV_GENERALSETTINGS:
-                    return (int)SizeConstants.SIZE_SEND_DEVICE_SETTINGS;
+                    {
+                        if (mPanelModel == (int)PanelModel.Panel_1010)
+                            return (int)SizeConstants.SIZE_RCV_DEVICE_SETTINGS_MS1010;
+                        else
+                            return (int)SizeConstants.SIZE_SEND_DEVICE_SETTINGS;
+                    }
                 case CommandConstants.CMD_SND_LOGSETTINGS:
                     return (int)SizeConstants.SIZE_STANDART_ANSWER;
                 case CommandConstants.CMD_RCV_LOCALINTERLOCK:
@@ -5735,13 +6465,10 @@ namespace MaviSoftServerV1._0
             object frmMainLock = new object();
             lock (frmMainLock)
             {
-
-
                 if (mParentForm.lblMsj[mMemIX].InvokeRequired == true)
                 {
                     TextDegisDelegate del = new TextDegisDelegate(SyncUpdateScreen);
                     mParentForm.Invoke(del, new object[] { TMsg, color });
-
                 }
                 else
                 {
@@ -5749,9 +6476,7 @@ namespace MaviSoftServerV1._0
                     {
                         mParentForm.lblMsj[mMemIX].Text = TMsg;
                         mParentForm.lblMsj[mMemIX].BackColor = color;
-
                     }
-
                 }
             }
         }
@@ -5765,7 +6490,6 @@ namespace MaviSoftServerV1._0
         {
             switch (TmpTaskType)
             {
-
                 case CommandConstants.CMD_SND_TIMEGROUP:
                     return "ZAMAN GRUBU GÖNDER";
                 case CommandConstants.CMD_SNDALL_TIMEGROUP:
@@ -5921,8 +6645,145 @@ namespace MaviSoftServerV1._0
             }
         }
 
+        /// <summary>
+        /// Var olan görevler dışında bir görev gelmesi durumunda görevi 'HATA' olarak güncelliyor.
+        /// </summary>
+        /// <param name="TaskNo">Görev Listesinde ki Kayit No</param>
+        /// <returns></returns>
+        public bool NoTaskDelete(int TaskNo)
+        {
+            object TLockObj = new object();
+            string tDBSQLStr = "";
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            string tDBSQLStr2 = "";
+            SqlCommand tDBCmd2;
+            int TRetInt;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT * FROM TaskList WHERE [Kayit No] = " + TaskNo;
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        tDBSQLStr2 = "UPDATE TaskList SET [Durum Kodu] = " + 3 + " WHERE [Kayit No] = " + TaskNo;
+                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                        TRetInt = tDBCmd2.ExecuteNonQuery();
+                        if (TRetInt > 0)
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
 
-        /********************Kendi Yazdığım Kodlar********************Kendi Yazdığım Kodlar********************/
+        /// <summary>
+        /// Mail gönderme rutini
+        /// </summary>
+        /// <param name="subject"></param>
+        /// <param name="body"></param>
+        /// <param name="isHtml"></param>
+        /// <returns></returns>
+        public bool SendMail(string subject, string body = null, bool isHtml = true)
+        {
+            bool result = false;
+            MailSettings mailSettings = ReceiveMailSettings();
+            try
+            {
+                var message = new MailMessage();
+                if (mailSettings.EMail_Adres != null)
+                {
+                    message.From = new MailAddress(mailSettings.EMail_Adres.Trim(), (mailSettings.Kullanici_Adi + " Geçiş Kontrol Sistemi "));
+                    if (mailSettings.Alici_1_EmailGonder == true && mailSettings.Alici_1_EmailAdress != null)
+                    {
+                        message.To.Add(new MailAddress(mailSettings.Alici_1_EmailAdress.Trim()));
+                    }
+                    if (mailSettings.Alici_2_EmailGonder == true && mailSettings.Alici_2_EmailAdress != null)
+                    {
+                        message.To.Add(new MailAddress(mailSettings.Alici_2_EmailAdress.Trim()));
+                    }
+                    if (mailSettings.Alici_3_EmailGonder == true && mailSettings.Alici_3_EmailAdress != null)
+                    {
+                        message.To.Add(new MailAddress(mailSettings.Alici_3_EmailAdress.Trim()));
+                    }
+                    message.Subject = subject;
+                    message.Body = body;
+                    message.IsBodyHtml = isHtml;
+                    using (var smtp = new SmtpClient(mailSettings.MailHost.Trim(), mailSettings.MailPort))
+                    {
+                        smtp.EnableSsl = mailSettings.SSL;
+                        smtp.Credentials = new NetworkCredential(mailSettings.EMail_Adres.Trim(), mailSettings.Password.Trim());
+                        smtp.Send(message);
+                        result = true;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                result = false;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Veritabanından mail ayarlarını alma
+        /// </summary>
+        /// <returns></returns>
+        public MailSettings ReceiveMailSettings()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            object TLockObj = new object();
+            MailSettings mailSettings = new MailSettings();
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    mDBConn.Open();
+                    tDBSQLStr = "SELECT * FROM EMailSettings";
+                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                    tDBReader = tDBCmd.ExecuteReader();
+                    if (tDBReader.Read())
+                    {
+                        mailSettings = new MailSettings
+                        {
+                            EMail_Adres = tDBReader["E-Mail Adres"].ToString(),
+                            Kullanici_Adi = tDBReader["Kullanici Adi"].ToString(),
+                            Password = tDBReader["Sifre"].ToString(),
+                            MailHost = tDBReader["SMPT Server"].ToString(),
+                            MailPort = tDBReader["SMPT Server Port"] as int? ?? default(int),
+                            SSL = tDBReader["SSL Kullan"] as bool? ?? default(bool),
+                            Authentication = tDBReader["Authentication"] as int? ?? default(int),
+                            Gonderme_Saati = tDBReader["Gonderme Saati"] as DateTime? ?? default(DateTime),
+                            Gelmeyenler_Raporu = tDBReader["Gelmeyenler Raporu"] as bool? ?? default(bool),
+                            Alici_1_EmailAdress = tDBReader["Alici 1 E-Mail Adres"].ToString(),
+                            Alici_1_EmailGonder = tDBReader["Alici 1 E-Mail Gonder"] as bool? ?? default(bool),
+                            Alici_2_EmailAdress = tDBReader["Alici 2 E-Mail Adres"].ToString(),
+                            Alici_2_EmailGonder = tDBReader["Alici 2 E-Mail Gonder"] as bool? ?? default(bool),
+                            Alici_3_EmailAdress = tDBReader["Alici 3 E-Mail Adres"].ToString(),
+                            Alici_3_EmailGonder = tDBReader["Alici 3 E-Mail Gonder"] as bool? ?? default(bool),
+                        };
+                    }
+                    return mailSettings;
+                }
+            }
+        }
+
+        /********************Kendi Convert Metotlarım********************Kendi Convert Metotlarım********************/
         public string ConvertToTypeInt(int reader, string Type)
         {
             if (reader != -1)
@@ -6006,7 +6867,7 @@ namespace MaviSoftServerV1._0
 
         /***************************************************************************/
 
-        public bool ClearSocketBuffers(TcpClient TClient, int? Size/*, TcpClient TClientLog*/)
+        public bool ClearSocketBuffers(TcpClient TClient, int? Size)
         {
             byte[] DummyBuffer;
             StringBuilder sBuilder = new StringBuilder();
@@ -6061,7 +6922,7 @@ namespace MaviSoftServerV1._0
                 TaskList[mMemIX, TaskPIX[mMemIX]].SenderClient = null;
             }
 
-        }//Görev Listesinden Silme İşlemi Yapıyor
+        }//Görev Listesinden Silme İşlemi Yapıyor IP Tasklar İçin
 
         public void SendTestCommand(TcpClient TClient)
         {
@@ -6218,6 +7079,30 @@ namespace MaviSoftServerV1._0
                 }
             }
 
+        }
+
+
+        /// <summary>
+        /// MS1010 Cihazlar İçin Ekranda Gösterilecek Ad ve Soyadı Türkçe Karakterlerden Arındırmak.
+        /// </summary>
+        /// <param name="adSoyad">Ad ve Soyadın Birleştirilmiş Hali</param>
+        /// <returns></returns>
+        public string ConvertNameSurname(string adSoyad)
+        {
+            adSoyad = adSoyad.Replace('ö', 'o');
+            adSoyad = adSoyad.Replace('ü', 'u');
+            adSoyad = adSoyad.Replace('ğ', 'g');
+            adSoyad = adSoyad.Replace('ş', 's');
+            adSoyad = adSoyad.Replace('ı', 'i');
+            adSoyad = adSoyad.Replace('ç', 'c');
+            adSoyad = adSoyad.Replace('Ö', 'O');
+            adSoyad = adSoyad.Replace('Ü', 'U');
+            adSoyad = adSoyad.Replace('Ğ', 'G');
+            adSoyad = adSoyad.Replace('Ş', 'S');
+            adSoyad = adSoyad.Replace('İ', 'I');
+            adSoyad = adSoyad.Replace('Ç', 'C');
+
+            return adSoyad;
         }
 
     }

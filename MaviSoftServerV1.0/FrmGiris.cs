@@ -50,7 +50,6 @@ namespace MaviSoftServerV1._0
                     {
                         if (connection.State == ConnectionState.Open)
                         {
-
                             AddUpdateAppSettings("Host", HostPC.Trim());
                             AddUpdateAppSettings("SQLServer", SQLServer.Trim());
                             FrmMain form1 = new FrmMain();

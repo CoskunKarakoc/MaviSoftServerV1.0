@@ -140,6 +140,7 @@ namespace MaviSoftServerV1._0
         public string snapShotCardID { get; set; }
 
         public int CaptureCount { get; set; }
+
         public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, int TPanelModel, List<Panel> Panels, FrmMain parentForm)
         {
             mMemIX = MemIX;
@@ -220,12 +221,6 @@ namespace MaviSoftServerV1._0
                         {
                             ClearDoorStatus();
                             SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
-                            if (mMailRetryCount == 0)
-                            {
-                                SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
-                                mMailRetryCount++;
-                            }
-
                             mLogProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
@@ -278,6 +273,11 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
                             SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
+                            if (mMailRetryCount == 0)
+                            {
+                                SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
+                                mMailRetryCount++;
+                            }
 
                             if (mPanelClientLog.Connected == true)
                             {
@@ -291,7 +291,8 @@ namespace MaviSoftServerV1._0
                         {
                             while (true)
                             {
-                                Thread.Sleep(5); //(50);
+                                Thread.Sleep(5);
+                                mMailRetryCount = 0;//Panel Bağlantısı Kesildiğinde Mail Atma Sayısı Kontrolü
                                 if (mPanelClientLog.Connected == false && mPanelClientLog.LingerState.Enabled == false)
                                 {
                                     mLogProc = CommandConstants.CMD_PORT_CLOSE;
@@ -305,8 +306,7 @@ namespace MaviSoftServerV1._0
                                     break;
                                 }
                                 mStartTime = DateTime.Now;
-                                //if (CheckSize(mPanelClientLog, (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS)))
-                                if (mPanelClientLog.Available > (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS))
+                                if (mPanelClientLog.Available > 0 && mPanelClientLog.Available > (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS))
                                 {
                                     mReceiveTimeEnd = mReceiveTimeStart.AddSeconds(3);
 
@@ -327,7 +327,6 @@ namespace MaviSoftServerV1._0
                                 {
                                     mLogProc = CommandConstants.CMD_TASK_LIST;
                                     break;
-
                                 }
 
                                 if (SndQueue.Count > 0)
@@ -341,16 +340,18 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_SND_GLOBALDATAUPDATE:
                         {
-                            if (SendGenericDBData(mPanelClientLog))
+                            if (mPanelModel != (int)PanelModel.Panel_1010)
                             {
-                                mLogProc = CommandConstants.CMD_TASK_LIST;
+                                if (SendGenericDBData(mPanelClientLog))
+                                {
+                                    mLogProc = CommandConstants.CMD_TASK_LIST;
+                                }
+                                else
+                                {
+                                    mLogProc = CommandConstants.CMD_TASK_LIST;
+                                    break;
+                                }
                             }
-                            else
-                            {
-                                mLogProc = CommandConstants.CMD_TASK_LIST;
-                                break;
-                            }
-
                         }
                         break;
                 }
@@ -361,8 +362,8 @@ namespace MaviSoftServerV1._0
         /// <summary>
         /// Boyut kontrolü
         /// </summary>
-        /// <param name="TClient"></param>
-        /// <param name="TWaitSize"></param>
+        /// <param name="TClient">O Anki Client Nesnesinin Available Değeri İçin</param>
+        /// <param name="TWaitSize">İstenilen Boyut</param>
         /// <returns></returns>
         public bool CheckSize(TcpClient TClient, int TWaitSize)
         {
@@ -389,7 +390,7 @@ namespace MaviSoftServerV1._0
         /// <summary>
         /// Panel'den veri alma ve gelen verinin prefixine göre görev atama 
         /// </summary>
-        /// <param name="TClient"></param>
+        /// <param name="TClient">İlişkili olan panel</param>
         /// <param name="TReturnLogStr">Panel'den dönen verinin dışarı gönderilmesi</param>
         /// <returns></returns>
         public bool ReveiveLogData(TcpClient TClient, ref string TReturnLogStr)
@@ -475,7 +476,6 @@ namespace MaviSoftServerV1._0
                     return false;
                 }
             }
-
             switch (TmpTaskType)
             {
                 case CommandConstants.CMD_RCV_LOGS:
@@ -586,7 +586,6 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            //TODO: Hangi kullanıcı olduğuna göre where koşulu uylunacak ProgInit'e
                             lock (TLockObj)
                             {
                                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
@@ -899,9 +898,12 @@ namespace MaviSoftServerV1._0
                             {
                                 foreach (var logPanel in LogPanelListesi)
                                 {
-                                    if (logPanel.mPanelNo != mPanelNo)
+                                    if (logPanel.mPanelModel != (int)PanelModel.Panel_1010)
                                     {
-                                        logPanel.SndQueue.Enqueue(TmpReturnStr);
+                                        if (logPanel.mPanelNo != mPanelNo)
+                                        {
+                                            logPanel.SndQueue.Enqueue(TmpReturnStr);
+                                        }
                                     }
                                 }
                                 return true;
@@ -1010,7 +1012,7 @@ namespace MaviSoftServerV1._0
         }
 
         /// <summary>
-        /// Veritabanından gelen görevi panele gönderme
+        ///  Diğer panellerden gelen antipassback verilerini panelin kendine gönderme
         /// </summary>
         /// <param name="TClient"></param>
         /// <returns></returns>
@@ -1064,21 +1066,21 @@ namespace MaviSoftServerV1._0
                     {
                         mailSettings = new MailSettings
                         {
-                            EMail_Adres = tDBReader[1].ToString(),
-                            Kullanici_Adi = tDBReader[2].ToString(),
-                            Password = tDBReader[3].ToString(),
-                            MailHost = tDBReader[4].ToString(),
-                            MailPort = tDBReader[5] as int? ?? default(int),
-                            SSL = tDBReader[6] as bool? ?? default(bool),
-                            Authentication = tDBReader[7] as int? ?? default(int),
-                            Gonderme_Saati = tDBReader[8] as DateTime? ?? default(DateTime),
-                            Gelmeyenler_Raporu = tDBReader[9] as bool? ?? default(bool),
-                            Alici_1_EmailAdress = tDBReader[10].ToString(),
-                            Alici_1_EmailGonder = tDBReader[11] as bool? ?? default(bool),
-                            Alici_2_EmailAdress = tDBReader[12].ToString(),
-                            Alici_2_EmailGonder = tDBReader[13] as bool? ?? default(bool),
-                            Alici_3_EmailAdress = tDBReader[14].ToString(),
-                            Alici_3_EmailGonder = tDBReader[15] as bool? ?? default(bool),
+                            EMail_Adres = tDBReader["E-Mail Adres"].ToString(),
+                            Kullanici_Adi = tDBReader["Kullanici Adi"].ToString(),
+                            Password = tDBReader["Sifre"].ToString(),
+                            MailHost = tDBReader["SMPT Server"].ToString(),
+                            MailPort = tDBReader["SMPT Server Port"] as int? ?? default(int),
+                            SSL = tDBReader["SSL Kullan"] as bool? ?? default(bool),
+                            Authentication = tDBReader["Authentication"] as int? ?? default(int),
+                            Gonderme_Saati = tDBReader["Gonderme Saati"] as DateTime? ?? default(DateTime),
+                            Gelmeyenler_Raporu = tDBReader["Gelmeyenler Raporu"] as bool? ?? default(bool),
+                            Alici_1_EmailAdress = tDBReader["Alici 1 E-Mail Adres"].ToString(),
+                            Alici_1_EmailGonder = tDBReader["Alici 1 E-Mail Gonder"] as bool? ?? default(bool),
+                            Alici_2_EmailAdress = tDBReader["Alici 2 E-Mail Adres"].ToString(),
+                            Alici_2_EmailGonder = tDBReader["Alici 2 E-Mail Gonder"] as bool? ?? default(bool),
+                            Alici_3_EmailAdress = tDBReader["Alici 3 E-Mail Adres"].ToString(),
+                            Alici_3_EmailGonder = tDBReader["Alici 3 E-Mail Gonder"] as bool? ?? default(bool),
                         };
                     }
                     return mailSettings;
@@ -1259,8 +1261,6 @@ namespace MaviSoftServerV1._0
                     return "EC";
                 case (ushort)CommandConstants.CMD_ERS_ACCESSGROUP:
                     return "MS";
-                //case (ushort)CommandConstants.CMD_ERSALL_ACCESSGROUP:
-                //    return "ES";
                 case (ushort)CommandConstants.CMD_ERS_ACCESSCOUNTERS:
                     return "EP";
                 case (ushort)CommandConstants.CMD_ERSALL_ACCESSCOUNTERS:
@@ -1460,13 +1460,10 @@ namespace MaviSoftServerV1._0
             object frmMainLock = new object();
             lock (frmMainLock)
             {
-
-
                 if (mParentForm.lblMsjLog[mMemIX].InvokeRequired == true)
                 {
                     TextDegisDelegate del = new TextDegisDelegate(SyncUpdateScreen);
                     mParentForm.Invoke(del, new object[] { TMsg, color });
-
                 }
                 else
                 {
@@ -1474,9 +1471,7 @@ namespace MaviSoftServerV1._0
                     {
                         mParentForm.lblMsjLog[mMemIX].Text = TMsg;
                         mParentForm.lblMsjLog[mMemIX].BackColor = color;
-
                     }
-
                 }
             }
         }
@@ -1490,7 +1485,6 @@ namespace MaviSoftServerV1._0
         {
             switch (TmpTaskType)
             {
-
                 case CommandConstants.CMD_SND_TIMEGROUP:
                     return "ZAMAN GRUBU GÖNDER";
                 case CommandConstants.CMD_SNDALL_TIMEGROUP:
@@ -1660,18 +1654,15 @@ namespace MaviSoftServerV1._0
                     return true;
                 else
                     return false;
-
-
             }
             catch (Exception)
             {
-
                 return false;
             }
         }
 
         /// <summary>
-        /// Panel Bağlantısı Yapılamadığında Kapı Durumlarını Siliyor.
+        /// Panel Bağlantısı Yapılamadığında Kapı Durumlarını Pasif Hale Geliyor.
         /// </summary>
         /// <returns></returns>
         private bool ClearDoorStatus()
@@ -1766,7 +1757,6 @@ namespace MaviSoftServerV1._0
             SqlDataReader tDBReader;
             lock (TLockObj)
             {
-
                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
                     try
@@ -1829,7 +1819,6 @@ namespace MaviSoftServerV1._0
             {
                 using (WebBrowser browser = new WebBrowser())
                 {
-
                     browser.ScrollBarsEnabled = false;
                     browser.AllowNavigation = true;
                     string userName = cameras.Kamera_Admin;

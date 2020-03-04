@@ -281,37 +281,33 @@ namespace MaviSoftServerV1._0
                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
                     mDBConn.Open();
-                    tDBSQLStr = "SELECT [E-Mail Adres], [Kullanici Adi], [Sifre], [SMPT Server], [SMPT Server Port]," +
-                        " [SSL Kullan], [Authentication], [Gonderme Saati], [Gelmeyenler Raporu], [Yemekhane Raporu]," +
-                        " [Kapi Grup No], [Kapi Grup Baslangic Saati], [Kapi Grup Bitis Saati], [Kapi Grup Gonderme Saati]," +
-                        " [Alici 1 E-Mail Adres], [Alici 1 E-Mail Gonder], [Alici 2 E-Mail Adres], [Alici 2 E-Mail Gonder]," +
-                        " [Alici 3 E-Mail Adres], [Alici 3 E-Mail Gonder] FROM EMailSettings";
+                    tDBSQLStr = "SELECT * FROM EMailSettings";
                     tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                     tDBReader = tDBCmd.ExecuteReader();
                     if (tDBReader.Read())
                     {
                         mailSettings = new MailSettings
                         {
-                            EMail_Adres = tDBReader[0].ToString(),
-                            Kullanici_Adi = tDBReader[1].ToString(),
-                            Password = tDBReader[2].ToString(),
-                            MailHost = tDBReader[3].ToString(),
-                            MailPort = tDBReader[4] as int? ?? default(int),
-                            SSL = tDBReader[5] as bool? ?? default(bool),
-                            Authentication = tDBReader[6] as int? ?? default(int),
-                            Gonderme_Saati = tDBReader[7] as DateTime? ?? default(DateTime),
-                            Gelmeyenler_Raporu = tDBReader[8] as bool? ?? default(bool),
-                            Yemekhane_Raporu = tDBReader[9] as bool? ?? default(bool),
-                            Kapi_Grup_No = tDBReader[10] as int? ?? default(int),
-                            Kapi_Grup_Baslangic_Saati = tDBReader[11] as DateTime? ?? default(DateTime),
-                            Kapi_Grup_Bitis_Saati = tDBReader[12] as DateTime? ?? default(DateTime),
-                            Kapi_Grup_Gonderme_Saati = tDBReader[13] as DateTime? ?? default(DateTime),
-                            Alici_1_EmailAdress = tDBReader[14].ToString(),
-                            Alici_1_EmailGonder = tDBReader[15] as bool? ?? default(bool),
-                            Alici_2_EmailAdress = tDBReader[16].ToString(),
-                            Alici_2_EmailGonder = tDBReader[17] as bool? ?? default(bool),
-                            Alici_3_EmailAdress = tDBReader[18].ToString(),
-                            Alici_3_EmailGonder = tDBReader[19] as bool? ?? default(bool),
+                            EMail_Adres = tDBReader["E-Mail Adres"].ToString(),
+                            Kullanici_Adi = tDBReader["Kullanici Adi"].ToString(),
+                            Password = tDBReader["Sifre"].ToString(),
+                            MailHost = tDBReader["SMPT Server"].ToString(),
+                            MailPort = tDBReader["SMPT Server Port"] as int? ?? default(int),
+                            SSL = tDBReader["SSL Kullan"] as bool? ?? default(bool),
+                            Authentication = tDBReader["Authentication"] as int? ?? default(int),
+                            Gonderme_Saati = tDBReader["Gonderme Saati"] as DateTime? ?? default(DateTime),
+                            Gelmeyenler_Raporu = tDBReader["Gelmeyenler Raporu"] as bool? ?? default(bool),
+                            Yemekhane_Raporu = tDBReader["Yemekhane Raporu"] as bool? ?? default(bool),
+                            Kapi_Grup_No = tDBReader["Kapi Grup No"] as int? ?? default(int),
+                            Kapi_Grup_Baslangic_Saati = tDBReader["Kapi Grup Baslangic Saati"] as DateTime? ?? default(DateTime),
+                            Kapi_Grup_Bitis_Saati = tDBReader["Kapi Grup Bitis Saati"] as DateTime? ?? default(DateTime),
+                            Kapi_Grup_Gonderme_Saati = tDBReader["Kapi Grup Gonderme Saati"] as DateTime? ?? default(DateTime),
+                            Alici_1_EmailAdress = tDBReader["Alici 1 E-Mail Adres"].ToString(),
+                            Alici_1_EmailGonder = tDBReader["Alici 1 E-Mail Gonder"] as bool? ?? default(bool),
+                            Alici_2_EmailAdress = tDBReader["Alici 2 E-Mail Adres"].ToString(),
+                            Alici_2_EmailGonder = tDBReader["Alici 2 E-Mail Gonder"] as bool? ?? default(bool),
+                            Alici_3_EmailAdress = tDBReader["Alici 3 E-Mail Adres"].ToString(),
+                            Alici_3_EmailGonder = tDBReader["Alici 3 E-Mail Gonder"] as bool? ?? default(bool),
                         };
                     }
                     return mailSettings;
