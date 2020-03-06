@@ -141,7 +141,7 @@ namespace MaviSoftServerV1._0
         {
             while (true)
             {
-                Thread.Sleep(500);
+                Thread.Sleep(100);
 
                 switch (mPanelProc)
                 {
@@ -755,38 +755,40 @@ namespace MaviSoftServerV1._0
                 using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                 {
                     mDBConn.Open();
-                    mDBSQLStr = "Select * from TaskList where [Durum Kodu]=" + 1 + " Order By [Kayit No]";
-                    mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
-                    mDBReader = mDBCmd.ExecuteReader();
 
-                    while (mDBReader.Read())
-                    {
-                        if ((mDBReader["Kayit No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) >= 0)
+                    foreach (var panel in mPanelsList)
+                    {   //Panel Göreve İçin Bekliyorsa
+                        if (panel.mPanelProc == CommandConstants.CMD_TASK_LIST)
                         {
-                            TTaskOk = 1;
-                            break;
-                        }
-                    }
+                            mDBSQLStr = "Select * from TaskList where [Panel No] = " + panel.mPanelNo + " And [Durum Kodu]=" + (int)CTaskStates.TASK_NEW + " Order By [Kayit No]";
+                            mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
+                            mDBReader = mDBCmd.ExecuteReader();
 
-                    if (TTaskOk > 0)
-                    {
-                        mTaskNo = (int)mDBReader["Kayit No"];
-                        mTaskType = (int)mDBReader["Gorev Kodu"];
-                        mTaskIntParam1 = mDBReader["IntParam 1"] as int? ?? default(int);
-                        mTaskIntParam2 = mDBReader["IntParam 2"] as int? ?? default(int);
-                        mTaskIntParam3 = mDBReader["IntParam 3"] as int? ?? default(int);
-                        mTaskIntParam4 = mDBReader["IntParam 4"] as int? ?? default(int);
-                        mTaskIntParam5 = mDBReader["IntParam 5"] as int? ?? default(int);
-                        mTaskStrParam1 = mDBReader["StrParam 1"].ToString();
-                        mTaskStrParam2 = mDBReader["StrParam 2"].ToString();
-                        mTaskStrParam3 = mDBReader["StrParam 3"].ToString();
-                        mTaskUserName = mDBReader["Kullanici Adi"].ToString();
-                        mTaskUpdateTable = (bool)mDBReader["Tablo Guncelle"];
-                        foreach (var panel in mPanelsList)
-                        {
-                            var panelNo = mDBReader["Panel No"] as int? ?? default(int);
-                            if (panel.mPanelNo == panelNo)
+                            TTaskOk = 0;
+                            while (mDBReader.Read())
                             {
+                                if ((mDBReader["Kayit No"] as int? ?? default(int)) > 0 && (mDBReader["Gorev Kodu"] as int? ?? default(int)) > 0 && (mDBReader["IntParam 1"] as int? ?? default(int)) >= 0)
+                                {
+                                    TTaskOk = 1;
+                                    break;
+                                }
+                            }
+
+                            if (TTaskOk > 0)
+                            {
+                                mTaskNo = (int)mDBReader["Kayit No"];
+                                mTaskType = (int)mDBReader["Gorev Kodu"];
+                                mTaskIntParam1 = mDBReader["IntParam 1"] as int? ?? default(int);
+                                mTaskIntParam2 = mDBReader["IntParam 2"] as int? ?? default(int);
+                                mTaskIntParam3 = mDBReader["IntParam 3"] as int? ?? default(int);
+                                mTaskIntParam4 = mDBReader["IntParam 4"] as int? ?? default(int);
+                                mTaskIntParam5 = mDBReader["IntParam 5"] as int? ?? default(int);
+                                mTaskStrParam1 = mDBReader["StrParam 1"].ToString();
+                                mTaskStrParam2 = mDBReader["StrParam 2"].ToString();
+                                mTaskStrParam3 = mDBReader["StrParam 3"].ToString();
+                                mTaskUserName = mDBReader["Kullanici Adi"].ToString();
+                                mTaskUpdateTable = (bool)mDBReader["Tablo Guncelle"];
+                                //Panel Bağlantısı Kopmamışsa
                                 if (panel.mPanelClient.Connected == true)
                                 {
                                     panel.mTempTaskSource = DB_TASK;
@@ -801,49 +803,60 @@ namespace MaviSoftServerV1._0
                                     panel.mTempTaskUserName = mTaskUserName;
                                     panel.mTempTaskUpdateTable = mTaskUpdateTable;
                                 }
-                               else
-                               {
-                                   string tDBSQLStr;
-                                   string tDBSQLStr2;
-                                   SqlCommand tDBCmd;
-                                   SqlCommand tDBCmd2;
-                                   object TLockObjj = new object();
-                                   int TRetInt = 0;
-                                   lock (TLockObjj)
-                                   {
-                                       try
-                                       {
-                                           tDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + 4 + " WHERE [Kayit No]=" + mTaskNo;
-                                           tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                           TRetInt = tDBCmd.ExecuteNonQuery();
-                                           if (TRetInt < 0)
-                                           {
-                                               tDBSQLStr2 = "DELETE FROM TaskList WHERE [Kayit No]=" + mTaskNo;
-                                               tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
-                                               TRetInt = tDBCmd2.ExecuteNonQuery();
-                                           }
-                                       }
-                                       catch (Exception)
-                                       {
-                                           throw;
-                                       }
-                                   }
+                                else
+                                {   //Panel Bağlantısı Kopmuşsa
+                                    string tDBSQLStr;
+                                    string tDBSQLStr2;
+                                    SqlCommand tDBCmd;
+                                    SqlCommand tDBCmd2;
+                                    object TLockObjj = new object();
+                                    int TRetInt = 0;
+                                    lock (TLockObjj)
+                                    {
+                                        try
+                                        {
+                                            tDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + (int)CTaskStates.TASK_TIMOUT + " WHERE [Kayit No]=" + mTaskNo;
+                                            tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                            TRetInt = tDBCmd.ExecuteNonQuery();
+                                            if (TRetInt < 0)
+                                            {
+                                                tDBSQLStr2 = "DELETE FROM TaskList WHERE [Kayit No]=" + mTaskNo;
+                                                tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                                TRetInt = tDBCmd2.ExecuteNonQuery();
+                                            }
+                                        }
+                                        catch (Exception)
+                                        {
+                                            throw;
+                                        }
+                                    }
 
-                               }
+                                }
+                            }
+                            else
+                            {
+                                panel.mTempTaskSource = NO_TASK;
+                                panel.mTempTaskNo = 0;
+                                panel.mTempTaskType = 0;
+                            }
+                            mDBReader.Close();
+                        }
+                        else if (panel.mPanelProc == CommandConstants.CMD_PORT_DISABLED || panel.mPanelProc == CommandConstants.CMD_PORT_CLOSE)//Panel Bağlanamıyorsa
+                        {
+                            int TRetInt;
+                            string tDBSQLStr;
+                            SqlCommand tDBCmd;
+                            mDBSQLStr = "UPDATE TaskList SET [Durum Kodu] = " + (int)CTaskStates.TASK_ERROR + " WHERE [Panel No] = " + panel.mPanelNo;
+                            mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
+                            TRetInt = mDBCmd.ExecuteNonQuery();
+                            if (TRetInt < 0)
+                            {
+                                tDBSQLStr = "DELETE TaskList WHERE [Panel No] = " + panel.mPanelNo;
+                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                tDBCmd.ExecuteNonQuery();
                             }
                         }
                     }
-                    else
-                    {
-                        foreach (var panel in mPanelsList)
-                        {
-                            panel.mTempTaskSource = NO_TASK;
-                            panel.mTempTaskNo = 0;
-                            panel.mTempTaskType = 0;
-                        }
-
-                    }
-                    mDBReader.Close();
                 }
             }
         }

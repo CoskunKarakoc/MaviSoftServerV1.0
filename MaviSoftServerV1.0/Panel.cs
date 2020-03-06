@@ -79,8 +79,6 @@ namespace MaviSoftServerV1._0
 
         private ushort mReadStep { get; set; }
 
-        private bool mProcessTerminated { get; set; }
-
         private ushort mRetryCnt { get; set; }
 
         private const ushort RETRY_COUNT = 2;
@@ -103,7 +101,7 @@ namespace MaviSoftServerV1._0
 
         private ushort mPanelIdleInterval { get; set; }
 
-        private CommandConstants mPanelProc { get; set; }
+        public CommandConstants mPanelProc { get; set; }
 
         private CommandConstants mLogProc { get; set; }
 
@@ -300,7 +298,7 @@ namespace MaviSoftServerV1._0
                             mRetryCnt = 0;
                             mTransferCompleted = false;
 
-                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
                             {
 
                                 ClearSocketBuffers(mPanelClient, null);
@@ -314,9 +312,6 @@ namespace MaviSoftServerV1._0
                                     Thread.Sleep(20);
                                     mStartTime = DateTime.Now;
                                 } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
-
-                                if (mProcessTerminated == true)
-                                    break;
 
                                 if (mStartTime >= mEndTime)
                                 {
@@ -413,14 +408,12 @@ namespace MaviSoftServerV1._0
                             }
 
                             SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-                            //  mTransferCompleted = true;
-                            //   mReadStep = 0;
-                            //    while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
-                            //  {
+
+
                             mRetryCnt = 0;
                             mTransferCompleted = false;
 
-                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
                             {
                                 ClearSocketBuffers(mPanelClient, null);
                                 SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
@@ -440,7 +433,6 @@ namespace MaviSoftServerV1._0
                                             mPanelClient.SendBufferSize = 65536;
                                             mPanelClient.ReceiveTimeout = mTimeOut;
                                             mPanelClient.SendTimeout = mTimeOut;
-
                                             mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
                                         }
                                         catch
@@ -450,13 +442,9 @@ namespace MaviSoftServerV1._0
                                     }
                                 } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
 
-                                if (mProcessTerminated == true)
-                                    break;
-
                                 if (mStartTime >= mEndTime)
                                 {
                                     SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
-                                    //  mRetryCnt++;
                                 }
                                 else
                                 {
@@ -479,9 +467,6 @@ namespace MaviSoftServerV1._0
 
                                 mRetryCnt++;
                             }
-
-                            //    mReadStep += 1;
-                            // }
 
                             if (mTransferCompleted == true)
                             {
@@ -514,8 +499,9 @@ namespace MaviSoftServerV1._0
                                     if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
                                         break;
 
-                                    //DB Task
-                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, mPanelProc);
+                                    // DB Task
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_TIMOUT, mPanelProc);
+
                                 }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
@@ -565,13 +551,10 @@ namespace MaviSoftServerV1._0
                             }
 
                             SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-                            //mTransferCompleted = true;
-                            //mReadStep = 0;
-                            //while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
-                            //{
+
                             mRetryCnt = 0;
                             mTransferCompleted = false;
-                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
                             {
 
                                 ClearSocketBuffers(mPanelClient, null);
@@ -595,7 +578,6 @@ namespace MaviSoftServerV1._0
                                             mPanelClient.SendBufferSize = 65536;
                                             mPanelClient.ReceiveTimeout = mTimeOut;
                                             mPanelClient.SendTimeout = mTimeOut;
-
                                             mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
                                         }
                                         catch
@@ -606,33 +588,25 @@ namespace MaviSoftServerV1._0
 
                                 } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
 
-                                if (mProcessTerminated == true)
-                                    break;
-
                                 if (mStartTime >= mEndTime)
                                 {
 
                                     //Display Timeout&Retrying Message
                                     SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
-                                    //mRetryCnt++;
                                 }
                                 else
                                 {
-                                    if (!ReceiveGenericAnswerData(mPanelClient, (CommandConstants)mTaskType))
+                                    if (ReceiveGenericAnswerData(mPanelClient, (CommandConstants)mTaskType) == false)
                                     {
-                                        break;
+                                        mRetryCnt++;//break;
                                     }
                                     else
                                     {
                                         mTransferCompleted = true;
+                                        break;
                                     }
                                 }
-
-                                mRetryCnt++;
                             }
-
-                            //mReadStep += 1;
-                            //}
 
                             if (mTransferCompleted == true)
                             {
@@ -663,7 +637,7 @@ namespace MaviSoftServerV1._0
                                 else
                                 {
                                     //DB Task
-                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, mPanelProc);
+                                    SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_TIMOUT, mPanelProc);
                                 }
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                             }
@@ -683,7 +657,7 @@ namespace MaviSoftServerV1._0
                             mRetryCnt = 0;
                             mTransferCompleted = false;
 
-                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
                             {
                                 ClearSocketBuffers(mPanelClient, null);
                                 SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
@@ -703,7 +677,6 @@ namespace MaviSoftServerV1._0
                                             mPanelClient.SendBufferSize = 65536;
                                             mPanelClient.ReceiveTimeout = mTimeOut;
                                             mPanelClient.SendTimeout = mTimeOut;
-
                                             mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
                                         }
                                         catch
@@ -712,9 +685,6 @@ namespace MaviSoftServerV1._0
                                         }
                                     }
                                 } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
-
-                                if (mProcessTerminated == true)
-                                    break;
 
                                 if (mStartTime >= mEndTime)
                                 {
@@ -814,14 +784,11 @@ namespace MaviSoftServerV1._0
                             }
 
                             SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-                            //  mTransferCompleted = true;
-                            //   mReadStep = 0;
-                            //   while ((mReadStep < 1) && (mTransferCompleted == true) && (mProcessTerminated == false))
-                            // {
+
                             mRetryCnt = 0;
                             mTransferCompleted = false;
 
-                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false) && (mProcessTerminated == false))
+                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
                             {
                                 mStartTime = DateTime.Now;
                                 mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
@@ -839,7 +806,6 @@ namespace MaviSoftServerV1._0
                                             mPanelClient.SendBufferSize = 65536;
                                             mPanelClient.ReceiveTimeout = mTimeOut;
                                             mPanelClient.SendTimeout = mTimeOut;
-
                                             mPanelClient.Connect(mPanelIPAddress, mPanelTCPPort);
                                         }
                                         catch
@@ -849,14 +815,10 @@ namespace MaviSoftServerV1._0
                                     }
                                 } while ((mStartTime < mEndTime) && (CheckSize(mPanelClient, (int)GetAnswerSize((CommandConstants)mTaskType)) == false));
 
-                                if (mProcessTerminated == true)
-                                    break;
-
                                 if (mStartTime >= mEndTime)
                                 {
                                     //Display Timeout&Retrying Message
                                     SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
-                                    //  mRetryCnt++;
                                 }
                                 else
                                 {
@@ -875,9 +837,6 @@ namespace MaviSoftServerV1._0
 
                                 mRetryCnt++;
                             }
-
-                            //  mReadStep += 1;
-                            //  }
                             mTaskTimeOut = 3;
                         }
                         break;
@@ -2924,7 +2883,7 @@ namespace MaviSoftServerV1._0
                             {
                                 TSndStr.Append("0");
                             }
-                            if ((bool)tDBReader["Offline Blocked Request"])
+                            if ((tDBReader["Offline Blocked Request"] as bool? ?? default(bool)))
                             {
                                 TSndStr.Append("1");
                             }
@@ -3382,8 +3341,6 @@ namespace MaviSoftServerV1._0
                             return false;
                         }
                     }
-
-
                 }
                 else
                 {
