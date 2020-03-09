@@ -796,15 +796,18 @@ namespace MaviSoftServerV1._0
                                     panel.mTempTaskType = mTaskType;
                                     panel.mTempTaskIntParam1 = mTaskIntParam1;
                                     panel.mTempTaskIntParam2 = mTaskIntParam2;
-                                    panel.mTempTaskIntParam3 = mTaskIntParam2;
-                                    panel.mTempTaskIntParam4 = mTaskIntParam2;
-                                    panel.mTempTaskIntParam5 = mTaskIntParam2;
+                                    panel.mTempTaskIntParam3 = mTaskIntParam3;
+                                    panel.mTempTaskIntParam4 = mTaskIntParam4;
+                                    panel.mTempTaskIntParam5 = mTaskIntParam5;
                                     panel.mTempTaskStrParam1 = mTaskStrParam1;
                                     panel.mTempTaskUserName = mTaskUserName;
                                     panel.mTempTaskUpdateTable = mTaskUpdateTable;
+                                    if (panel.mTempTaskType == (int)CommandConstants.CMD_SND_GENERALSETTINGS)
+                                        Thread.Sleep(2000);
                                 }
                                 else
-                                {   //Panel Bağlantısı Kopmuşsa
+                                {
+                                    //Panel Bağlantısı Kopmuşsa
                                     string tDBSQLStr;
                                     string tDBSQLStr2;
                                     SqlCommand tDBCmd;
@@ -815,7 +818,7 @@ namespace MaviSoftServerV1._0
                                     {
                                         try
                                         {
-                                            tDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + (int)CTaskStates.TASK_TIMOUT + " WHERE [Kayit No]=" + mTaskNo;
+                                            tDBSQLStr = "UPDATE TaskList SET [Durum Kodu]=" + (int)CTaskStates.TASK_NOCONNECTION + " WHERE [Kayit No]=" + mTaskNo;
                                             tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                                             TRetInt = tDBCmd.ExecuteNonQuery();
                                             if (TRetInt < 0)

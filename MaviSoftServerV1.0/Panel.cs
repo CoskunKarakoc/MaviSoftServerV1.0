@@ -344,7 +344,7 @@ namespace MaviSoftServerV1._0
                             }
                             ClearSocketBuffers(mPanelClient, null);
                             SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
-                            Thread.Sleep(50);//TODO:250'den 50 ye düşürüldü test amaçlı 03032020 tarihinde
+                            Thread.Sleep(50);//CHANGE:250'den 50 ye düşürüldü test amaçlı 03032020 tarihinde
                             mTaskSource = mTempTaskSource;
                             mTaskNo = mTempTaskNo;
                             mTaskType = mTempTaskType;
@@ -582,7 +582,7 @@ namespace MaviSoftServerV1._0
                                         }
                                         catch
                                         {
-
+                                            SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_TIMOUT, mPanelProc);
                                         }
                                     }
 
@@ -2400,6 +2400,52 @@ namespace MaviSoftServerV1._0
                                                     {
                                                         TSndStr.Append("000000000000");
                                                     }
+                                                    //TODO:MS 1010 lar güncellendiğinde komuta bunlarda eklenecek.
+                                                    //TSndStr.Append("0000");
+                                                    //if (tDBReader["Kart ID 2"].ToString() != null && tDBReader["Kart ID 2"].ToString() != "")
+                                                    //{
+                                                    //    TSndStr.Append(ConvertToTypeInt64(Convert.ToInt64(tDBReader["Kart ID 2"]), "D10"));
+                                                    //}
+                                                    //else
+                                                    //{
+                                                    //    TSndStr.Append("0000000000");
+                                                    //}
+                                                    //TSndStr.Append("0000");
+                                                    //if (tDBReader["Kart ID 3"].ToString() != null && tDBReader["Kart ID 3"].ToString() != "")
+                                                    //{
+                                                    //    TSndStr.Append(ConvertToTypeInt64(Convert.ToInt64(tDBReader["Kart ID 3"]), "D10"));
+                                                    //}
+                                                    //else
+                                                    //{
+                                                    //    TSndStr.Append("0000000000");
+                                                    //}
+                                                    //TSndStr.Append("0000");
+                                                    //if (tDBReader["Plaka"].ToString() != null && tDBReader["Plaka"].ToString() != "")
+                                                    //{//TODO:Plakalara arası başı ve sonu boşluk olmayacak 
+                                                    //    if (tDBReader["Plaka"].ToString().Length > 10)
+                                                    //    {
+                                                    //        TSndStr.Append(tDBReader["Plaka"].ToString().Substring(0, 10).Trim().Replace(" ", ""));
+                                                    //    }
+                                                    //    else if (tDBReader["Plaka"].ToString().Length < 10)
+                                                    //    {
+                                                    //        string plaka = "";
+                                                    //        for (int i = 0; i < (10 - tDBReader["Plaka"].ToString().Length); i++)
+                                                    //        {
+                                                    //            plaka += "0";
+                                                    //        }
+                                                    //        plaka += tDBReader["Plaka"].ToString().Trim().Replace(" ", "");
+                                                    //        TSndStr.Append(plaka);
+                                                    //    }
+                                                    //    else
+                                                    //    {
+                                                    //        TSndStr.Append(tDBReader["Plaka"].ToString().Trim().Replace(" ", ""));
+                                                    //    }
+                                                    //}
+                                                    //else
+                                                    //{
+                                                    //    TSndStr.Append("0000000000");
+                                                    //}
+
                                                     TSndStr.Append("**\r");
                                                 }
                                             }
@@ -2509,10 +2555,54 @@ namespace MaviSoftServerV1._0
                                 {
                                     TSndStr.Append("0001");
                                 }
-                                TSndStr.Append("00");
+                                TSndStr.Append("0000");
+                                if (tDBReader["Kart ID 2"].ToString() != null && tDBReader["Kart ID 2"].ToString() != "")
+                                {
+                                    TSndStr.Append(ConvertToTypeInt64(Convert.ToInt64(tDBReader["Kart ID 2"]), "D10"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000000000");
+                                }
+                                TSndStr.Append("0000");
+                                if (tDBReader["Kart ID 3"].ToString() != null && tDBReader["Kart ID 3"].ToString() != "")
+                                {
+                                    TSndStr.Append(ConvertToTypeInt64(Convert.ToInt64(tDBReader["Kart ID 3"]), "D10"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000000000");
+                                }
+                                TSndStr.Append("0000");
+                                if (tDBReader["Plaka"].ToString() != null && tDBReader["Plaka"].ToString() != "")
+                                {
+                                    if (tDBReader["Plaka"].ToString().Length > 10)
+                                    {
+                                        TSndStr.Append(tDBReader["Plaka"].ToString().Substring(0, 10).Trim().Replace(" ", ""));
+                                    }
+                                    else if (tDBReader["Plaka"].ToString().Length < 10)
+                                    {
+                                        string plaka = "";
+                                        for (int i = 0; i < (10 - tDBReader["Plaka"].ToString().Length); i++)
+                                        {
+                                            plaka += "0";
+                                        }
+                                        plaka += tDBReader["Plaka"].ToString().Trim().Replace(" ", "");
+                                        TSndStr.Append(plaka);
+                                    }
+                                    else
+                                    {
+                                        TSndStr.Append(tDBReader["Plaka"].ToString().Trim().Replace(" ", ""));
+                                    }
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000000000");
+                                }
+                                TSndStr.Append("0");//TODO:Etiket veya Plaka Komutu Gelecek
+                                TSndStr.Append("00000000000000000000000");//23 Karakter 0
                                 TSndStr.Append("**\r");
                                 mTaskTimeOut = 3;
-
                             }
                             else
                             {
@@ -2766,7 +2856,7 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append(mPanelNo.ToString("D3"));
                             TSndStr.Append(ConvertToTypeInt((tDBReader["Haftanin Gunu"] as int? ?? default(int)), "D2"));
                             TSndStr.Append(ConvertToTypeInt((tDBReader["Zaman Dilimi"] as int? ?? default(int)), "D2"));
-                            if (tDBReader["Aktif"] as bool? ?? default(bool))
+                            if (tDBReader["Aktif"] as bool? ?? default(bool)==true)
                             {
                                 TSndStr.Append("0");
                             }
@@ -3583,78 +3673,88 @@ namespace MaviSoftServerV1._0
                 case CommandConstants.CMD_RCV_USER:
                 case CommandConstants.CMD_RCVALL_USER:
                     {
-                        if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6)) == DBIntParam1)
+                        if (mPanelModel != (int)PanelModel.Panel_1010)
                         {
-                            if (TmpTaskUpdateTable)
+                            if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6)) == DBIntParam1)
                             {
-                                lock (TLockObj)
+                                if (TmpTaskUpdateTable)
                                 {
-                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    lock (TLockObj)
                                     {
-                                        mDBConn.Open();
-                                        tDBSQLStr = "SELECT * FROM Users WHERE [ID]=" + DBIntParam1;
-                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                        tDBReader = tDBCmd.ExecuteReader();
-                                        DateTime tDateTime;
-                                        if (TmpReturnStr.Substring(TPos + 44, 2) == "00" || TmpReturnStr.Substring(TPos + 46, 2) == "00")
+                                        using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                         {
-                                            tDateTime = Convert.ToDateTime("01/01/" + TmpReturnStr.Substring(TPos + 48, 2));
-                                        }
-                                        else
-                                        {
-                                            tDateTime = Convert.ToDateTime(TmpReturnStr.Substring(TPos + 44, 2) + "/" + TmpReturnStr.Substring(TPos + 46, 2) + "/20" + TmpReturnStr.Substring(TPos + 48, 2));
-                                        }
-                                        if (!tDBReader.Read())
-                                        {
+                                            mDBConn.Open();
+                                            tDBSQLStr = "SELECT * FROM Users WHERE [ID]=" + DBIntParam1;
+                                            tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                            tDBReader = tDBCmd.ExecuteReader();
+                                            DateTime tDateTime;
+                                            if (TmpReturnStr.Substring(TPos + 44, 2) == "00" || TmpReturnStr.Substring(TPos + 46, 2) == "00")
+                                            {
+                                                tDateTime = Convert.ToDateTime("01/01/" + TmpReturnStr.Substring(TPos + 48, 2));
+                                            }
+                                            else
+                                            {
+                                                tDateTime = Convert.ToDateTime(TmpReturnStr.Substring(TPos + 44, 2) + "/" + TmpReturnStr.Substring(TPos + 46, 2) + "/20" + TmpReturnStr.Substring(TPos + 48, 2));
+                                            }
+                                            if (!tDBReader.Read())
+                                            {
 
 
-                                            tDBSQLStr2 = "INSERT INTO Users (ID,[Kart ID],Sifre,[Grup No],[Grup Takvimi Aktif],[Grup Takvimi No],[Visitor Grup No],[Sureli Kullanici],[Bitis Tarihi],[3 Grup],[Grup No 2],[Grup No 3])" +
-                                                "VALUES (" +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 16, 10)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 26, 4)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 30, 4)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 34, 1)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 35, 4)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 39, 4)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 43, 1)) + "," +
-                                                "'" + tDateTime + "'," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 50, 1)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 51, 4)) + "," +
-                                                Convert.ToInt32(TmpReturnStr.Substring(TPos + 55, 4)) + ")";
-                                        }
-                                        else
-                                        {
-                                            tDBSQLStr2 = "UPDATE Users" +
-                                                " SET " +
-                                                " [Kart ID] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 16, 10)) + "," +
-                                                " [Sifre] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 26, 4)) + "," +
-                                                " [Grup No] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 30, 4)) + "," +
-                                                " [Grup Takvimi Aktif] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 34, 1)) + "," +
-                                                " [Grup Takvimi No] = " + Convert.ToInt16(TmpReturnStr.Substring(TPos + 35, 4)) + "," +
-                                                " [Visitor Grup No] = " + Convert.ToInt16(TmpReturnStr.Substring(TPos + 39, 4)) + "," +
-                                                " [Sureli Kullanici] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 43, 1)) + "," +
-                                                " [Bitis Tarihi] = " + "'" + tDateTime + "'," +
-                                                " [3 Grup] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 50, 1)) + "," +
-                                                " [Grup No 2] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 51, 4)) + "," +
-                                                " [Grup No 3] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 55, 4)) +
-                                                " WHERE [ID] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6));
-                                        }
+                                                tDBSQLStr2 = "INSERT INTO Users (ID,[Kart ID],Sifre,[Grup No],[Grup Takvimi Aktif],[Grup Takvimi No],[Visitor Grup No],[Sureli Kullanici],[Bitis Tarihi],[3 Grup],[Grup No 2],[Grup No 3],[Kart ID 2],[Kart ID 2],[Plaka])" +
+                                                    "VALUES (" +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 16, 10).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 26, 4).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 30, 4).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 34, 1).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 35, 4).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 39, 4).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 43, 1).Trim()) + "," +
+                                                    "'" + tDateTime + "'," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 50, 1).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 51, 4).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 55, 4).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 63, 10).Trim()) + "," +
+                                                    Convert.ToInt32(TmpReturnStr.Substring(TPos + 77, 10).Trim()) + "," +
+                                                    "'" + TmpReturnStr.Substring(TPos + 91, 10).Trim() + "')";
+                                            }
+                                            else
+                                            {
+                                                tDBSQLStr2 = "UPDATE Users" +
+                                                    " SET " +
+                                                    " [Kart ID] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 16, 10).Trim()) + "," +
+                                                    " [Sifre] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 26, 4).Trim()) + "," +
+                                                    " [Grup No] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 30, 4).Trim()) + "," +
+                                                    " [Grup Takvimi Aktif] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 34, 1).Trim()) + "," +
+                                                    " [Grup Takvimi No] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 35, 4).Trim()) + "," +
+                                                    " [Visitor Grup No] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 39, 4).Trim()) + "," +
+                                                    " [Sureli Kullanici] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 43, 1).Trim()) + "," +
+                                                    " [Bitis Tarihi] = " + "'" + tDateTime + "'," +
+                                                    " [3 Grup] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 50, 1).Trim()) + "," +
+                                                    " [Grup No 2] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 51, 4).Trim()) + "," +
+                                                    " [Grup No 3] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 55, 4).Trim()) + "," +
+                                                    " [Kart ID 2] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 63, 10).Trim()) + "," +
+                                                    " [Kart ID 3] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 77, 10).Trim()) + "," +
+                                                    " [Plaka] = '" + TmpReturnStr.Substring(TPos + 91, 10).Trim() + "'" +
+                                                    " WHERE [ID] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6).Trim());
+                                            }
 
-                                        tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
-                                        TRetInt = tDBCmd2.ExecuteNonQuery();
-                                        if (TRetInt > 0)
-                                        {
-                                            return true;
-                                        }
-                                        else
-                                        {
-                                            return false;
+                                            tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                            TRetInt = tDBCmd2.ExecuteNonQuery();
+                                            if (TRetInt > 0)
+                                            {
+                                                return true;
+                                            }
+                                            else
+                                            {
+                                                return false;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                        return false;
                     }
                     break;
                 case CommandConstants.CMD_RCV_ACCESSGROUP:

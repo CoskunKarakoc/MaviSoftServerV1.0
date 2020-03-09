@@ -16,7 +16,8 @@ namespace MaviSoftServerV1._0
         TASK_NEW = 1,
         TASK_COMPLETED = 2,
         TASK_ERROR = 3,
-        TASK_TIMOUT = 4
+        TASK_TIMOUT = 4,
+        TASK_NOCONNECTION = 5
     }
 
     public struct S_ANSWER
@@ -222,7 +223,7 @@ namespace MaviSoftServerV1._0
         SIZE_ALARM_INFO = 42,
         SIZE_RECEIVE_ACCESS_PERM = 188,
         SIZE_CHECK_NEW_ACCESS = 286,
-        SIZE_RCV_USER = 64,
+        SIZE_RCV_USER = 128,
         SIZE_RCV_ACCESSGROUP = 127,
         SIZE_ERSALL_USER = 13,
         SIZE_RCV_LOCALINTERLOCK = 29,
