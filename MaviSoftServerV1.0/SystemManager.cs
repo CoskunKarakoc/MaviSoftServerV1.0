@@ -141,7 +141,7 @@ namespace MaviSoftServerV1._0
         {
             while (true)
             {
-                Thread.Sleep(100);
+                Thread.Sleep(50);//CHANGE:100'DEN 50 YE DÜŞÜRÜLDÜ 09032020
 
                 switch (mPanelProc)
                 {

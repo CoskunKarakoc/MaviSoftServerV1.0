@@ -2854,9 +2854,34 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
                             TSndStr.Append(mPanelSerialNo.ToString("X4"));
                             TSndStr.Append(mPanelNo.ToString("D3"));
-                            TSndStr.Append(ConvertToTypeInt((tDBReader["Haftanin Gunu"] as int? ?? default(int)), "D2"));
-                            TSndStr.Append(ConvertToTypeInt((tDBReader["Zaman Dilimi"] as int? ?? default(int)), "D2"));
-                            if (tDBReader["Aktif"] as bool? ?? default(bool)==true)
+                            if ((tDBReader["Haftanin Gunu"] as int? ?? default(int)) > 7)
+                            {
+                                tDBSQLStr2 = "SELECT * FROM TatilGunus WHERE " +
+                                    "[Ozel Gun No]=" + DBIntParam2.ToString();
+                                tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                tDBReader2 = tDBCmd2.ExecuteReader();
+                                if (tDBReader2.Read())
+                                {
+                                    TSndStr.Append(ConvertToTypeInt((tDBReader["Haftanin Gunu"] as int? ?? default(int)), "D2"));
+                                    TSndStr.Append(ConvertToTypeInt((tDBReader["Zaman Dilimi"] as int? ?? default(int)), "D2"));
+                                    TSndStr.Append(ConvertToTypeDatetime(tDBReader2["Tarih"] as DateTime? ?? default(DateTime), "D2"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("01");
+                                    TSndStr.Append(ConvertToTypeInt((tDBReader["Zaman Dilimi"] as int? ?? default(int)), "D2"));
+                                    TSndStr.Append("000000");
+                                }
+
+                            }
+                            else
+                            {
+                                TSndStr.Append(ConvertToTypeInt((tDBReader["Haftanin Gunu"] as int? ?? default(int)), "D2"));
+                                TSndStr.Append(ConvertToTypeInt((tDBReader["Zaman Dilimi"] as int? ?? default(int)), "D2"));
+                                TSndStr.Append("000000");
+                            }
+
+                            if (tDBReader["Aktif"] as bool? ?? default(bool) == true)
                             {
                                 TSndStr.Append("0");
                             }
@@ -2870,9 +2895,9 @@ namespace MaviSoftServerV1._0
                             {
                                 var durum = "Durum " + i;
                                 var role = "Role " + i;
-                                if (tDBReader[durum] as bool? ?? default(bool))
+                                if (tDBReader[durum] as bool? ?? default(bool) == true)
                                 {
-                                    if (tDBReader[role] as bool? ?? default(bool))
+                                    if (tDBReader[role] as bool? ?? default(bool) == true)
                                     {
                                         TSndStr.Append("1");
                                     }

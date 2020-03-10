@@ -209,7 +209,7 @@ namespace MaviSoftServerV1._0
         {
             while (true)
             {
-                Thread.Sleep(250);
+                Thread.Sleep(150);//CHANGE:150'DEN 300'E ÇIKTI 09032020
 
                 if (mActive == 0)
                     mLogProc = CommandConstants.CMD_PORT_DISABLED;
