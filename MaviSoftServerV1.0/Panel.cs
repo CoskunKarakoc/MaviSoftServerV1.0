@@ -231,13 +231,23 @@ namespace MaviSoftServerV1._0
                 {
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
-                            SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
+                            CurWinStr = "IPTAL";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Red);
+                                PreWinStr = CurWinStr;
+                            }
                             mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
                     case CommandConstants.CMD_PORT_INIT:
                         {
-                            SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.SkyBlue);
+                            CurWinStr = "AYARLANIYOR";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.SkyBlue);
+                                PreWinStr = CurWinStr;
+                            }
                             mPanelClient = new TcpClient();
                             mPanelClient.ReceiveBufferSize = 65536;
                             mPanelClient.SendBufferSize = 65536;
@@ -262,8 +272,12 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CONNECT:
                         {
-
-                            SyncUpdateScreen("BAĞLANIYOR", System.Drawing.Color.Yellow);
+                            CurWinStr = "BAGLANIYOR";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Yellow);
+                                PreWinStr = CurWinStr;
+                            }
                             mStartTime = DateTime.Now;
 
                             if (mStartTime > mEndTime)
@@ -282,7 +296,12 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
-                            SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
+                            CurWinStr = "KAPATILIYOR";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Yellow);
+                                PreWinStr = CurWinStr;
+                            }
                             if (mMailRetryCount == 0)
                             {
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
@@ -300,8 +319,12 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_TEST:
                         {
-                            //Port Test (Read RTC Command)
-                            SyncUpdateScreen("PORT TEST", System.Drawing.Color.RoyalBlue);
+                            CurWinStr = "PORT TEST";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.RoyalBlue);
+                                PreWinStr = CurWinStr;
+                            }
                             mRetryCnt = 0;
                             mTransferCompleted = false;
 
@@ -351,14 +374,6 @@ namespace MaviSoftServerV1._0
                             }
                             ClearSocketBuffers(mPanelClient, null);
 
-                            //SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
-                            CurWinStr = "HAZIR";
-                            if (CurWinStr != PreWinStr)
-                            {
-                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Green);
-                                PreWinStr = CurWinStr;
-                            }
-
                             Thread.Sleep(50);//CHANGE:250'den 50 ye düşürüldü test amaçlı 03032020 tarihinde
                             mTaskSource = mTempTaskSource;
                             mTaskNo = mTempTaskNo;
@@ -388,11 +403,17 @@ namespace MaviSoftServerV1._0
                                 {
                                     mPanelProc = CommandConstants.CMD_TASK_LIST;
                                 }
+                                PreWinStr = ".!";
                             }
                             else
                             {
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
-                                PreWinStr = "No Task";
+                                CurWinStr = "HAZIR";
+                                if (CurWinStr != PreWinStr)
+                                {
+                                    SyncUpdateScreen(CurWinStr, System.Drawing.Color.Green);
+                                    PreWinStr = CurWinStr;
+                                }
                             }
                             if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
                             {
@@ -423,7 +444,6 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            //SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
                             CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
                             if (CurTaskWinStr != PreTaskWinStr)
                             {
@@ -466,12 +486,6 @@ namespace MaviSoftServerV1._0
                                 if (mStartTime >= mEndTime)
                                 {
                                     SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
-                                    //CurWinStr = "ZAMAN AŞIMI";
-                                    //if (CurWinStr != PreWinStr)
-                                    //{
-                                    //    SyncUpdateScreen(CurWinStr, System.Drawing.Color.Red);
-                                    //    PreWinStr = CurWinStr;
-                                    //}
                                 }
                                 else
                                 {
@@ -576,7 +590,6 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-                            //SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
                             CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
                             if (CurTaskWinStr != PreTaskWinStr)
                             {
@@ -684,7 +697,6 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            //SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
                             CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
                             if (CurTaskWinStr != PreTaskWinStr)
                             {
@@ -822,7 +834,6 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            // SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
                             CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
                             if (CurTaskWinStr != PreTaskWinStr)
                             {
@@ -1264,7 +1275,18 @@ namespace MaviSoftServerV1._0
                                     TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Remote IP" + i] as int? ?? default(int), "D3"));
                                 }
 
-                                TSndStr.Append("00"); // Panel Buton Detector - Panel Buton Detector Type
+                                // Panel Button Detector
+                                if ((tDBReader["Panel Button Detector"] as bool? ?? default(bool)))
+                                    TSndStr.Append("1");
+                                else
+                                    TSndStr.Append("0");
+
+                                //Panel Button Detector Time
+                                if ((tDBReader["Panel Button Detector Time"] as int? ?? default(int)) <= 0 || (tDBReader["Panel Button Detector Time"] as int? ?? default(int)) > 9)
+                                    TSndStr.Append("1");
+                                else
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Panel Button Detector Time"] as int? ?? default(int), "D1"));
+
 
                                 if ((tDBReader["Global Zone Interlock Active"] as bool? ?? default(bool)))
                                     TSndStr.Append("1");
@@ -1503,8 +1525,11 @@ namespace MaviSoftServerV1._0
                                             TSndStr.Append(tDBReader2["WKapi Adi"].ToString().Substring(0, 15));
                                         }
 
-                                        TSndStr.Append("0");//Buton detector function
-
+                                        //Buton detector mode
+                                        if ((tDBReader2["WKapi Ana Alarm Rolesi"] as bool? ?? default(bool)))
+                                            TSndStr.Append("1");
+                                        else
+                                            TSndStr.Append("0");
                                     }
                                 }
                                 TSndStr.Append("**\r");
@@ -2643,7 +2668,17 @@ namespace MaviSoftServerV1._0
                                 {
                                     TSndStr.Append("0000000000");
                                 }
-                                TSndStr.Append("0");//TODO:Etiket veya Plaka Komutu Gelecek
+                                TSndStr.Append("0");//TODO:Plaka Firmware eklenince silinecek
+                                //TODO: Plaka Firmware eklenince açılacak
+                                //if (tDBReader["Gecis Modu"].ToString() != null && tDBReader["Gecis Modu"].ToString() != "")
+                                //{
+                                //    TSndStr.Append(ConvertToTypeInt(tDBReader["Gecis Modu"] as int? ?? default(int), "D1"));
+                                //}
+                                //else
+                                //{
+                                //    TSndStr.Append("0");
+                                //}
+
                                 TSndStr.Append("00000000000000000000000");//23 Karakter 0
                                 TSndStr.Append("**\r");
                                 mTaskTimeOut = 3;

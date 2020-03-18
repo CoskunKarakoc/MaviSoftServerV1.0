@@ -223,18 +223,11 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
                             ClearDoorStatus();
-                            CurWinStr = "İPTAL";
-                            if (CurWinStr != PreWinStr)
-                            {
-                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Red);
-                                PreWinStr = CurWinStr;
-                            }
                             mLogProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
                     case CommandConstants.CMD_PORT_INIT:
                         {
-                            //SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.SkyBlue);
                             CurWinStr = "AYARLANIYOR";
                             if (CurWinStr != PreWinStr)
                             {
@@ -264,14 +257,6 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CONNECT:
                         {
-                            //SyncUpdateScreen("BAĞLANIYOR", System.Drawing.Color.Yellow);
-                            CurWinStr = "BAĞLANIYOR";
-                            if (CurWinStr != PreWinStr)
-                            {
-                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Yellow);
-                                PreWinStr = CurWinStr;
-                            }
-
                             mStartTime = DateTime.Now;
 
                             if (mStartTime > mEndTime)
@@ -294,14 +279,6 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
-                            //SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
-                            CurWinStr = "KAPATILIYOR";
-                            if (CurWinStr != PreWinStr)
-                            {
-                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Yellow);
-                                PreWinStr = CurWinStr;
-                            }
-
                             if (mMailRetryCount == 0)
                             {
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
@@ -318,7 +295,6 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_TASK_LIST:
                         {
-                            //SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
                             CurWinStr = "HAZIR";
                             if (CurWinStr != PreWinStr)
                             {
@@ -326,8 +302,6 @@ namespace MaviSoftServerV1._0
                                 PreWinStr = CurWinStr;
                             }
 
-                            //while (true)
-                            //{
                             Thread.Sleep(5);
                             mMailRetryCount = 0;//Panel Bağlantısı Kesildiğinde Mail Atma Sayısı Kontrolü
                             if (mPanelClientLog.Connected == false && mPanelClientLog.LingerState.Enabled == false)
@@ -335,7 +309,7 @@ namespace MaviSoftServerV1._0
                                 mLogProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-                            //SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
+                           
                             mReceiveTimeStart = DateTime.Now;
                             if (mReceiveTimeStart > mReceiveTimeEnd)
                             {
@@ -353,6 +327,7 @@ namespace MaviSoftServerV1._0
                                     if (ProcessReceivedData(mPanelNo, mPanelSerialNo, (CommandConstants)mTaskType, mLogTaskSource, mLogTaskUpdateTable, mLogReturnStr))
                                     {
                                         mLogTransferCompleted = true;
+                                        mLogProc = CommandConstants.CMD_TASK_LIST;
                                     }
                                     else
                                     {
@@ -372,7 +347,6 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            //}
                         }
                         break;
                     case CommandConstants.CMD_SND_GLOBALDATAUPDATE:
