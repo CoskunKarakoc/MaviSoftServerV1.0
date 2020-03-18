@@ -123,6 +123,14 @@ namespace MaviSoftServerV1._0
 
         private ushort mMemIX { get; set; }
 
+        private string CurWinStr = " ";
+
+        private string PreWinStr = "!";
+
+        private string CurTaskWinStr = " ";
+
+        private string PreTaskWinStr = "!";
+
         private ushort mTimeOut { get; set; }
 
         private ushort mTaskTimeOut { get; set; }
@@ -214,7 +222,7 @@ namespace MaviSoftServerV1._0
             ushort TProc = 0;
             while (true)
             {
-                Thread.Sleep(5);
+                Thread.Sleep(50);
 
                 if (mActive == 0)
                     mPanelProc = CommandConstants.CMD_PORT_DISABLED;
@@ -256,7 +264,6 @@ namespace MaviSoftServerV1._0
                         {
 
                             SyncUpdateScreen("BAĞLANIYOR", System.Drawing.Color.Yellow);
-
                             mStartTime = DateTime.Now;
 
                             if (mStartTime > mEndTime)
@@ -343,7 +350,15 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
                             ClearSocketBuffers(mPanelClient, null);
-                            SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
+
+                            //SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
+                            CurWinStr = "HAZIR";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Green);
+                                PreWinStr = CurWinStr;
+                            }
+
                             Thread.Sleep(50);//CHANGE:250'den 50 ye düşürüldü test amaçlı 03032020 tarihinde
                             mTaskSource = mTempTaskSource;
                             mTaskNo = mTempTaskNo;
@@ -377,6 +392,7 @@ namespace MaviSoftServerV1._0
                             else
                             {
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
+                                PreWinStr = "No Task";
                             }
                             if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
                             {
@@ -407,8 +423,13 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-
+                            //SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
+                            CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
+                            if (CurTaskWinStr != PreTaskWinStr)
+                            {
+                                SyncUpdateScreen(CurTaskWinStr, System.Drawing.Color.Blue);
+                                PreTaskWinStr = CurTaskWinStr;
+                            }
 
                             mRetryCnt = 0;
                             mTransferCompleted = false;
@@ -445,6 +466,12 @@ namespace MaviSoftServerV1._0
                                 if (mStartTime >= mEndTime)
                                 {
                                     SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                    //CurWinStr = "ZAMAN AŞIMI";
+                                    //if (CurWinStr != PreWinStr)
+                                    //{
+                                    //    SyncUpdateScreen(CurWinStr, System.Drawing.Color.Red);
+                                    //    PreWinStr = CurWinStr;
+                                    //}
                                 }
                                 else
                                 {
@@ -549,9 +576,13 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-
-                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-
+                            //SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
+                            CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
+                            if (CurTaskWinStr != PreTaskWinStr)
+                            {
+                                SyncUpdateScreen(CurTaskWinStr, System.Drawing.Color.Blue);
+                                PreTaskWinStr = CurTaskWinStr;
+                            }
                             mRetryCnt = 0;
                             mTransferCompleted = false;
                             while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
@@ -653,7 +684,15 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
+                            //SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
+                            CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
+                            if (CurTaskWinStr != PreTaskWinStr)
+                            {
+                                SyncUpdateScreen(CurTaskWinStr, System.Drawing.Color.Blue);
+                                PreTaskWinStr = CurTaskWinStr;
+                            }
+
+
                             mRetryCnt = 0;
                             mTransferCompleted = false;
 
@@ -783,8 +822,13 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
-                            SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
-
+                            // SyncUpdateScreen(GetScreenMessage((CommandConstants)mTaskType), System.Drawing.Color.Blue);
+                            CurTaskWinStr = GetScreenMessage((CommandConstants)mTaskType);
+                            if (CurTaskWinStr != PreTaskWinStr)
+                            {
+                                SyncUpdateScreen(CurTaskWinStr, System.Drawing.Color.Blue);
+                                PreTaskWinStr = CurTaskWinStr;
+                            }
                             mRetryCnt = 0;
                             mTransferCompleted = false;
 
@@ -5872,12 +5916,27 @@ namespace MaviSoftServerV1._0
                             TAccessResult = Convert.ToInt32(TmpReturnStr.Substring(TPos + 13, 2));
                             TUsersID = Convert.ToInt64(TmpReturnStr.Substring(TPos + 15, 6));
                             TCardID = FindUserCardID(TUsersID);
-                            day = Convert.ToInt32(TmpReturnStr.Substring(TPos + 21, 2));
-                            month = Convert.ToInt32(TmpReturnStr.Substring(TPos + 23, 2));
-                            year = Convert.ToInt32(TmpReturnStr.Substring(TPos + 25, 2));
-                            hour = Convert.ToInt32(TmpReturnStr.Substring(TPos + 27, 2));
-                            minute = Convert.ToInt32(TmpReturnStr.Substring(TPos + 29, 2));
-                            second = Convert.ToInt32(TmpReturnStr.Substring(TPos + 31, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 21, 2), out day)) == false || day <= 0)
+                                day = DateTime.Now.Day;
+                            // day = Convert.ToInt32(TmpReturnStr.Substring(TPos + 21, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 23, 2), out month)) == false || month <= 0)
+                                month = DateTime.Now.Month;
+                            // month = Convert.ToInt32(TmpReturnStr.Substring(TPos + 23, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 25, 2), out year)) == false || year <= -1)
+                            {
+                                string temp = DateTime.Now.Year.ToString();
+                                year = Convert.ToInt32(temp.Substring(2, 2));
+                            }
+                            // year = Convert.ToInt32(TmpReturnStr.Substring(TPos + 25, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 27, 2), out hour)) == false)
+                                hour = DateTime.Now.Hour;
+                            // hour = Convert.ToInt32(TmpReturnStr.Substring(TPos + 27, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 29, 2), out minute)) == false)
+                                minute = DateTime.Now.Minute;
+                            // minute = Convert.ToInt32(TmpReturnStr.Substring(TPos + 29, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 31, 2), out second)) == false)
+                                second = DateTime.Now.Second;
+                            //second = Convert.ToInt32(TmpReturnStr.Substring(TPos + 31, 2));
                             TDate = new DateTime(int.Parse("20" + year), month, day, hour, minute, second);
 
                             if (TUsersID > 100000 || TUsersID < 0)

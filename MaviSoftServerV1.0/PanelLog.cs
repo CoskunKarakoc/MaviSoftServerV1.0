@@ -135,6 +135,9 @@ namespace MaviSoftServerV1._0
 
         public Queue SndQueue = new Queue();
 
+        private string CurWinStr = " ";
+        private string PreWinStr = "!";
+
         public DateTime snapShotTime { get; set; }
 
         public string snapShotCardID { get; set; }
@@ -209,7 +212,7 @@ namespace MaviSoftServerV1._0
         {
             while (true)
             {
-                Thread.Sleep(150);//CHANGE:150'DEN 300'E ÇIKTI 09032020
+                Thread.Sleep(250);//CHANGE:200'DEN 250'YE ÇIKTI 09032020
 
                 if (mActive == 0)
                     mLogProc = CommandConstants.CMD_PORT_DISABLED;
@@ -220,13 +223,25 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_PORT_DISABLED:
                         {
                             ClearDoorStatus();
-                            SyncUpdateScreen("IPTAL", System.Drawing.Color.Red);
+                            CurWinStr = "İPTAL";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Red);
+                                PreWinStr = CurWinStr;
+                            }
                             mLogProc = CommandConstants.CMD_PORT_CLOSE;
                         }
                         break;
                     case CommandConstants.CMD_PORT_INIT:
                         {
-                            SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.SkyBlue);
+                            //SyncUpdateScreen("AYARLANIYOR", System.Drawing.Color.SkyBlue);
+                            CurWinStr = "AYARLANIYOR";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.SkyBlue);
+                                PreWinStr = CurWinStr;
+                            }
+
                             mPanelClientLog = new TcpClient();
                             mPanelClientLog.ReceiveBufferSize = 0x1FFFF;
                             mPanelClientLog.SendBufferSize = 0x1FFFF;
@@ -249,7 +264,14 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CONNECT:
                         {
-                            SyncUpdateScreen("BAĞLANIYOR", System.Drawing.Color.Yellow);
+                            //SyncUpdateScreen("BAĞLANIYOR", System.Drawing.Color.Yellow);
+                            CurWinStr = "BAĞLANIYOR";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Yellow);
+                                PreWinStr = CurWinStr;
+                            }
+
                             mStartTime = DateTime.Now;
 
                             if (mStartTime > mEndTime)
@@ -272,7 +294,14 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
-                            SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
+                            //SyncUpdateScreen("KAPATILIYOR", System.Drawing.Color.Yellow);
+                            CurWinStr = "KAPATILIYOR";
+                            if (CurWinStr != PreWinStr)
+                            {
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Yellow);
+                                PreWinStr = CurWinStr;
+                            }
+
                             if (mMailRetryCount == 0)
                             {
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
@@ -289,53 +318,61 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_TASK_LIST:
                         {
-                            while (true)
+                            //SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
+                            CurWinStr = "HAZIR";
+                            if (CurWinStr != PreWinStr)
                             {
-                                Thread.Sleep(5);
-                                mMailRetryCount = 0;//Panel Bağlantısı Kesildiğinde Mail Atma Sayısı Kontrolü
-                                if (mPanelClientLog.Connected == false && mPanelClientLog.LingerState.Enabled == false)
-                                {
-                                    mLogProc = CommandConstants.CMD_PORT_CLOSE;
-                                    break;
-                                }
-                                SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
-                                mReceiveTimeStart = DateTime.Now;
-                                if (mReceiveTimeStart > mReceiveTimeEnd)
-                                {
-                                    mLogProc = CommandConstants.CMD_PORT_CLOSE;
-                                    break;
-                                }
-                                mStartTime = DateTime.Now;
-                                if (mPanelClientLog.Available > 0 && mPanelClientLog.Available > (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS))
-                                {
-                                    mReceiveTimeEnd = mReceiveTimeStart.AddSeconds(3);
+                                SyncUpdateScreen(CurWinStr, System.Drawing.Color.Green);
+                                PreWinStr = CurWinStr;
+                            }
 
-                                    mEndTime = mStartTime.AddSeconds(mTimeOut);
-                                    if (ReveiveLogData(mPanelClientLog, ref mLogReturnStr))
+                            //while (true)
+                            //{
+                            Thread.Sleep(5);
+                            mMailRetryCount = 0;//Panel Bağlantısı Kesildiğinde Mail Atma Sayısı Kontrolü
+                            if (mPanelClientLog.Connected == false && mPanelClientLog.LingerState.Enabled == false)
+                            {
+                                mLogProc = CommandConstants.CMD_PORT_CLOSE;
+                                break;
+                            }
+                            //SyncUpdateScreen("HAZIR", System.Drawing.Color.Green);
+                            mReceiveTimeStart = DateTime.Now;
+                            if (mReceiveTimeStart > mReceiveTimeEnd)
+                            {
+                                mLogProc = CommandConstants.CMD_PORT_CLOSE;
+                                break;
+                            }
+                            mStartTime = DateTime.Now;
+                            if (mPanelClientLog.Available > 0 && mPanelClientLog.Available > (int)GetAnswerSize(CommandConstants.CMD_RCV_LOGS))
+                            {
+                                mReceiveTimeEnd = mReceiveTimeStart.AddSeconds(3);
+
+                                //mEndTime = mStartTime.AddSeconds(mTimeOut);
+                                if (ReveiveLogData(mPanelClientLog, ref mLogReturnStr))
+                                {
+                                    if (ProcessReceivedData(mPanelNo, mPanelSerialNo, (CommandConstants)mTaskType, mLogTaskSource, mLogTaskUpdateTable, mLogReturnStr))
                                     {
-                                        if (ProcessReceivedData(mPanelNo, mPanelSerialNo, (CommandConstants)mTaskType, mLogTaskSource, mLogTaskUpdateTable, mLogReturnStr))
-                                        {
-                                            mLogTransferCompleted = true;
-                                        }
-                                        else
-                                        {
-                                            break;
-                                        }
+                                        mLogTransferCompleted = true;
+                                    }
+                                    else
+                                    {
+                                        break;
                                     }
                                 }
-                                else
-                                {
-                                    mLogProc = CommandConstants.CMD_TASK_LIST;
-                                    break;
-                                }
-
-                                if (SndQueue.Count > 0)
-                                {
-                                    mLogProc = CommandConstants.CMD_SND_GLOBALDATAUPDATE;
-                                    break;
-                                }
-
                             }
+                            else
+                            {
+                                mLogProc = CommandConstants.CMD_TASK_LIST;
+                                break;
+                            }
+
+                            if (SndQueue.Count > 0)
+                            {
+                                mLogProc = CommandConstants.CMD_SND_GLOBALDATAUPDATE;
+                                break;
+                            }
+
+                            //}
                         }
                         break;
                     case CommandConstants.CMD_SND_GLOBALDATAUPDATE:
@@ -351,6 +388,10 @@ namespace MaviSoftServerV1._0
                                     mLogProc = CommandConstants.CMD_TASK_LIST;
                                     break;
                                 }
+                            }
+                            else
+                            {
+                                mLogProc = CommandConstants.CMD_TASK_LIST;
                             }
                         }
                         break;
@@ -519,12 +560,27 @@ namespace MaviSoftServerV1._0
                             TDoorType = Convert.ToInt32(TmpReturnStr.Substring(TPos + 14, 1));
                             TUsersID = Convert.ToInt64(TmpReturnStr.Substring(TPos + 15, 6));
                             TCardID = ClearPreZeros(TmpReturnStr.Substring(TPos + 21, 10));
-                            day = Convert.ToInt32(TmpReturnStr.Substring(TPos + 31, 2));
-                            month = Convert.ToInt32(TmpReturnStr.Substring(TPos + 33, 2));
-                            year = Convert.ToInt32(TmpReturnStr.Substring(TPos + 35, 2));
-                            hour = Convert.ToInt32(TmpReturnStr.Substring(TPos + 37, 2));
-                            minute = Convert.ToInt32(TmpReturnStr.Substring(TPos + 39, 2));
-                            second = Convert.ToInt32(TmpReturnStr.Substring(TPos + 41, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 31, 2), out day)) == false || day <= 0 || day >= 32)
+                                day = DateTime.Now.Day;
+                            //day = Convert.ToInt32(TmpReturnStr.Substring(TPos + 31, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 33, 2), out month)) == false || month <= 0 || month >= 13)
+                                month = DateTime.Now.Month;
+                            //month = Convert.ToInt32(TmpReturnStr.Substring(TPos + 33, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 35, 2), out year)) == false || year <= -1)
+                            {
+                                string temp = DateTime.Now.Year.ToString();
+                                year = Convert.ToInt32(temp.Substring(2, 2));
+                            }
+                            //year = Convert.ToInt32(TmpReturnStr.Substring(TPos + 35, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 37, 2), out hour)) == false)
+                                hour = DateTime.Now.Hour;
+                            //hour = Convert.ToInt32(TmpReturnStr.Substring(TPos + 37, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 39, 2), out minute)) == false)
+                                minute = DateTime.Now.Minute;
+                            // minute = Convert.ToInt32(TmpReturnStr.Substring(TPos + 39, 2));
+                            if ((int.TryParse(TmpReturnStr.Substring(TPos + 41, 2), out second)) == false)
+                                second = DateTime.Now.Second;
+                            //second = Convert.ToInt32(TmpReturnStr.Substring(TPos + 41, 2));
                             TDate = new DateTime(int.Parse("20" + year), month, day, hour, minute, second);
                             if (!IsDate(TDate.ToString("yyyy-MM-dd HH:mm:ss")))
                                 TDate = DateTime.Now;
@@ -890,7 +946,7 @@ namespace MaviSoftServerV1._0
                     }
                 case CommandConstants.CMD_ADD_GLOBALDATAUPDATE:
                     {
-                        SyncUpdateScreen("GLOBAL DATA", System.Drawing.Color.Green);
+                        //SyncUpdateScreen("GLOBAL DATA", System.Drawing.Color.Green);
                         object obj = new object();
                         lock (obj)
                         {
