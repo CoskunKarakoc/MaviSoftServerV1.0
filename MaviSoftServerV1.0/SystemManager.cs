@@ -92,6 +92,11 @@ namespace MaviSoftServerV1._0
 
         private DateTime mPeriodicAccessDataTime { get; set; }
 
+        private DateTime mPeriodicPanelHourUpgradeStart { get; set; }
+
+        private DateTime mPeriodicPanelHourUpgradeEnd { get; set; }
+
+
         int mTimeOut = 3;
 
 
@@ -128,6 +133,8 @@ namespace MaviSoftServerV1._0
                 mPeriodeAccessStartTime = DateTime.Now;
                 mPeriodeAccessEndTime = mPeriodeAccessStartTime.AddHours(mTimeOut);
                 mPeriodicAccessDataTime = ReceivePeriodicAccessDataTime();
+                mPeriodicPanelHourUpgradeStart = DateTime.Now;
+                mPeriodicPanelHourUpgradeEnd = mPeriodicPanelHourUpgradeStart.AddHours(1);
                 return true;
 
             }
@@ -224,6 +231,16 @@ namespace MaviSoftServerV1._0
                                 break;
                             }
 
+                            /*Periyodik olarak panel saatinin güncellenmesi*/
+                            mPeriodicPanelHourUpgradeStart = DateTime.Now;
+                            if (mPeriodicPanelHourUpgradeStart.ToShortTimeString() == mPeriodicPanelHourUpgradeEnd.ToShortTimeString())
+                            {
+                                mPeriodicPanelHourUpgradeEnd = mPeriodicPanelHourUpgradeStart.AddHours(1);
+                                mPanelProc = CommandConstants.CMD_SND_RTC;
+                                break;
+                            }
+
+
                         }
                         break;
                     case CommandConstants.CMD_RCV_LOGS:
@@ -259,6 +276,31 @@ namespace MaviSoftServerV1._0
                                 mPanelProc = CommandConstants.CMD_TASK_LIST;
                                 break;
                             }
+                        }
+                    case CommandConstants.CMD_SND_RTC:
+                        {
+                            StringBuilder TSndStr = new StringBuilder();
+                            int TDataInt;
+                            object TLockObj = new object();
+                            string tDBSQLStr = "";
+                            SqlCommand tDBCmd;
+                            lock (TLockObj)
+                            {
+                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                {
+                                    mDBConn.Open();
+                                    foreach (var panel in mPanelsList)
+                                    {
+                                        tDBSQLStr += "INSERT INTO TaskList ([Gorev Kodu], [IntParam 1], [Panel No], [Durum Kodu], Tarih, [Kullanici Adi], [Tablo Guncelle])" +
+                                        " VALUES(" +
+                                        (int)CommandConstants.CMD_SND_RTC + "," + 1 + "," + panel.mPanelNo + "," + 1 + "," + "'" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "'," + "'System'," + 0 + ") ";
+                                    }
+                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                    TDataInt = tDBCmd.ExecuteNonQuery();
+                                }
+                            }
+                            mPanelProc = CommandConstants.CMD_TASK_LIST;
+                            break;
                         }
                 }
 

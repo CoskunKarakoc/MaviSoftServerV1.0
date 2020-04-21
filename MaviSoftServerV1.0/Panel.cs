@@ -2247,9 +2247,9 @@ namespace MaviSoftServerV1._0
                                 PersonelAdiSoyadi = Adi + " " + Soyadi;
                                 PersonelAdiSoyadi = ConvertNameSurname(PersonelAdiSoyadi);
                                 TSndStr.Append(PersonelAdiSoyadi);
-                                if (tDBReader["Grup No"].ToString() != null)
+                                if (tDBReader["Grup No 2"].ToString() != null)
                                 {
-                                    tDBSQLStr2 = "SELECT TOP 1 * FROM GroupsDetailNew WHERE [Grup No]=" + tDBReader["Grup No"].ToString() + " AND [Panel No]=" + mPanelNo.ToString();
+                                    tDBSQLStr2 = "SELECT TOP 1 * FROM GroupsDetailNew WHERE [Grup No]=" + (tDBReader["Grup No 2"] as int? ?? default(int)) + " AND [Panel No]=" + mPanelNo.ToString() + " ORDER BY [Kapi No]";
                                     tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
                                     tDBReader2 = tDBCmd2.ExecuteReader();
                                     if (tDBReader2.Read())
@@ -2264,7 +2264,7 @@ namespace MaviSoftServerV1._0
 
                                         if (tDBReader2["Kapi Zaman Grup No"].ToString() != null && tDBReader2["Kapi Zaman Grup No"].ToString() != "")
                                         {
-                                            tDBSQLStr3 = "SELECT TOP 1 * FROM  TimeGroups WHERE [Zaman Grup No]=" + tDBReader2["Kapi Zaman Grup No"].ToString();
+                                            tDBSQLStr3 = "SELECT TOP 1 * FROM  TimeGroups WHERE [Zaman Grup No]=" + tDBReader2["Kapi Zaman Grup No"].ToString() + " ORDER BY [Zaman Grup No]";
                                             tDBCmd3 = new SqlCommand(tDBSQLStr3, mDBConn);
                                             tDBReader3 = tDBCmd3.ExecuteReader();
                                             if (tDBReader3.Read())
@@ -2285,7 +2285,7 @@ namespace MaviSoftServerV1._0
                                                 {
                                                     TSndStr.Append("0");
                                                 }
-                                                tDBSQLStr4 = "SELECT * FROM GroupsMaster WHERE [Grup No]=" + tDBReader["Grup No"].ToString();
+                                                tDBSQLStr4 = "SELECT * FROM GroupsMaster WHERE [Grup No]=" + tDBReader["Grup No 2"].ToString();
                                                 tDBCmd4 = new SqlCommand(tDBSQLStr4, mDBConn);
                                                 tDBReader4 = tDBCmd4.ExecuteReader();
                                                 if (tDBReader4.Read())
@@ -2527,7 +2527,6 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
-                                TSndStr.Remove(1, TSndStr.Length);
                                 TSndStr.Append("ERR");
                             }
                         }
@@ -2685,7 +2684,6 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
-                                TSndStr.Remove(1, TSndStr.Length);
                                 TSndStr.Append("ERR");
                             }
                         }

@@ -136,6 +136,7 @@ namespace MaviSoftServerV1._0
         public Queue SndQueue = new Queue();
 
         private string CurWinStr = " ";
+
         private string PreWinStr = "!";
 
         public DateTime snapShotTime { get; set; }
