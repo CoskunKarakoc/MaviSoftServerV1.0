@@ -2247,9 +2247,9 @@ namespace MaviSoftServerV1._0
                                 PersonelAdiSoyadi = Adi + " " + Soyadi;
                                 PersonelAdiSoyadi = ConvertNameSurname(PersonelAdiSoyadi);
                                 TSndStr.Append(PersonelAdiSoyadi);
-                                if (tDBReader["Grup No 2"].ToString() != null)
+                                if (tDBReader["Grup No 1"].ToString() != null)
                                 {
-                                    tDBSQLStr2 = "SELECT TOP 1 * FROM GroupsDetailNew WHERE [Grup No]=" + (tDBReader["Grup No 2"] as int? ?? default(int)) + " AND [Panel No]=" + mPanelNo.ToString() + " ORDER BY [Kapi No]";
+                                    tDBSQLStr2 = "SELECT TOP 1 * FROM GroupsDetailNew WHERE [Grup No]=" + (tDBReader["Grup No 1"] as int? ?? default(int)) + " AND [Panel No]=" + mPanelNo.ToString() + " ORDER BY [Kapi No]";
                                     tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
                                     tDBReader2 = tDBCmd2.ExecuteReader();
                                     if (tDBReader2.Read())
@@ -2285,7 +2285,7 @@ namespace MaviSoftServerV1._0
                                                 {
                                                     TSndStr.Append("0");
                                                 }
-                                                tDBSQLStr4 = "SELECT * FROM GroupsMaster WHERE [Grup No]=" + tDBReader["Grup No 2"].ToString();
+                                                tDBSQLStr4 = "SELECT * FROM GroupsMaster WHERE [Grup No]=" + tDBReader["Grup No 1"].ToString();
                                                 tDBCmd4 = new SqlCommand(tDBSQLStr4, mDBConn);
                                                 tDBReader4 = tDBCmd4.ExecuteReader();
                                                 if (tDBReader4.Read())
