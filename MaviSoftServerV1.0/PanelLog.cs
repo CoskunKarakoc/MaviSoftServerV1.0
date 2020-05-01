@@ -283,6 +283,8 @@ namespace MaviSoftServerV1._0
                             if (mMailRetryCount == 0)
                             {
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
+                                SendSms sendSms = new SendSms(new SmsSettings());
+                                sendSms.PanelBaglantiDurumu(mPanelNo + " Nolu Panel İle Bağlantı Sağlanamıyor.");
                                 mMailRetryCount++;
                             }
 
@@ -310,7 +312,7 @@ namespace MaviSoftServerV1._0
                                 mLogProc = CommandConstants.CMD_PORT_CLOSE;
                                 break;
                             }
-                           
+
                             mReceiveTimeStart = DateTime.Now;
                             if (mReceiveTimeStart > mReceiveTimeEnd)
                             {
@@ -788,6 +790,8 @@ namespace MaviSoftServerV1._0
                                 {
                                     return false;
                                 }
+                                SendSms sendSms = new SendSms(new SmsSettings());
+                                sendSms.HerGirisCikistaMesajGonder(TCardID, TUsersID, (TDoorType - 1));
                             }
                         }
                     }

@@ -96,6 +96,13 @@ namespace MaviSoftServerV1._0
 
         private DateTime mPeriodicPanelHourUpgradeEnd { get; set; }
 
+        private DateTime mPeriodicIcerdeDisardaSMSKontrolStart { get; set; }
+
+        private DateTime mPeriodicIcerdeDisardaSMSKontrolEnd { get; set; }
+
+        private DateTime mPeriodicGelmeyenSMSKontrolStart { get; set; }
+
+        private DateTime mPeriodicGelmeyenSMSKontrolEnd { get; set; }
 
         int mTimeOut = 3;
 
@@ -135,6 +142,10 @@ namespace MaviSoftServerV1._0
                 mPeriodicAccessDataTime = ReceivePeriodicAccessDataTime();
                 mPeriodicPanelHourUpgradeStart = DateTime.Now;
                 mPeriodicPanelHourUpgradeEnd = mPeriodicPanelHourUpgradeStart.AddHours(1);
+                mPeriodicIcerdeDisardaSMSKontrolStart = DateTime.Now;
+                mPeriodicIcerdeDisardaSMSKontrolEnd = mPeriodicIcerdeDisardaSMSKontrolStart.AddHours(mTimeOut);
+                mPeriodicGelmeyenSMSKontrolStart = DateTime.Now;
+                mPeriodicGelmeyenSMSKontrolEnd = mPeriodicGelmeyenSMSKontrolStart.AddHours(mTimeOut);
                 return true;
 
             }
@@ -178,6 +189,61 @@ namespace MaviSoftServerV1._0
                                 }
                             }
 
+                            /*İçerde-Dışarda Raporunda ki İçerdeki Kullanıcıların sahip olduğu numaraya mesaj atma kontrolü*/
+                            mPeriodicIcerdeDisardaSMSKontrolStart = DateTime.Now;
+                            if (mPeriodicIcerdeDisardaSMSKontrolStart.ToShortTimeString() == mPeriodicIcerdeDisardaSMSKontrolEnd.ToShortTimeString())
+                            {
+                                SmsSettings smsSetting = new SmsSettings();
+                                if (mPeriodicIcerdeDisardaSMSKontrolStart.ToShortTimeString() == smsSetting.Icerde_Disarda_Saat.Value.ToShortTimeString() && mPeriodicIcerdeDisardaSMSKontrolStart.Second == 0)
+                                {
+                                    if (smsSetting.Icerde_Disarda_Gonder == true)
+                                    {
+                                        SendSms sendSms = new SendSms(smsSetting);
+                                        sendSms.IcerdeDisardaRaporMesajıGonder();
+                                    }
+                                }
+                                mPeriodicIcerdeDisardaSMSKontrolEnd = mPeriodicIcerdeDisardaSMSKontrolStart.AddHours(mTimeOut);
+                            }
+                            else
+                            {
+                                SmsSettings smsSetting = new SmsSettings();
+                                if (mPeriodicIcerdeDisardaSMSKontrolStart.ToShortTimeString() == smsSetting.Icerde_Disarda_Saat.Value.ToShortTimeString() && mPeriodicIcerdeDisardaSMSKontrolStart.Second == 0)
+                                {
+                                    if (smsSetting.Icerde_Disarda_Gonder == true)
+                                    {
+                                        SendSms sendSms = new SendSms(smsSetting);
+                                        sendSms.IcerdeDisardaRaporMesajıGonder();
+                                    }
+                                }
+                            }
+
+                            /*Gelmeyenler Raporu SMS Gönderme Kontrolü*/
+                            mPeriodicGelmeyenSMSKontrolStart = DateTime.Now;
+                            if (mPeriodicGelmeyenSMSKontrolStart.ToShortTimeString() == mPeriodicGelmeyenSMSKontrolEnd.ToShortTimeString())
+                            {
+                                SmsSettings smsSetting = new SmsSettings();
+                                if (mPeriodicGelmeyenSMSKontrolStart.ToShortTimeString() == smsSetting.Gelmeyenler_Saat.Value.ToShortTimeString() && mPeriodicGelmeyenSMSKontrolStart.Second == 0)
+                                {
+                                    if (smsSetting.Gelmeyenler_Gonder == true)
+                                    {
+                                        SendSms sendSms = new SendSms(smsSetting);
+                                        sendSms.GelmeyenMesajiGonder();
+                                    }
+                                }
+                                mPeriodicGelmeyenSMSKontrolEnd = mPeriodicGelmeyenSMSKontrolStart.AddHours(mTimeOut);
+                            }
+                            else
+                            {
+                                SmsSettings smsSetting = new SmsSettings();
+                                if (mPeriodicGelmeyenSMSKontrolStart.ToShortTimeString() == smsSetting.Gelmeyenler_Saat.Value.ToShortTimeString() && mPeriodicGelmeyenSMSKontrolStart.Second == 0)
+                                {
+                                    if (smsSetting.Gelmeyenler_Gonder == true)
+                                    {
+                                        SendSms sendSms = new SendSms(smsSetting);
+                                        sendSms.GelmeyenMesajiGonder();
+                                    }
+                                }
+                            }
 
                             /*Yemekhane Mail Gönderme Kontrolü*/
                             mYemekhaneMailStartTime = DateTime.Now;

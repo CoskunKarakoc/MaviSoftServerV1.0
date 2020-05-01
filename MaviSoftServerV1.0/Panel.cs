@@ -305,6 +305,8 @@ namespace MaviSoftServerV1._0
                             if (mMailRetryCount == 0)
                             {
                                 SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
+                                SendSms sendSms = new SendSms(new SmsSettings());
+                                sendSms.PanelBaglantiDurumu(mPanelNo + " Nolu Panel İle Bağlantı Sağlanamıyor.");
                                 mMailRetryCount++;
                             }
 
