@@ -52,33 +52,30 @@ namespace MaviSoftServerV1._0
 
         public static string GetSmsXMLCodeOneToMany(string UserName, string Password, string UserCode, string AccountId, string Originator, string MessageText, List<string> ReceiverNumber, string IsCheckBlackList = "0", string ValidityPeriod = "60")
         {
-            string sendSMSXML = @"<soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/'
-                                      xmlns='https://webservice.asistiletisim.com.tr/SmsProxy'>
-                                  <soapenv:Header/>
-                                    <soapenv:Body>
-                                      <sendSms>
-                                        <requestXml>
-                                            <![CDATA[<SendSms>
-                                             <Username>" + UserName + @"</Username>
-                                             <Password>" + Password + @"</Password>
-                                             <UserCode>" + UserCode + @"</UserCode>
-                                             <AccountId>" + AccountId + @"</AccountId>
-                                             <Originator>" + Originator + @"</Originator>
-                                             <SendDate></SendDate>
-                                             <ValidityPeriod>" + ValidityPeriod + @"</ValidityPeriod>
-                                             <MessageText>" + MessageText + @"</MessageText>
-                                             <IsCheckBlackList>" + IsCheckBlackList + @"</IsCheckBlackList>
-                                       <ReceiverList>";
+            string sendSMSXML = @"<soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns=""https://webservice.asistiletisim.com.tr/SmsProxy"">
+                                           <soapenv:Header/>
+                                           <soapenv:Body>
+                                              <sendSms>
+                                                 <requestXml><![CDATA[<SendSms>
+                                                       <Username>" + UserName + @"</Username>
+                                                       <Password>" + Password + @"</Password>
+                                                       <UserCode>" + UserCode + @"</UserCode>
+                                                       <AccountId>" + AccountId + @"</AccountId>
+                                                       <Originator>" + Originator + @"</Originator>
+                                                       <ValidityPeriod>" + ValidityPeriod + @"</ValidityPeriod>
+                                                       <SendDate/>
+                                                       <MessageText>" + MessageText + @"</MessageText>
+                                                       <IsCheckBlackList>" + IsCheckBlackList + @"</IsCheckBlackList>
+                                                          <ReceiverList>";
             foreach (string receiverNumber in ReceiverNumber)
             {
                 sendSMSXML += "<Receiver>" + receiverNumber + "</Receiver>";
             }
             sendSMSXML += @"</ReceiverList>
-                                   </SendSms>]]>
-                                    </requestXml>
-                                     </sendSms>
-                                    </soapenv:Body>
-                                   </soapenv:Envelope>";
+                                                    </SendSms>]]></requestXml>
+                                              </sendSms>
+                                           </soapenv:Body>
+                                        </soapenv:Envelope>";
             return sendSMSXML;
         }
 

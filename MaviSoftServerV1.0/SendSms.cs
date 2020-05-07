@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace MaviSoftServerV1._0
 {
@@ -20,13 +24,13 @@ namespace MaviSoftServerV1._0
             var messageUser = GetUserWithKartIDAndUserID(Kart_ID, User_ID);
             if (_smsSettings.Her_Giris_Cikista_Gonder == true && Gecis_Tipi == 0)
             {
-
-                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, "", "", _smsSettings.Originator, _smsSettings.Her_Giris_Cikista_Mesaj, new List<string> { messageUser.Telefon });
-
+                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, _smsSettings.UserCode, _smsSettings.AccountID, _smsSettings.Originator, _smsSettings.Her_Giris_Cikista_Mesaj, new List<string> { messageUser.Telefon });
+                CallSmsWebService(XMLCode);
             }
             else if (_smsSettings.Her_Giris_Cikista_Gonder == true && Gecis_Tipi == 1)
             {
-                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, "", "", _smsSettings.Originator, _smsSettings.Her_Giris_Cikista_Mesaj, new List<string> { messageUser.Telefon });
+                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, _smsSettings.UserCode, _smsSettings.AccountID, _smsSettings.Originator, _smsSettings.Her_Giris_Cikista_Mesaj, new List<string> { messageUser.Telefon });
+                CallSmsWebService(XMLCode);
             }
         }
 
@@ -35,7 +39,8 @@ namespace MaviSoftServerV1._0
         {
             if (_smsSettings.Icerde_Disarda_Gonder == true && IcerdekiKullaniciListesi().Count > 0)
             {
-                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, "", "", _smsSettings.Originator, _smsSettings.Gelmeyenler_Mesaj, IcerdekiKullaniciListesi());
+                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, _smsSettings.UserCode, _smsSettings.AccountID, _smsSettings.Originator, _smsSettings.Gelmeyenler_Mesaj, IcerdekiKullaniciListesi());
+                CallSmsWebService(XMLCode);
             }
         }
 
@@ -44,7 +49,8 @@ namespace MaviSoftServerV1._0
         {
             if (_smsSettings.Gelmeyenler_Gonder == true && GelmeyenKullaniListesi().Count > 0)
             {
-                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, "", "", _smsSettings.Originator, _smsSettings.Gelmeyenler_Mesaj, GelmeyenKullaniListesi());
+                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, _smsSettings.UserCode, _smsSettings.AccountID, _smsSettings.Originator, _smsSettings.Gelmeyenler_Mesaj, GelmeyenKullaniListesi());
+                CallSmsWebService(XMLCode);
             }
         }
 
@@ -53,7 +59,8 @@ namespace MaviSoftServerV1._0
         {
             if (_smsSettings.PanelBaglantiDurumu_Gonder == true && PanelBaglatiSMSListesi().Count > 0)
             {
-                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, "", "", _smsSettings.Originator, Mesaj, PanelBaglatiSMSListesi());
+                var XMLCode = SmsOperationCode.GetSmsXMLCodeOneToMany(_smsSettings.Kullanici_Adi, _smsSettings.Sifre, _smsSettings.UserCode, _smsSettings.AccountID, _smsSettings.Originator, Mesaj, PanelBaglatiSMSListesi());
+                CallSmsWebService(XMLCode);
             }
         }
 
@@ -65,6 +72,7 @@ namespace MaviSoftServerV1._0
             SqlCommand tDBCmd;
             SqlDataReader tDBReader;
             List<SmsUserEntity> smsUsers = new List<SmsUserEntity>();
+            string CC = "90";
             lock (TLockObj)
             {
                 using (var connection = new SqlConnection(SqlServerAdress.Adres))
@@ -85,23 +93,11 @@ namespace MaviSoftServerV1._0
                                 Telefon = tDBReader["Telefon"].ToString()
                             };
 
-                            if (entity.Telefon.Length > 11)
+                            if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                entity.Telefon = entity.Telefon.Substring(0, 11);
+                                CC += entity.Telefon;
+                                entity.Telefon = CC;
                             }
-                            else if (entity.Telefon.Length < 11)
-                            {
-                                string temp = "";
-                                for (int i = 0; i < (11 - entity.Telefon.Length); i++)
-                                {
-                                    temp += "0";
-                                }
-                                entity.Telefon += temp;
-                            }
-
-                            var CC = "9" + entity.Telefon;
-                            entity.Telefon = CC;
-
                             smsUsers.Add(entity);
                         }
 
@@ -123,6 +119,7 @@ namespace MaviSoftServerV1._0
             string tDBSQLStr;
             SqlCommand tDBCmd;
             SqlDataReader tDBReader;
+            string CC = "90";
             lock (TLockObj)
             {
                 using (var connection = new SqlConnection(SqlServerAdress.Adres))
@@ -144,22 +141,11 @@ namespace MaviSoftServerV1._0
                             };
                             tDBReader.Close();
 
-                            if (entity.Telefon.Length > 11)
+                            if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                entity.Telefon = entity.Telefon.Substring(0, 11);
+                                CC += entity.Telefon;
+                                entity.Telefon = CC;
                             }
-                            else if (entity.Telefon.Length < 11)
-                            {
-                                string temp = "";
-                                for (int i = 0; i < (11 - entity.Telefon.Length); i++)
-                                {
-                                    temp += "0";
-                                }
-                                entity.Telefon += temp;
-                            }
-
-                            var CC = "9" + entity.Telefon;
-                            entity.Telefon = CC;
 
                             return entity;
                         }
@@ -183,6 +169,7 @@ namespace MaviSoftServerV1._0
             SqlDataReader tDBReader;
             List<SmsUserEntity> smsUsers = new List<SmsUserEntity>();
             List<string> telefonListesi = new List<string>();
+            string CC = "90";
             lock (TLockObj)
             {
                 using (var connection = new SqlConnection(SqlServerAdress.Adres))
@@ -211,24 +198,13 @@ namespace MaviSoftServerV1._0
                                 Telefon = tDBReader[2].ToString()
                             };
 
-                            if (entity.Telefon.Length > 11)
+                            if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                entity.Telefon = entity.Telefon.Substring(0, 11);
-                            }
-                            else if (entity.Telefon.Length < 11)
-                            {
-                                string temp = "";
-                                for (int i = 0; i < (11 - entity.Telefon.Length); i++)
-                                {
-                                    temp += "0";
-                                }
-                                entity.Telefon += temp;
+                                CC += entity.Telefon;
+                                telefonListesi.Add(CC);
+                                smsUsers.Add(entity);
                             }
 
-                            var CC = "9" + entity.Telefon;
-                            entity.Telefon = CC;
-                            telefonListesi.Add(entity.Telefon);
-                            smsUsers.Add(entity);
                         }
                         tDBReader.Close();
                     }
@@ -249,6 +225,7 @@ namespace MaviSoftServerV1._0
             SqlDataReader tDBReader;
             List<SmsUserEntity> smsUsers = new List<SmsUserEntity>();
             List<string> telefonListesi = new List<string>();
+            string CC = "90";
             lock (TLockObj)
             {
                 using (var connection = new SqlConnection(SqlServerAdress.Adres))
@@ -276,23 +253,13 @@ namespace MaviSoftServerV1._0
                                 Telefon = tDBReader[2].ToString()
                             };
 
-                            if (entity.Telefon.Length > 11)
+                            if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                entity.Telefon = entity.Telefon.Substring(0, 11);
+                                CC += entity.Telefon;
+                                telefonListesi.Add(CC);
+                                smsUsers.Add(entity);
                             }
-                            else if (entity.Telefon.Length < 11)
-                            {
-                                string temp = "";
-                                for (int i = 0; i < (11 - entity.Telefon.Length); i++)
-                                {
-                                    temp += "0";
-                                }
-                                entity.Telefon += temp;
-                            }
-                            var CC = "9" + entity.Telefon;
-                            entity.Telefon = CC;
-                            telefonListesi.Add(entity.Telefon);
-                            smsUsers.Add(entity);
+
                         }
                         tDBReader.Close();
                     }
@@ -323,25 +290,17 @@ namespace MaviSoftServerV1._0
                         tDBSQLStr = @"SELECT * FROM SMSForPanelStatus";
                         tDBCmd = new SqlCommand(tDBSQLStr, connection);
                         tDBReader = tDBCmd.ExecuteReader();
+                        string CC = "90";
                         while (tDBReader.Read())
                         {
                             var telNo = tDBReader[1].ToString();
 
-                            if (telNo.Length > 11)
+
+                            if (telNo.Length == 10 && !telNo.StartsWith("0"))
                             {
-                                telNo = telNo.Substring(0, 11);
+                                CC += telNo;
+                                telefonListesi.Add(CC);
                             }
-                            else if (telNo.Length < 11)
-                            {
-                                string temp = "";
-                                for (int i = 0; i < (11 - telNo.Length); i++)
-                                {
-                                    temp += "0";
-                                }
-                                telNo += temp;
-                            }
-                            var CC = "9" + telNo;
-                            telefonListesi.Add(CC);
                         }
                         tDBReader.Close();
                     }
@@ -354,7 +313,32 @@ namespace MaviSoftServerV1._0
             }
         }
 
-
+        private void CallSmsWebService(string xmlCode)
+        {
+            var _url = "https://webservice.asistiletisim.com.tr/SmsProxy.asmx";
+            var _action = "https://webservice.asistiletisim.com.tr/SmsProxy/sendSms";
+            XmlDocument soapEnvelopeXml = new XmlDocument();
+            soapEnvelopeXml.LoadXml(xmlCode);
+            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(_url);
+            webRequest.Headers.Add("SOAPAction", _action);
+            webRequest.ContentType = "text/xml;charset=\"utf-8\"";
+            webRequest.Accept = "text/xml";
+            webRequest.Method = "POST";
+            using (Stream stream = webRequest.GetRequestStream())
+            {
+                soapEnvelopeXml.Save(stream);
+            }
+            IAsyncResult asyncResult = webRequest.BeginGetResponse(null, null);
+            asyncResult.AsyncWaitHandle.WaitOne();
+            string soapResult;
+            using (WebResponse webResponse = webRequest.EndGetResponse(asyncResult))
+            {
+                using (StreamReader rd = new StreamReader(webResponse.GetResponseStream()))
+                {
+                    soapResult = rd.ReadToEnd();
+                }
+            }
+        }
     }
 
     public class SmsUserEntity

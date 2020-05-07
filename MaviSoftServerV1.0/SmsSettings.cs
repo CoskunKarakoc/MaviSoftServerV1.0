@@ -46,6 +46,11 @@ namespace MaviSoftServerV1._0
 
         public bool? PanelBaglantiDurumu_Gonder { get; set; }
 
+        public string UserCode { get; set; }
+
+        public string AccountID { get; set; }
+
+
         private void BindProperty()
         {
             object TLockObj = new object();
@@ -80,6 +85,8 @@ namespace MaviSoftServerV1._0
                             Her_Giris_Cikista_Gonder = tDBReader["HerGirisCikista Gonder"] as bool? ?? default(bool);
                             Her_Giris_Cikista_Mesaj = tDBReader["HerGirisCikista Mesaj"].ToString();
                             PanelBaglantiDurumu_Gonder = tDBReader["PanelBaglantiDurumu Gonder"] as bool? ?? default(bool);
+                            UserCode = tDBReader["UserCode"].ToString();
+                            AccountID = tDBReader["AccountID"].ToString();
                         }
 
                         tDBReader.Close();
@@ -101,6 +108,8 @@ namespace MaviSoftServerV1._0
                         Her_Giris_Cikista_Gonder = null;
                         Her_Giris_Cikista_Mesaj = null;
                         PanelBaglantiDurumu_Gonder = null;
+                        UserCode = null;
+                        AccountID = null;
                     }
                 }
             }

@@ -2670,17 +2670,58 @@ namespace MaviSoftServerV1._0
                                     TSndStr.Append("0000000000");
                                 }
                                 TSndStr.Append("0");//TODO:Plaka Firmware eklenince silinecek
-                                //TODO: Plaka Firmware eklenince açılacak
-                                //if (tDBReader["Gecis Modu"].ToString() != null && tDBReader["Gecis Modu"].ToString() != "")
-                                //{
-                                //    TSndStr.Append(ConvertToTypeInt(tDBReader["Gecis Modu"] as int? ?? default(int), "D1"));
-                                //}
-                                //else
-                                //{
-                                //    TSndStr.Append("0");
-                                //}
+                                                    //TODO: Plaka Firmware eklenince açılacak
+                                                    //if (tDBReader["Gecis Modu"].ToString() != null && tDBReader["Gecis Modu"].ToString() != "")
+                                                    //{
+                                                    //    TSndStr.Append(ConvertToTypeInt(tDBReader["Gecis Modu"] as int? ?? default(int), "D1"));
+                                                    //}
+                                                    //else
+                                                    //{
+                                                    //    TSndStr.Append("0");
+                                                    //}
 
-                                TSndStr.Append("00000000000000000000000");//23 Karakter 0
+                                if (tDBReader["Grup No 4"].ToString() != null && tDBReader["Grup No 4"].ToString() != "")
+                                {
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 4"] as int? ?? default(int), "D4"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000");
+                                }
+                                if (tDBReader["Grup No 5"].ToString() != null && tDBReader["Grup No 5"].ToString() != "")
+                                {
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 5"] as int? ?? default(int), "D4"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000");
+                                }
+                                if (tDBReader["Grup No 6"].ToString() != null && tDBReader["Grup No 6"].ToString() != "")
+                                {
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 6"] as int? ?? default(int), "D4"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000");
+                                }
+                                if (tDBReader["Grup No 7"].ToString() != null && tDBReader["Grup No 7"].ToString() != "")
+                                {
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 7"] as int? ?? default(int), "D4"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000");
+                                }
+                                if (tDBReader["Grup No 8"].ToString() != null && tDBReader["Grup No 8"].ToString() != "")
+                                {
+                                    TSndStr.Append(ConvertToTypeInt(tDBReader["Grup No 8"] as int? ?? default(int), "D4"));
+                                }
+                                else
+                                {
+                                    TSndStr.Append("0000");
+                                }
+
+                                TSndStr.Append("000");//23 Karakter 0
                                 TSndStr.Append("**\r");
                                 mTaskTimeOut = 3;
                             }
@@ -3804,7 +3845,7 @@ namespace MaviSoftServerV1._0
                                             {
 
 
-                                                tDBSQLStr2 = "INSERT INTO Users (ID,[Kart ID],Sifre,[Grup No],[Grup Takvimi Aktif],[Grup Takvimi No],[Visitor Grup No],[Sureli Kullanici],[Bitis Tarihi],[3 Grup],[Grup No 2],[Grup No 3],[Kart ID 2],[Kart ID 2],[Plaka])" +
+                                                tDBSQLStr2 = "INSERT INTO Users (ID,[Kart ID],Sifre,[Grup No],[Grup Takvimi Aktif],[Grup Takvimi No],[Visitor Grup No],[Sureli Kullanici],[Bitis Tarihi],[3 Grup],[Grup No 2],[Grup No 3],[Kart ID 2],[Kart ID 2],[Plaka],[Grup No 4],[Grup No 5],[Grup No 6],[Grup No 7],[Grup No 8])" +
                                                     "VALUES (" +
                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6).Trim()) + "," +
                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 16, 10).Trim()) + "," +
@@ -3820,7 +3861,12 @@ namespace MaviSoftServerV1._0
                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 55, 4).Trim()) + "," +
                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 63, 10).Trim()) + "," +
                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 77, 10).Trim()) + "," +
-                                                    "'" + TmpReturnStr.Substring(TPos + 91, 10).Trim() + "')";
+                                                    "'" + TmpReturnStr.Substring(TPos + 91, 10).Trim() + "," +
+                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 102, 4).Trim()) + "," +
+                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 106, 4).Trim()) + "," +
+                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 110, 4).Trim()) + "," +
+                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 114, 4).Trim()) + "," +
+                                                     Convert.ToInt32(TmpReturnStr.Substring(TPos + 118, 4).Trim()) + "')";
                                             }
                                             else
                                             {
@@ -3839,7 +3885,12 @@ namespace MaviSoftServerV1._0
                                                     " [Grup No 3] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 55, 4).Trim()) + "," +
                                                     " [Kart ID 2] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 63, 10).Trim()) + "," +
                                                     " [Kart ID 3] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 77, 10).Trim()) + "," +
-                                                    " [Plaka] = '" + TmpReturnStr.Substring(TPos + 91, 10).Trim() + "'" +
+                                                    " [Plaka] = '" + TmpReturnStr.Substring(TPos + 91, 10).Trim() + "'" + "," +
+                                                    " [Grup No 4] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 102, 4).Trim()) + "," +
+                                                    " [Grup No 5] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 106, 4).Trim()) + "," +
+                                                    " [Grup No 6] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 110, 4).Trim()) + "," +
+                                                    " [Grup No 7] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 114, 4).Trim()) + "," +
+                                                    " [Grup No 8] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 118, 4).Trim()) +
                                                     " WHERE [ID] = " + Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 6).Trim());
                                             }
 
@@ -6881,7 +6932,7 @@ namespace MaviSoftServerV1._0
                 var message = new MailMessage();
                 if (mailSettings.EMail_Adres != null)
                 {
-                    message.From = new MailAddress(mailSettings.EMail_Adres.Trim(), (mailSettings.Kullanici_Adi + " Geçiş Kontrol Sistemi "));
+                    message.From = new MailAddress(mailSettings.EMail_Adres.Trim(), mailSettings.Kullanici_Adi);
                     if (mailSettings.Alici_1_EmailGonder == true && mailSettings.Alici_1_EmailAdress != null)
                     {
                         message.To.Add(new MailAddress(mailSettings.Alici_1_EmailAdress.Trim()));
@@ -6894,7 +6945,7 @@ namespace MaviSoftServerV1._0
                     {
                         message.To.Add(new MailAddress(mailSettings.Alici_3_EmailAdress.Trim()));
                     }
-                    message.Subject = subject;
+                    message.Subject = "Kartlı Geçiş Kontrol Sistemi ";
                     message.Body = body;
                     message.IsBodyHtml = isHtml;
                     using (var smtp = new SmtpClient(mailSettings.MailHost.Trim(), mailSettings.MailPort))

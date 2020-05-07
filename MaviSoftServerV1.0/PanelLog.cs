@@ -1013,7 +1013,7 @@ namespace MaviSoftServerV1._0
                 var message = new MailMessage();
                 if (mailSettings.EMail_Adres != null)
                 {
-                    message.From = new MailAddress(mailSettings.EMail_Adres.Trim(), (mailSettings.Kullanici_Adi + " Geçiş Kontrol Sistemi "));
+                    message.From = new MailAddress(mailSettings.EMail_Adres.Trim(), mailSettings.Kullanici_Adi);
                     if (mailSettings.Alici_1_EmailGonder == true && mailSettings.Alici_1_EmailAdress != null)
                     {
                         message.To.Add(new MailAddress(mailSettings.Alici_1_EmailAdress.Trim()));
@@ -1026,7 +1026,7 @@ namespace MaviSoftServerV1._0
                     {
                         message.To.Add(new MailAddress(mailSettings.Alici_3_EmailAdress.Trim()));
                     }
-                    message.Subject = subject;
+                    message.Subject = "Kartlı Geçiş Kontrol Sistemi ";
                     message.Body = body;
                     message.IsBodyHtml = isHtml;
                     using (var smtp = new SmtpClient(mailSettings.MailHost.Trim(), mailSettings.MailPort))
