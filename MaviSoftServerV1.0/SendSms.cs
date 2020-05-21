@@ -95,8 +95,8 @@ namespace MaviSoftServerV1._0
 
                             if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                CC += entity.Telefon;
-                                entity.Telefon = CC;
+                                var temp = CC + entity.Telefon;
+                                entity.Telefon = temp;
                             }
                             smsUsers.Add(entity);
                         }
@@ -143,8 +143,8 @@ namespace MaviSoftServerV1._0
 
                             if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                CC += entity.Telefon;
-                                entity.Telefon = CC;
+                                var temp = CC + entity.Telefon;
+                                entity.Telefon = temp;
                             }
 
                             return entity;
@@ -200,8 +200,8 @@ namespace MaviSoftServerV1._0
 
                             if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                CC += entity.Telefon;
-                                telefonListesi.Add(CC);
+                                var temp = CC + entity.Telefon;
+                                telefonListesi.Add(temp);
                                 smsUsers.Add(entity);
                             }
 
@@ -255,8 +255,8 @@ namespace MaviSoftServerV1._0
 
                             if (entity.Telefon.Length == 10 && !entity.Telefon.StartsWith("0"))
                             {
-                                CC += entity.Telefon;
-                                telefonListesi.Add(CC);
+                                var temp = CC + entity.Telefon;
+                                telefonListesi.Add(temp);
                                 smsUsers.Add(entity);
                             }
 
@@ -298,8 +298,8 @@ namespace MaviSoftServerV1._0
 
                             if (telNo.Length == 10 && !telNo.StartsWith("0"))
                             {
-                                CC += telNo;
-                                telefonListesi.Add(CC);
+                                var temp = CC + telNo;
+                                telefonListesi.Add(temp);
                             }
                         }
                         tDBReader.Close();
@@ -315,29 +315,38 @@ namespace MaviSoftServerV1._0
 
         private void CallSmsWebService(string xmlCode)
         {
-            var _url = "https://webservice.asistiletisim.com.tr/SmsProxy.asmx";
-            var _action = "https://webservice.asistiletisim.com.tr/SmsProxy/sendSms";
-            XmlDocument soapEnvelopeXml = new XmlDocument();
-            soapEnvelopeXml.LoadXml(xmlCode);
-            HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(_url);
-            webRequest.Headers.Add("SOAPAction", _action);
-            webRequest.ContentType = "text/xml;charset=\"utf-8\"";
-            webRequest.Accept = "text/xml";
-            webRequest.Method = "POST";
-            using (Stream stream = webRequest.GetRequestStream())
+            try
             {
-                soapEnvelopeXml.Save(stream);
-            }
-            IAsyncResult asyncResult = webRequest.BeginGetResponse(null, null);
-            asyncResult.AsyncWaitHandle.WaitOne();
-            string soapResult;
-            using (WebResponse webResponse = webRequest.EndGetResponse(asyncResult))
-            {
-                using (StreamReader rd = new StreamReader(webResponse.GetResponseStream()))
+                var _url = "https://webservice.asistiletisim.com.tr/SmsProxy.asmx";
+                var _action = "https://webservice.asistiletisim.com.tr/SmsProxy/sendSms";
+                XmlDocument soapEnvelopeXml = new XmlDocument();
+                soapEnvelopeXml.LoadXml(xmlCode);
+                HttpWebRequest webRequest = (HttpWebRequest)WebRequest.Create(_url);
+                webRequest.Headers.Add("SOAPAction", _action);
+                webRequest.ContentType = "text/xml;charset=\"utf-8\"";
+                webRequest.Accept = "text/xml";
+                webRequest.Method = "POST";
+                using (Stream stream = webRequest.GetRequestStream())
                 {
-                    soapResult = rd.ReadToEnd();
+                    soapEnvelopeXml.Save(stream);
+                }
+                IAsyncResult asyncResult = webRequest.BeginGetResponse(null, null);
+                asyncResult.AsyncWaitHandle.WaitOne();
+                string soapResult;
+                using (WebResponse webResponse = webRequest.EndGetResponse(asyncResult))
+                {
+                    using (StreamReader rd = new StreamReader(webResponse.GetResponseStream()))
+                    {
+                        soapResult = rd.ReadToEnd();
+                    }
                 }
             }
+            catch (Exception)
+            {
+
+            }
+
+
         }
     }
 

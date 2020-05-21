@@ -104,7 +104,7 @@ namespace MaviSoftServerV1._0
 
         private DateTime mPeriodicGelmeyenSMSKontrolEnd { get; set; }
 
-        int mTimeOut = 3;
+        int mTimeOut = 1;
 
 
 
@@ -301,7 +301,7 @@ namespace MaviSoftServerV1._0
                             mPeriodicPanelHourUpgradeStart = DateTime.Now;
                             if (mPeriodicPanelHourUpgradeStart.ToShortTimeString() == mPeriodicPanelHourUpgradeEnd.ToShortTimeString())
                             {
-                                mPeriodicPanelHourUpgradeEnd = mPeriodicPanelHourUpgradeStart.AddHours(1);
+                                mPeriodicPanelHourUpgradeEnd = mPeriodicPanelHourUpgradeStart.AddHours(mTimeOut);
                                 mPanelProc = CommandConstants.CMD_SND_RTC;
                                 break;
                             }
@@ -764,7 +764,7 @@ namespace MaviSoftServerV1._0
                         var BaslangicTarihSaat = DateTime.Now.ToShortDateString() + " " + mailSettings.Kapi_Grup_Baslangic_Saati.Value.ToLongTimeString();
                         var BitisTarihSaat = DateTime.Now.ToShortDateString() + " " + mailSettings.Kapi_Grup_Bitis_Saati.Value.ToLongTimeString();
                         tDBSQLStr = @"SELECT COUNT(*),PanelSettings.[Panel ID],
-                        PanelSettings.[Panel Name],AccessDatas.[Kapi ID] FROM AccessDatas
+                        PanelSettings.[Panel Name],MIN(AccessDatas.Tarih) AS [İlk Kayıt],MAX(AccessDatas.Tarih) AS [Son Kayıt] FROM AccessDatas
 				        LEFT JOIN PanelSettings ON AccessDatas.[Panel ID]=PanelSettings.[Panel ID]
 				        WHERE AccessDatas.[Gecis Tipi] = 0 AND AccessDatas.[Kart ID]>0";
                         tDBSQLStr += " AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + BaslangicTarihSaat + "',103) ";
@@ -791,18 +791,20 @@ namespace MaviSoftServerV1._0
 
                             tDBSQLStr += ")";
                         }
-                        tDBSQLStr += " GROUP BY PanelSettings.[Panel ID],PanelSettings.[Panel Name],AccessDatas.[Kapi ID]";
+                        tDBSQLStr += " GROUP BY PanelSettings.[Panel ID],PanelSettings.[Panel Name]";
                         tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                         tDBReader = tDBCmd.ExecuteReader();
                         builder.Append("<!DOCTYPE html><html><head><style>.base-table { border: solid 1px #DDEEEE;border-collapse: collapse;border-spacing: 0;font: normal 13px Arial, sans-serif;}.base-table thead th {background-color: #DDEFEF;border: solid 1px #DDEEEE;color: #336B6B;padding: 10px;text-align: left;text-shadow: 1px 1px 1px #fff;}.base-table tbody td {border: solid 1px #DDEEEE;color: #333;padding: 10px;text-shadow: 1px 1px 1px #fff;}</style><title>Gelmeyenler Raporu</title></head><body><h4>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h4></br><h6>" + DateTime.Now.ToLongDateString() + "</h6>");
-                        builder.Append("<table class='base-table'><thead><tr><th>Panel ID</th><th>Panel Adı</th><th>Kapı ID</th><th>Geçiş Sayısı</th></tr></thead><tbody>");
+                        builder.Append("<table class='base-table'><thead><tr><th>Panel ID</th><th>Panel Adı</th><th>İlk Kayıt</th><th>Son Kayıt</th><th>Onaylı Geçiş Sayısı</th></tr></thead><tbody>");
                         bool result = false;
+                        int sum = 0;
                         while (tDBReader.Read())
                         {
                             result = true;
-                            builder.Append("<tr><td>" + (tDBReader[1] as int? ?? default(int)) + "</td><td>" + (tDBReader[2].ToString()) + "</td><td>" + (tDBReader[3] as int? ?? default(int)) + "</td><td>" + (tDBReader[0] as int? ?? default(int)) + "</td></tr>");
+                            sum += (tDBReader[0] as int? ?? default(int));
+                            builder.Append("<tr><td>" + (tDBReader[1] as int? ?? default(int)) + "</td><td>" + (tDBReader[2].ToString()) + "</td><td>" + (tDBReader[3].ToString()) + "</td><td>" + (tDBReader[4].ToString()) + "</td><td>" + (tDBReader[0] as int? ?? default(int)) + "</td></tr>");
                         }
-                        builder.Append("</tbody></table></body></html>");
+                        builder.Append("</tbody><tfoot style='text - align:center'><tr><td></td><td></td><td></td><td><h3><b>Toplam:</b></h3></td><td>" + sum + "</td></tr></tfoot></table></body></html>");
                         if (result == true)
                         {
                             return builder.ToString();

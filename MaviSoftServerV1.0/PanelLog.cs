@@ -91,6 +91,13 @@ namespace MaviSoftServerV1._0
 
         private DateTime mReceiveTimeEnd { get; set; }
 
+
+        private DateTime mStatusStartTime { get; set; }
+
+        private DateTime mStatusEndTime { get; set; }
+
+        private int mStatusChekcTime { get; set; }
+
         public string mMailSendTime { get; set; }
 
         public ushort mActive { get; set; }
@@ -125,7 +132,7 @@ namespace MaviSoftServerV1._0
 
         private string DoorStatusStr = "";
 
-        int mMailRetryCount = 0;
+        int mMailAndSmsRetryCount = 0;
 
         List<Panel> PanelListesi = new List<Panel>();
 
@@ -145,8 +152,9 @@ namespace MaviSoftServerV1._0
 
         public int CaptureCount { get; set; }
 
-        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, int TPanelModel, List<Panel> Panels, FrmMain parentForm)
+        public PanelLog(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, int TPanelModel, List<Panel> Panels, string PanelName, FrmMain parentForm)
         {
+            mStatusChekcTime = 10;
             mMemIX = MemIX;
             mActive = TActive;
             mTimeOut = JTimeOut;
@@ -158,8 +166,11 @@ namespace MaviSoftServerV1._0
             mParentForm = parentForm;
             PanelListesi = Panels;
             mPanelModel = TPanelModel;
+            mPanelName = PanelName;
             mReceiveTimeStart = DateTime.Now;
             snapShotTime = DateTime.Now;
+            mStatusStartTime = DateTime.Now;
+            mStatusEndTime = mStatusStartTime.AddMinutes(mStatusChekcTime);
             snapShotCardID = "0";
             CaptureCount = 0;
             if (mTimeOut < 3 && mTimeOut > 60)
@@ -280,12 +291,16 @@ namespace MaviSoftServerV1._0
                         break;
                     case CommandConstants.CMD_PORT_CLOSE:
                         {
-                            if (mMailRetryCount == 0)
+                            mStatusStartTime = DateTime.Now;
+                            if (mMailAndSmsRetryCount == 0)
                             {
-                                SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
-                                SendSms sendSms = new SendSms(new SmsSettings());
-                                sendSms.PanelBaglantiDurumu(mPanelNo + " Nolu Panel İle Bağlantı Sağlanamıyor.");
-                                mMailRetryCount++;
+                                if (mStatusStartTime >= mStatusEndTime)
+                                {
+                                    SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu  " + mPanelName + " İsimli Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
+                                    SendSms sendSms = new SendSms(new SmsSettings());
+                                    sendSms.PanelBaglantiDurumu(mPanelNo + " Nolu " + mPanelName + " İsimli Panel İle Bağlantı Sağlanamıyor.");
+                                    mMailAndSmsRetryCount++;
+                                }
                             }
 
                             if (mPanelClientLog.Connected == true)
@@ -306,7 +321,9 @@ namespace MaviSoftServerV1._0
                             }
 
                             Thread.Sleep(5);
-                            mMailRetryCount = 0;//Panel Bağlantısı Kesildiğinde Mail Atma Sayısı Kontrolü
+                            mMailAndSmsRetryCount = 0;//Panel Bağlantısı Kesildiğinde Mail ve SMS Atma Sayısı Kontrolü
+                            mStatusStartTime = DateTime.Now;//Panel Bağlantısının Kontrolü
+                            mStatusEndTime = mStatusStartTime.AddMinutes(mStatusChekcTime);//Panel Bağlantısının Kontrolü
                             if (mPanelClientLog.Connected == false && mPanelClientLog.LingerState.Enabled == false)
                             {
                                 mLogProc = CommandConstants.CMD_PORT_CLOSE;

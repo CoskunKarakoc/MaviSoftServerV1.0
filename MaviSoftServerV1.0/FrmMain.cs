@@ -50,6 +50,8 @@ namespace MaviSoftServerV1._0
             public ushort SndRcvTimeout;
             public int PanelNo;
             public int PanelModel;
+            public string PanelName;
+
         }
 
         public FrmMain()
@@ -131,6 +133,7 @@ namespace MaviSoftServerV1._0
                                 SPorts[i].TCPPortNo = MReader["Panel TCP Port"] as int? ?? default(int);
                                 SPorts[i].MACAddress = MReader["Seri No"] as int? ?? default(int);
                                 SPorts[i].PanelModel = MReader["Panel Model"] as int? ?? default(int);
+                                SPorts[i].PanelName = MReader["Panel Name"].ToString();
                                 SPorts[i].ConnTimeout = 3;
                                 SPorts[i].SndRcvTimeout = 3;
 
@@ -148,10 +151,10 @@ namespace MaviSoftServerV1._0
                     {
                         if (SPorts[j].Active == 1)
                         {
-                            Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, this);
+                            Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, SPorts[j].PanelName, this);
                             Panels[j].StartPanel();
                             AktifPanelListesi.Add(Panels[j]);
-                            LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, AktifPanelListesi, this);
+                            LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, AktifPanelListesi, SPorts[j].PanelName, this);
                             LogPanels[j].StartPanel();
                             AktifPanelLogListesi.Add(LogPanels[j]);
                         }

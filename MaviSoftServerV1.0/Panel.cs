@@ -162,7 +162,7 @@ namespace MaviSoftServerV1._0
         int mMailRetryCount = 0;
 
 
-        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, int TPanelModel, FrmMain parentForm)
+        public Panel(ushort MemIX, ushort TActive, int TPanelNo, ushort JTimeOut, string TIPAdress, int TMACAdress, int TCPPortOne, int TCPPortTwo, int TPanelModel, string PanelName, FrmMain parentForm)
         {
             mMemIX = MemIX;
             mActive = TActive;
@@ -174,6 +174,7 @@ namespace MaviSoftServerV1._0
             mPanelNo = TPanelNo;
             mParentForm = parentForm;
             mPanelModel = TPanelModel;
+            mPanelName = PanelName;
             mTaskTimeOut = 3;
             if (mTimeOut < 3 && mTimeOut > 60)
             {
@@ -302,13 +303,13 @@ namespace MaviSoftServerV1._0
                                 SyncUpdateScreen(CurWinStr, System.Drawing.Color.Yellow);
                                 PreWinStr = CurWinStr;
                             }
-                            if (mMailRetryCount == 0)
-                            {
-                                SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
-                                SendSms sendSms = new SendSms(new SmsSettings());
-                                sendSms.PanelBaglantiDurumu(mPanelNo + " Nolu Panel İle Bağlantı Sağlanamıyor.");
-                                mMailRetryCount++;
-                            }
+                            //if (mMailRetryCount == 0)
+                            //{
+                            //    SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu "+mPanelName+" İsimli Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
+                            //    SendSms sendSms = new SendSms(new SmsSettings());
+                            //    sendSms.PanelBaglantiDurumu(mPanelNo + " Nolu "+mPanelName+" İsimli Panel İle Bağlantı Sağlanamıyor.");
+                            //    mMailRetryCount++;
+                            //}
 
                             if (mPanelClient.Connected == true)
                             {
@@ -2292,13 +2293,20 @@ namespace MaviSoftServerV1._0
                                                 tDBReader4 = tDBCmd4.ExecuteReader();
                                                 if (tDBReader4.Read())
                                                 {
-                                                    if ((tDBReader4["Grup Gecis Sayisi"] as int? ?? default(int)) > -1)
+                                                    if ((tDBReader3["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 0 || (tDBReader3["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 7)
                                                     {
-                                                        TSndStr.Append(ConvertToTypeInt((tDBReader4["Grup Gecis Sayisi"] as int? ?? default(int)), "D3"));
+                                                        TSndStr.Append("000");
                                                     }
                                                     else
                                                     {
-                                                        TSndStr.Append("000");
+                                                        if ((tDBReader4["Grup Gecis Sayisi"] as int? ?? default(int)) > -1)
+                                                        {
+                                                            TSndStr.Append(ConvertToTypeInt((tDBReader4["Grup Gecis Sayisi"] as int? ?? default(int)), "D3"));
+                                                        }
+                                                        else
+                                                        {
+                                                            TSndStr.Append("000");
+                                                        }
                                                     }
                                                     if ((tDBReader3["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 0 || (tDBReader3["Gecis Sinirlama Tipi"] as int? ?? default(int)) == 7)
                                                     {
