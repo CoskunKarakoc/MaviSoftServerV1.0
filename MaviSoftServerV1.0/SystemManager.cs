@@ -70,6 +70,10 @@ namespace MaviSoftServerV1._0
 
         private DateTime mTaskListEndTime { get; set; }
 
+        private DateTime mVisitorDeleteStartTime { get; set; }
+
+        private DateTime mVisitorDeleteEndTime { get; set; }
+
         public SqlConnection mDBConn { get; set; }
 
         public string mDBSQLStr { get; set; }
@@ -114,6 +118,8 @@ namespace MaviSoftServerV1._0
             mLogPanelList = logPanels;
             mParentForm = frmMain;
             mTaskListStartTime = DateTime.Now;
+            mVisitorDeleteStartTime = DateTime.Now;
+            mVisitorDeleteEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 9, 20, 0, 0);
             mTaskListEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 3, 0, 0, 0);
         }
 
@@ -274,6 +280,14 @@ namespace MaviSoftServerV1._0
                             {
                                 ClearTaskList();
                                 mTaskListEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 3, 0, 0, 0);
+                            }
+
+                            /*Her gün saat 00:00'da "Tüm Ziyaretçiler" panellerlerden siliniyor.*/
+                            mVisitorDeleteStartTime = DateTime.Now;
+                            if (mVisitorDeleteStartTime.ToShortTimeString() == mVisitorDeleteEndTime.ToShortTimeString())
+                            {
+                                DeleteAllVisitor();
+                                mVisitorDeleteEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, 0);
                             }
 
 
@@ -959,7 +973,7 @@ namespace MaviSoftServerV1._0
                             int TRetInt;
                             string tDBSQLStr;
                             SqlCommand tDBCmd;
-                            mDBSQLStr = "UPDATE TaskList SET [Durum Kodu] = " + (int)CTaskStates.TASK_ERROR + " WHERE [Panel No] = " + panel.mPanelNo;
+                            mDBSQLStr = "UPDATE TaskList SET [Durum Kodu] = " + (int)CTaskStates.TASK_ERROR + " WHERE [Panel No] = " + panel.mPanelNo + " AND [Durum Kodu]<>2";
                             mDBCmd = new SqlCommand(mDBSQLStr, mDBConn);
                             TRetInt = mDBCmd.ExecuteNonQuery();
                             if (TRetInt < 0)
@@ -1046,6 +1060,48 @@ namespace MaviSoftServerV1._0
             }
         }
 
+        private void DeleteAllVisitor()
+        {
+            int TRetInt;
+            string tDBSQLStr;
+            object TLockObj = new object();
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            List<int> visitorID = new List<int>();
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
 
+                    try
+                    {
+                        mDBConn.Open();
+                        tDBSQLStr = "SELECT ID FROM Users WHERE [Kullanici Tipi]=1";
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBReader = tDBCmd.ExecuteReader();
+                        while (tDBReader.Read())
+                        {
+                            visitorID.Add((tDBReader[0] as int? ?? default(int)));
+                        }
+                        foreach (var id in visitorID)
+                        {
+                            foreach (var panel in mPanelsList)
+                            {
+                                tDBSQLStr += "INSERT INTO TaskList ([Gorev Kodu], [IntParam 1], [Panel No], [Durum Kodu], Tarih, [Kullanici Adi], [Tablo Guncelle],[Deneme Sayisi])" +
+                                                                       " VALUES(" +
+                                                                       (int)CommandConstants.CMD_ERS_USER + "," + id + "," + panel.mPanelNo + "," + 1 + "," + "'" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "'," + "'System'," + 1 + "," + 1 + ") ";
+                            }
+
+                        }
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        TRetInt = tDBCmd.ExecuteNonQuery();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+            }
+        }
     }
 }

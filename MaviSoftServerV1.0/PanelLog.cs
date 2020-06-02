@@ -565,6 +565,7 @@ namespace MaviSoftServerV1._0
                                 string temp = DateTime.Now.Year.ToString();
                                 year = Convert.ToInt32(temp.Substring(2, 2));
                             }
+                            
                             //year = Convert.ToInt32(TmpReturnStr.Substring(TPos + 35, 2));
                             if ((int.TryParse(TmpReturnStr.Substring(TPos + 37, 2), out hour)) == false)
                                 hour = DateTime.Now.Hour;
@@ -785,31 +786,39 @@ namespace MaviSoftServerV1._0
                         }
                         lock (TLockObj)
                         {
-                            using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                            try
                             {
-                                mDBConn.Open();
-                                if (TAccessResult == 4)
-                                    TUserKayitNo = 1;
-
-                                tDBSQLStr = @"INSERT INTO AccessDatas " +
-                                   "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
-                                   "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
-                                   "[User Kayit No],Kontrol,[Canli Resim])" +
-                                   "VALUES " +
-                                   "(" +
-                                   TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
-                                   TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
-                                   (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
-                                   TUserKayitNo + "," + 0 + "," + "'" + Snapshot + "'" + ")";
-                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
-                                TRetInt = tDBCmd.ExecuteNonQuery();
-                                if (TRetInt <= 0)
+                                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                                 {
-                                    return false;
+                                    mDBConn.Open();
+                                    if (TAccessResult == 4)
+                                        TUserKayitNo = 1;
+
+                                    tDBSQLStr = @"INSERT INTO AccessDatas " +
+                                       "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
+                                       "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
+                                       "[User Kayit No],Kontrol,[Canli Resim])" +
+                                       "VALUES " +
+                                       "(" +
+                                       TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
+                                       TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
+                                       (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
+                                       TUserKayitNo + "," + 0 + "," + "'" + Snapshot + "'" + ")";
+                                    tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                    TRetInt = tDBCmd.ExecuteNonQuery();
+                                    if (TRetInt <= 0)
+                                    {
+                                        return false;
+                                    }
+                                    SendSms sendSms = new SendSms(new SmsSettings());
+                                    sendSms.HerGirisCikistaMesajGonder(TCardID, TUsersID, (TDoorType - 1));
                                 }
-                                SendSms sendSms = new SendSms(new SmsSettings());
-                                sendSms.HerGirisCikistaMesajGonder(TCardID, TUsersID, (TDoorType - 1));
                             }
+                            catch (Exception)
+                            {
+
+                            }
+                         
                         }
                     }
                     break;
