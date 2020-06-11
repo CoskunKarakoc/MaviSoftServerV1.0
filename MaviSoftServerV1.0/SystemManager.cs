@@ -275,16 +275,18 @@ namespace MaviSoftServerV1._0
 
 
                             /*Her gün saat 03:00' da TaskList Table temizleme kontrolü*/
+                            /*"AccessDatasTemps" veritabanından siliniyor.*/
                             mTaskListStartTime = DateTime.Now;
                             if (mTaskListStartTime.ToShortTimeString() == mTaskListEndTime.ToShortTimeString())
                             {
                                 ClearTaskList();
+                                DeleteAccessDatasTempsLog();
                                 mTaskListEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 3, 0, 0, 0);
                             }
 
-                            /*Her gün saat 00:00'da "Tüm Ziyaretçiler" panellerlerden siliniyor.*/
+                            /*Her gün saat 00:00'da "Tüm Ziyaretçiler" panellerlerden siliniyor ve "AccessDatasTemp" veritabanından siliniyor.*/
                             mVisitorDeleteStartTime = DateTime.Now;
-                            if (mVisitorDeleteStartTime.ToShortTimeString() == mVisitorDeleteEndTime.ToShortTimeString())
+                            if (mVisitorDeleteStartTime.ToShortTimeString() == mVisitorDeleteEndTime.ToShortTimeString() && mVisitorDeleteStartTime.Second == 0)
                             {
                                 DeleteAllVisitor();
                                 mVisitorDeleteEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, 0);
@@ -1103,5 +1105,63 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
+
+
+        private void DeleteAccessDatasTempsLog()
+        {
+            int TRetInt;
+            string tDBSQLStr;
+            string tDBSQLStr2 = "";
+            object TLockObj = new object();
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            List<int> kayitNo = new List<int>();
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    try
+                    {
+                        mDBConn.Open();
+                        tDBSQLStr = "SELECT * FROM AccessDatasTemps";
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBReader = tDBCmd.ExecuteReader();
+                        while (tDBReader.Read())
+                        {
+                            if ((tDBReader["Kod"] as int? ?? default(int)) >= 20 && (tDBReader["Kod"] as int? ?? default(int)) <= 27)
+                            {
+                                if ((tDBReader["Kontrol"] as int? ?? default(int)) == 1)
+                                {
+                                    kayitNo.Add(tDBReader["Kayit No"] as int? ?? default(int));
+                                }
+                            }
+                            else
+                            {
+                                kayitNo.Add(tDBReader["Kayit No"] as int? ?? default(int));
+                            }
+
+                        }
+
+                        if (kayitNo.Count > 0 && kayitNo != null)
+                        {
+                            tDBSQLStr2 = "";
+                            foreach (var item in kayitNo)
+                            {
+                                tDBSQLStr2 += "DELETE FROM AccessDatasTemps WHERE [Kayit No]=" + item.ToString();
+                            }
+
+                            tDBCmd = new SqlCommand(tDBSQLStr2, mDBConn);
+                            TRetInt = tDBCmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+            }
+        }
+
+
     }
 }
