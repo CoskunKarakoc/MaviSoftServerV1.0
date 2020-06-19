@@ -466,7 +466,13 @@ namespace MaviSoftServerV1._0
                             while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
                             {
                                 ClearSocketBuffers(mPanelClient, null);
-                                SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+
+                                if (!SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType))
+                                {
+                                    mTransferCompleted = false;
+                                    break;
+                                }
+
                                 mStartTime = DateTime.Now;
                                 mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
                                 do
@@ -614,8 +620,11 @@ namespace MaviSoftServerV1._0
                             {
 
                                 ClearSocketBuffers(mPanelClient, null);
-
-                                SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+                                if (!SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType))
+                                {
+                                    mTransferCompleted = false;
+                                    break;
+                                }
 
                                 mStartTime = DateTime.Now;
                                 mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
@@ -947,7 +956,7 @@ namespace MaviSoftServerV1._0
             try
             {
                 var netStream = TClient.GetStream();
-                if (netStream.CanWrite)
+                if (netStream.CanWrite && !TSndStr.Contains("ERR"))
                 {
                     TSndBytes = Encoding.UTF8.GetBytes(TSndStr.ToString());
                     netStream.Write(TSndBytes, 0, TSndBytes.Length);
@@ -1225,6 +1234,16 @@ namespace MaviSoftServerV1._0
                                     TSndStr.Append("**\r");
                                     mTaskTimeOut = 3;
                                 }
+                                else
+                                {
+                                    TSndStr.Clear();
+                                    TSndStr.Append("ERR");
+                                }
+                            }
+                            else
+                            {
+                                TSndStr.Clear();
+                                TSndStr.Append("ERR");
                             }
                         }
                     }
@@ -1550,7 +1569,7 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
-                                TSndStr.Remove(1, TSndStr.Length);
+                                TSndStr.Clear();
                                 TSndStr.Append("ERR");
                             }
                         }
@@ -1981,7 +2000,7 @@ namespace MaviSoftServerV1._0
                         }
                         else
                         {
-                            TSndStr.Remove(1, TSndStr.Length);
+                            TSndStr.Clear();
                             TSndStr.Append("ERR");
                         }
                     }
@@ -2165,7 +2184,7 @@ namespace MaviSoftServerV1._0
                         }
                         else
                         {
-                            TSndStr.Remove(1, TSndStr.Length);
+                            TSndStr.Clear();
                             TSndStr.Append("ERR");
                         }
                     }
@@ -2539,10 +2558,19 @@ namespace MaviSoftServerV1._0
                                             }
                                         }
                                     }
-
+                                    else
+                                    {
+                                        TSndStr.Clear();
+                                        TSndStr.Append("ERR");
+                                    }
 
                                 }
+                                else
+                                {
 
+                                    TSndStr.Clear();
+                                    TSndStr.Append("ERR");
+                                }
                             }
                             else
                             {
@@ -2744,6 +2772,7 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
+                                TSndStr.Clear();
                                 TSndStr.Append("ERR");
                             }
                         }
@@ -2768,8 +2797,7 @@ namespace MaviSoftServerV1._0
             {
                 lock (TLockObj)
                 {
-                    if (mDBConn.State != ConnectionState.Open)
-                        mDBConn.Open();
+
                     using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
                     {
                         mDBConn.Open();
@@ -2806,7 +2834,7 @@ namespace MaviSoftServerV1._0
                         }
                         else
                         {
-                            TSndStr.Remove(1, TSndStr.Length);
+                            TSndStr.Clear();
                             TSndStr.Append("ERR");
                         }
                     }
@@ -3070,7 +3098,7 @@ namespace MaviSoftServerV1._0
                         }
                         else
                         {
-                            TSndStr.Remove(1, TSndStr.Length);
+                            TSndStr.Clear();
                             TSndStr.Append("ERR");
                         }
                     }
@@ -3194,7 +3222,7 @@ namespace MaviSoftServerV1._0
                         }
                         else
                         {
-                            TSndStr.Remove(1, TSndStr.Length);
+                            TSndStr.Clear();
                             TSndStr.Append("ERR");
                         }
                     }
@@ -3250,6 +3278,11 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append("0000000000000000");
                             TSndStr.Append("**\r");
                             mTaskTimeOut = 3;
+                        }
+                        else
+                        {
+                            TSndStr.Clear();
+                            TSndStr.Append("ERR");
                         }
                     }
                 }
@@ -3356,6 +3389,11 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("**\r");
                             mTaskTimeOut = 3;
+                        }
+                        else
+                        {
+                            TSndStr.Clear();
+                            TSndStr.Append("ERR");
                         }
                     }
                 }
@@ -3482,6 +3520,11 @@ namespace MaviSoftServerV1._0
                             }
                             TSndStr.Append("**\r");
                             mTaskTimeOut = 3;
+                        }
+                        else
+                        {
+                            TSndStr.Clear();
+                            TSndStr.Append("ERR");
                         }
                     }
                 }
@@ -3764,6 +3807,11 @@ namespace MaviSoftServerV1._0
                                     mTaskTimeOut = 3;
                                 }
                             }
+                            else
+                            {
+                                TSndStr.Clear();
+                                TSndStr.Append("ERR");
+                            }
                         }
                     }
                 }
@@ -3992,7 +4040,7 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
-                                TSndStr.Remove(1, TSndStr.Length);
+                                TSndStr.Clear();
                                 TSndStr.Append("ERR");
                             }
                         }
@@ -4228,6 +4276,11 @@ namespace MaviSoftServerV1._0
                                     mTaskTimeOut = 3;
                                 }
                             }
+                            else
+                            {
+                                TSndStr.Clear();
+                                TSndStr.Append("ERR");
+                            }
                         }
                     }
                 }
@@ -4351,7 +4404,7 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
-                                TSndStr.Remove(1, TSndStr.Length);
+                                TSndStr.Clear();
                                 TSndStr.Append("ERR");
                             }
                         }
@@ -4587,6 +4640,11 @@ namespace MaviSoftServerV1._0
                                     mTaskTimeOut = 3;
                                 }
                             }
+                            else
+                            {
+                                TSndStr.Clear();
+                                TSndStr.Append("ERR");
+                            }
                         }
                     }
                 }
@@ -4710,7 +4768,7 @@ namespace MaviSoftServerV1._0
                             }
                             else
                             {
-                                TSndStr.Remove(1, TSndStr.Length);
+                                TSndStr.Clear();
                                 TSndStr.Append("ERR");
                             }
                         }

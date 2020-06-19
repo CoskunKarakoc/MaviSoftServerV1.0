@@ -148,7 +148,7 @@ namespace MaviSoftServerV1._0
                         i++;
                     }
 
-                    for (ushort j = 0; j <= (ushort)TCONST.MAX_PANEL; j++)
+                    for (ushort j = 0; j <= (ushort)TCONST.MAX_PANEL; j++)//for (ushort j = 1; j <=1; j++)
                     {
                         if (SPorts[j].Active == 1)
                         {
