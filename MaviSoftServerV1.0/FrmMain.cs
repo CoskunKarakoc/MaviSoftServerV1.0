@@ -8,6 +8,7 @@ namespace MaviSoftServerV1._0
 {
     public partial class FrmMain : Form
     {
+
         public SqlConnection MConn { get; set; }
 
         public List<Panel> AktifPanelListesi;
@@ -20,21 +21,21 @@ namespace MaviSoftServerV1._0
 
         public SqlDataReader MReader { get; set; }
 
-        public Label[] lblIP = new Label[201];
+        public Label[] lblIP = new Label[(int)TCONST.MAX_PANEL + 1];
 
-        public Label[] lblMsj = new Label[201];
+        public Label[] lblMsj = new Label[(int)TCONST.MAX_PANEL + 1];
 
-        public Label[] lblMsjLog = new Label[201];
+        public Label[] lblMsjLog = new Label[(int)TCONST.MAX_PANEL + 1];
 
         public Label lbl;
 
         public Label denemeLab;
 
-        public S_PORTS[] SPorts = new S_PORTS[201];
+        public S_PORTS[] SPorts = new S_PORTS[(int)TCONST.MAX_PANEL + 1];
 
-        public Panel[] Panels = new Panel[201];
+        public Panel[] Panels = new Panel[(int)TCONST.MAX_PANEL + 1];
 
-        public PanelLog[] LogPanels = new PanelLog[201];
+        public PanelLog[] LogPanels = new PanelLog[(int)TCONST.MAX_PANEL + 1];
 
         public SystemManager PanelOuther;
 
