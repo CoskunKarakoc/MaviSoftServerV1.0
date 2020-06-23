@@ -7421,7 +7421,7 @@ namespace MaviSoftServerV1._0
                                         {
                                             mDBConn.Open();
                                             tDBSQLStr = @"SELECT * FROM Users " +
-                                          "WHERE [Kart ID] = '" + TCardID + "' " +
+                                            "WHERE [Kart ID] = '" + TCardID + "' OR [Kart ID 2]='" + TCardID + "' OR [Kart ID 3]='" + TCardID + "'" +
                                           "ORDER BY [Kayit No]";
                                             tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
                                             tDBReader = tDBCmd.ExecuteReader();
