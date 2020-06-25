@@ -2865,11 +2865,22 @@ namespace MaviSoftServerV1._0
             /*14*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_ERSALL_USER)
             {
-                TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
-                TSndStr.Append(mPanelSerialNo.ToString("X4"));
-                TSndStr.Append(mPanelNo.ToString("D3"));
-                TSndStr.Append("**\r");
-                mTaskTimeOut = 30;
+                if (mPanelModel == (int)PanelModel.Panel_1010)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                    mTaskTimeOut = 30;
+                }
+                else
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                    mTaskTimeOut = 30;
+                }
             }
             /*15*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOGCOUNT)
