@@ -2,8 +2,8 @@
 {
     public static class SqlServerAdress
     {
-        public static string Adres = "data source = .; initial catalog = MW301_DB25; integrated security = True; MultipleActiveResultSets = True;";
-
+        //public static string Adres = "data source = .; initial catalog = MW301_DB25; integrated security = True; MultipleActiveResultSets = True;";
+        public static string Adres = "data source = .; initial catalog = MW301_DB25_WEB; integrated security = True; MultipleActiveResultSets = True;";
         public static string GetAdress()
         {
             return Adres;

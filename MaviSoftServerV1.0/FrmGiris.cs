@@ -41,7 +41,8 @@ namespace MaviSoftServerV1._0
             else
             {
 
-                SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
+                //SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
+                SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25_WEB; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
                 SqlServerAdress.SetAdres(SqlAdress);
                 using (connection = new SqlConnection(SqlAdress))
                 {
