@@ -3073,11 +3073,11 @@ namespace MaviSoftServerV1._0
 
                             if (tDBReader["Aktif"] as bool? ?? default(bool) == true)
                             {
-                                TSndStr.Append("0");
+                                TSndStr.Append("1");
                             }
                             else
                             {
-                                TSndStr.Append("1");
+                                TSndStr.Append("0");
                             }
                             TSndStr.Append(ConvertToTypeTime(tDBReader["Saat 1"] as DateTime? ?? default(DateTime), "D2"));
                             TSndStr.Append(ConvertToTypeTime(tDBReader["Saat 2"] as DateTime? ?? default(DateTime), "D2"));
