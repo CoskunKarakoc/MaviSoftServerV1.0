@@ -146,6 +146,8 @@ namespace MaviSoftServerV1._0
 
         public Queue FireAndAlarmQueue = new Queue();
 
+        public Queue GlobalInterlockQueue = new Queue();
+
         private string CurWinStr = " ";
 
         private string PreWinStr = "!";
@@ -382,6 +384,13 @@ namespace MaviSoftServerV1._0
                                 mLogProc = CommandConstants.CMD_SND_FIREANDALARM;
                                 break;
                             }
+
+                            if (GlobalInterlockQueue.Count > 0)
+                            {
+                                mLogProc = CommandConstants.CMD_SND_GLOBALINTERLOCK;
+                                break;
+                            }
+
                         }
                         break;
                     case CommandConstants.CMD_SND_GLOBALDATAUPDATE:
@@ -429,6 +438,26 @@ namespace MaviSoftServerV1._0
                             if (mPanelModel != (int)PanelModel.Panel_1010)
                             {
                                 if (SendFireAndAlarmForPanel(mPanelClientLog))
+                                {
+                                    mLogProc = CommandConstants.CMD_TASK_LIST;
+                                }
+                                else
+                                {
+                                    mLogProc = CommandConstants.CMD_TASK_LIST;
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                mLogProc = CommandConstants.CMD_TASK_LIST;
+                            }
+                        }
+                        break;
+                    case CommandConstants.CMD_SND_GLOBALINTERLOCK:
+                        {
+                            if (mPanelModel != (int)PanelModel.Panel_1010)
+                            {
+                                if (SendGlobalInterlockForPanel(mPanelClientLog))
                                 {
                                     mLogProc = CommandConstants.CMD_TASK_LIST;
                                 }
@@ -526,6 +555,15 @@ namespace MaviSoftServerV1._0
                     mTaskType = (int)CommandConstants.CMD_ADD_FIREANDALARM;
                     return true;
                 }
+
+                TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_ADD_GLOBALINTERLOCK));
+                if (TPos > -1)
+                {
+                    TReturnLogStr = TRcvData;
+                    mTaskType = (int)CommandConstants.CMD_ADD_GLOBALINTERLOCK;
+                    return true;
+                }
+
 
                 TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_RCV_DOORSTATUS));
                 if (TPos > -1)
@@ -1119,6 +1157,36 @@ namespace MaviSoftServerV1._0
                             }
                         }
                     }
+                case CommandConstants.CMD_ADD_GLOBALINTERLOCK:
+                    {
+                        //SyncUpdateScreen("GLOBAL DATA", System.Drawing.Color.Green);
+                        object obj = new object();
+                        lock (obj)
+                        {
+                            try
+                            {
+                                foreach (var logPanel in LogPanelListesi)
+                                {
+                                    if (logPanel.mPanelModel != (int)PanelModel.Panel_1010)
+                                    {
+                                        if (logPanel.mPanelNo != mPanelNo)
+                                        {
+                                            if (!logPanel.GlobalInterlockQueue.Contains(TmpReturnStr))
+                                            {
+                                                logPanel.GlobalInterlockQueue.Enqueue(TmpReturnStr);
+                                            }
+                                        }
+                                    }
+                                }
+                                return true;
+                            }
+                            catch (Exception)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                    break;
                 default:
                     break;
             }
@@ -1302,6 +1370,38 @@ namespace MaviSoftServerV1._0
                 else
                 {
                     FireAndAlarmQueue.Enqueue(SendStr);
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Global Interlock Göndermek İşlemi
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <returns></returns>
+        public bool SendGlobalInterlockForPanel(TcpClient TClient)
+        {
+            byte[] TSndBytes;
+
+            try
+            {
+                string SendStr = GlobalInterlockQueue.Dequeue().ToString();
+                var netStream = TClient.GetStream();
+                if (netStream.CanWrite)
+                {
+                    TSndBytes = Encoding.UTF8.GetBytes(SendStr.ToString());
+                    netStream.Write(TSndBytes, 0, TSndBytes.Length);
+                    return true;
+                }
+                else
+                {
+                    GlobalInterlockQueue.Enqueue(SendStr);
                     return false;
                 }
             }
@@ -1612,6 +1712,8 @@ namespace MaviSoftServerV1._0
                     return "ICF";
                 case (ushort)CommandConstants.CMD_ADD_FIREANDALARM:
                     return "GBA";
+                case (ushort)CommandConstants.CMD_ADD_GLOBALINTERLOCK:
+                    return "GID";
                 default:
                     return "ERR";
             }
