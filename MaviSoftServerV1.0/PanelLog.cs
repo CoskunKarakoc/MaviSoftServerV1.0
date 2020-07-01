@@ -525,7 +525,6 @@ namespace MaviSoftServerV1._0
                 {
                     TClient.GetStream().Read(RcvBuffer, 0, TSize);
                     TRcvData = Encoding.UTF8.GetString(RcvBuffer);
-                    Debug.WriteLine(TRcvData);
                 }
                 else
                 {
