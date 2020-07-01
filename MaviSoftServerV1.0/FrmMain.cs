@@ -152,16 +152,12 @@ namespace MaviSoftServerV1._0
                     {
                         if (SPorts[j].Active == 1)
                         {
-                            if (j==15)
-                            {
-                                Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, SPorts[j].PanelName, this);
-                                Panels[j].StartPanel();
-                                AktifPanelListesi.Add(Panels[j]);
-                                LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, AktifPanelListesi, SPorts[j].PanelName, this);
-                                LogPanels[j].StartPanel();
-                                AktifPanelLogListesi.Add(LogPanels[j]);
-                            }
-                           
+                            Panels[j] = new Panel(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, SPorts[j].PanelName, this);
+                            Panels[j].StartPanel();
+                            AktifPanelListesi.Add(Panels[j]);
+                            LogPanels[j] = new PanelLog(j, SPorts[j].Active, SPorts[j].PanelNo, SPorts[j].SndRcvTimeout, SPorts[j].IPAdress, SPorts[j].MACAddress, SPorts[j].TCPPortNo, 11010, SPorts[j].PanelModel, AktifPanelListesi, SPorts[j].PanelName, this);
+                            LogPanels[j].StartPanel();
+                            AktifPanelLogListesi.Add(LogPanels[j]);
                         }
                     }
                     foreach (var logPanel in LogPanels)
