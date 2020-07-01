@@ -25,50 +25,102 @@ namespace MaviSoftServerV1._0
 
         private void btnTamam_Click(object sender, EventArgs e)
         {
-            string UserName = txtUserName.Text;
-            string Password = txtSifre.Text;
-            string HostPC = txtHostPC.Text;
-            string SQLServer = txtServer.Text;
-            if (UserName == null || Password == null || HostPC == null || SQLServer == null || UserName == "" || Password == "" || HostPC == "" || SQLServer == "")
+            if (chkBoxDefault.Checked == true)
             {
-                lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
-                lblMessage.Visible = true;
-                txtServer.Clear();
-                txtUserName.Clear();
-                txtSifre.Clear();
-                txtHostPC.Clear();
+                string UserName = txtUserName.Text;
+                string Password = txtSifre.Text;
+                string HostPC = txtHostPC.Text;
+                if (UserName == null || Password == null || HostPC == null || UserName == "" || Password == "" || HostPC == "")
+                {
+                    lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
+                    lblMessage.Visible = true;
+                    txtServer.Clear();
+                    txtUserName.Clear();
+                    txtSifre.Clear();
+                    txtHostPC.Clear();
+                }
+                else
+                {
+
+                    //SqlAdress = "data source = " + HostPC.Trim() + "; initial catalog = MW301_DB25; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
+                    SqlAdress = "data source = " + HostPC.Trim() + "; initial catalog = MW301_DB25_WEB; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
+                    SqlServerAdress.SetAdres(SqlAdress);
+                    using (connection = new SqlConnection(SqlAdress))
+                    {
+                        connection.Open();
+                        try
+                        {
+                            if (connection.State == ConnectionState.Open)
+                            {
+                                AddUpdateAppSettings("Host", HostPC.Trim());
+                                AddUpdateAppSettings("SQLServer", "");
+                                FrmMain form1 = new FrmMain();
+                                form1.Show();
+                                this.Hide();
+                            }
+
+                        }
+                        catch (Exception)
+                        {
+                            lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
+                            lblMessage.Visible = true;
+                            txtUserName.Clear();
+                            txtSifre.Clear();
+                            txtHostPC.Clear();
+                            connection.Dispose();
+                            connection.Close();
+                        }
+                    }
+                }
             }
             else
             {
 
-                //SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
-                SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25_WEB; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
-                SqlServerAdress.SetAdres(SqlAdress);
-                using (connection = new SqlConnection(SqlAdress))
+                string UserName = txtUserName.Text;
+                string Password = txtSifre.Text;
+                string HostPC = txtHostPC.Text;
+                string SQLServer = txtServer.Text;
+                if (UserName == null || Password == null || HostPC == null || SQLServer == null || UserName == "" || Password == "" || HostPC == "" || SQLServer == "")
                 {
-                    connection.Open();
-                    try
-                    {
-                        if (connection.State == ConnectionState.Open)
-                        {
-                            AddUpdateAppSettings("Host", HostPC.Trim());
-                            AddUpdateAppSettings("SQLServer", SQLServer.Trim());
-                            FrmMain form1 = new FrmMain();
-                            form1.Show();
-                            this.Hide();
-                        }
+                    lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
+                    lblMessage.Visible = true;
+                    txtServer.Clear();
+                    txtUserName.Clear();
+                    txtSifre.Clear();
+                    txtHostPC.Clear();
+                }
+                else
+                {
 
-                    }
-                    catch (Exception)
+                    //SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
+                    SqlAdress = "data source = " + HostPC.Trim() + "\\" + SQLServer.Trim() + "; initial catalog = MW301_DB25_WEB; User Id=" + UserName.Trim() + "; Password=" + Password.Trim() + "; MultipleActiveResultSets = True;";
+                    SqlServerAdress.SetAdres(SqlAdress);
+                    using (connection = new SqlConnection(SqlAdress))
                     {
-                        lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
-                        lblMessage.Visible = true;
-                        txtServer.Clear();
-                        txtUserName.Clear();
-                        txtSifre.Clear();
-                        txtHostPC.Clear();
-                        connection.Dispose();
-                        connection.Close();
+                        connection.Open();
+                        try
+                        {
+                            if (connection.State == ConnectionState.Open)
+                            {
+                                AddUpdateAppSettings("Host", HostPC.Trim());
+                                AddUpdateAppSettings("SQLServer", SQLServer.Trim());
+                                FrmMain form1 = new FrmMain();
+                                form1.Show();
+                                this.Hide();
+                            }
+
+                        }
+                        catch (Exception)
+                        {
+                            lblMessage.Text = "Yanlış yada eksik karakter girdiniz!";
+                            lblMessage.Visible = true;
+                            txtServer.Clear();
+                            txtUserName.Clear();
+                            txtSifre.Clear();
+                            txtHostPC.Clear();
+                            connection.Dispose();
+                            connection.Close();
+                        }
                     }
                 }
             }
@@ -76,10 +128,15 @@ namespace MaviSoftServerV1._0
 
         private void chckDegistir_CheckedChanged(object sender, EventArgs e)
         {
-            if (chckDegistir.Checked == true)
+            if (chckDegistir.Checked == true && chkBoxDefault.Checked == false)
             {
                 txtHostPC.Enabled = true;
                 txtServer.Enabled = true;
+            }
+            else if (chckDegistir.Checked == true && chkBoxDefault.Checked == true)
+            {
+                txtHostPC.Enabled = true;
+                txtServer.Enabled = false;
             }
             else
             {
@@ -120,6 +177,20 @@ namespace MaviSoftServerV1._0
         private void FrmGiris_FormClosed(object sender, FormClosedEventArgs e)
         {
             Environment.Exit(0);
+        }
+
+        private void chkBoxDefault_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkBoxDefault.Checked == true)
+            {
+                txtServer.Clear();
+                txtServer.Enabled = false;
+            }
+            else
+            {
+                txtServer.Clear();
+                txtServer.Enabled = true;
+            }
         }
     }
 }

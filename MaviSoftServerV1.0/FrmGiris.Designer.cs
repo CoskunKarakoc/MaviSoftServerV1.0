@@ -42,6 +42,7 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.chckDegistir = new System.Windows.Forms.CheckBox();
+            this.chkBoxDefault = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -80,6 +81,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.chkBoxDefault);
             this.groupBox1.Controls.Add(this.lblMessage);
             this.groupBox1.Controls.Add(this.txtHostPC);
             this.groupBox1.Controls.Add(this.txtServer);
@@ -167,13 +169,24 @@
             // chckDegistir
             // 
             this.chckDegistir.AutoSize = true;
-            this.chckDegistir.Location = new System.Drawing.Point(89, 19);
+            this.chckDegistir.Location = new System.Drawing.Point(73, 19);
             this.chckDegistir.Name = "chckDegistir";
             this.chckDegistir.Size = new System.Drawing.Size(61, 17);
             this.chckDegistir.TabIndex = 0;
             this.chckDegistir.Text = "Değiştir";
             this.chckDegistir.UseVisualStyleBackColor = true;
             this.chckDegistir.CheckedChanged += new System.EventHandler(this.chckDegistir_CheckedChanged);
+            // 
+            // chkBoxDefault
+            // 
+            this.chkBoxDefault.AutoSize = true;
+            this.chkBoxDefault.Location = new System.Drawing.Point(140, 19);
+            this.chkBoxDefault.Name = "chkBoxDefault";
+            this.chkBoxDefault.Size = new System.Drawing.Size(104, 17);
+            this.chkBoxDefault.TabIndex = 8;
+            this.chkBoxDefault.Text = "Default Instance";
+            this.chkBoxDefault.UseVisualStyleBackColor = true;
+            this.chkBoxDefault.CheckedChanged += new System.EventHandler(this.chkBoxDefault_CheckedChanged);
             // 
             // FrmGiris
             // 
@@ -216,5 +229,6 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.CheckBox chckDegistir;
         private System.Windows.Forms.Label lblMessage;
+        private System.Windows.Forms.CheckBox chkBoxDefault;
     }
 }

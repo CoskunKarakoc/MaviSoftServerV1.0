@@ -525,6 +525,7 @@ namespace MaviSoftServerV1._0
                 {
                     TClient.GetStream().Read(RcvBuffer, 0, TSize);
                     TRcvData = Encoding.UTF8.GetString(RcvBuffer);
+                    Debug.WriteLine(TRcvData);
                 }
                 else
                 {
@@ -580,6 +581,17 @@ namespace MaviSoftServerV1._0
                     mTaskType = (int)CommandConstants.CMD_RCV_LOGS;
                     return true;
                 }
+
+                TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_RCV_OLD_LOGS));
+                if (TPos > -1)
+                {
+                    TReturnLogStr = TRcvData;
+                    mTaskType = (int)CommandConstants.CMD_RCV_OLD_LOGS;
+                    SendAnswerOldRCVLOGS(TClient);//Alındığına Dair Cevap
+                    return true;
+                }
+
+
                 else
                 {
                     return false;
@@ -950,6 +962,290 @@ namespace MaviSoftServerV1._0
                         }
                     }
                     break;
+                case CommandConstants.CMD_RCV_OLD_LOGS:
+                    {
+                        try
+                        {
+                            int TLocalBolgeNo = 1;
+                            int TGlobalBolgeNo = 1;
+                            int TMacSerial = 0;
+                            int TPanel = 1;
+                            int TReader = 1;
+                            int TAccessResult = 0;
+                            int TDoorType = 1;
+                            long TUsersID = 0;
+                            string TCardID = "";
+                            string TLPR = "";
+                            int TUserType = 1;
+                            long TUserKayitNo = 0;
+                            long TVisitorKayitNo = 0;
+                            DateTime TDate = new DateTime();
+                            string TmpName = "";
+                            string TmpSurname = "";
+                            string TmpTelefon = "";
+                            int year = 0;
+                            int month = 0;
+                            int day = 0;
+                            int hour = 0;
+                            int minute = 0;
+                            int second = 0;
+                            bool TPictureOk = false;
+                            string Snapshot = "";
+                            if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16) == PanelSerialNo)
+                            {
+                                TMacSerial = Convert.ToInt32(TmpReturnStr.Substring(TPos + 3, 4), 16);
+                                TPanel = Convert.ToInt32(TmpReturnStr.Substring(TPos + 7, 3));
+                                if (TPanel > (int)TCONST.MAX_PANEL || TPanel < 1)
+                                    break;
+
+
+                                TReader = Convert.ToInt32(TmpReturnStr.Substring(TPos + 10, 2));
+                                TAccessResult = Convert.ToInt32(TmpReturnStr.Substring(TPos + 12, 2));
+                                TDoorType = Convert.ToInt32(TmpReturnStr.Substring(TPos + 14, 1));
+                                TUsersID = Convert.ToInt64(TmpReturnStr.Substring(TPos + 15, 6));
+                                TCardID = ClearPreZeros(TmpReturnStr.Substring(TPos + 21, 10));
+                                if ((int.TryParse(TmpReturnStr.Substring(TPos + 31, 2), out day)) == false || day <= 0 || day >= 32)
+                                    day = DateTime.Now.Day;
+                                //day = Convert.ToInt32(TmpReturnStr.Substring(TPos + 31, 2));
+                                if ((int.TryParse(TmpReturnStr.Substring(TPos + 33, 2), out month)) == false || month <= 0 || month >= 13)
+                                    month = DateTime.Now.Month;
+                                //month = Convert.ToInt32(TmpReturnStr.Substring(TPos + 33, 2));
+                                if ((int.TryParse(TmpReturnStr.Substring(TPos + 35, 2), out year)) == false || year <= -1)
+                                {
+                                    string temp = DateTime.Now.Year.ToString();
+                                    year = Convert.ToInt32(temp.Substring(2, 2));
+                                }
+
+                                //year = Convert.ToInt32(TmpReturnStr.Substring(TPos + 35, 2));
+                                if ((int.TryParse(TmpReturnStr.Substring(TPos + 37, 2), out hour)) == false)
+                                    hour = DateTime.Now.Hour;
+                                //hour = Convert.ToInt32(TmpReturnStr.Substring(TPos + 37, 2));
+                                if ((int.TryParse(TmpReturnStr.Substring(TPos + 39, 2), out minute)) == false)
+                                    minute = DateTime.Now.Minute;
+                                // minute = Convert.ToInt32(TmpReturnStr.Substring(TPos + 39, 2));
+                                if ((int.TryParse(TmpReturnStr.Substring(TPos + 41, 2), out second)) == false)
+                                    second = DateTime.Now.Second;
+                                //second = Convert.ToInt32(TmpReturnStr.Substring(TPos + 41, 2));
+                                TDate = new DateTime(int.Parse("20" + year), month, day, hour, minute, second);
+                                if (!IsDate(TDate.ToString("yyyy-MM-dd HH:mm:ss")))
+                                    TDate = DateTime.Now;
+
+                                if (TUsersID > 100000 || TUsersID < 0)
+                                    break;
+
+
+                                TCardID = FindUserCardID(TUsersID);
+
+                                if (TmpReturnStr.Substring(TPos + 43, 10) != "**********" && TmpReturnStr.Substring(TPos + 43, 10) != "")
+                                    TLPR = TmpReturnStr.Substring(TPos + 43, 10);
+                                else
+                                    TLPR = "";
+
+                                if (TAccessResult <= 4)
+                                {
+                                    if (TLPR.Trim() == "")
+                                    {
+                                        if (int.Parse(TCardID) == 0 || TCardID.Trim() == "")
+                                            break;
+                                    }
+                                }
+
+                                if (TAccessResult == 4)
+                                {
+                                    TUsersID = 0;
+                                }
+
+                                if (TAccessResult <= 10)
+                                {
+                                    if (TReader > 16 || TReader < 1)
+                                        break;
+                                }
+
+                                if (TAccessResult < 0)
+                                {
+                                    break;
+                                }
+
+                                if (TAccessResult > 13 && TAccessResult < 20)
+                                {
+                                    break;
+                                }
+
+                                if (TAccessResult < 20)
+                                {
+                                    if (TDoorType > 2 || TDoorType < 1)
+                                        break;
+                                }
+
+                                if (TAccessResult >= 26 && TAccessResult <= 27)
+                                {
+                                    if (int.Parse(TCardID) == 0 || TCardID.Trim() == "")
+                                    {
+                                        TCardID = FindUserCardID(TUsersID);
+                                    }
+                                }
+
+                                if (IsDate(TDate.ToString()) == false)
+                                {
+                                    break;
+                                }
+
+                                lock (TLockObj)
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        tDBSQLStr = "SELECT TOP 1 * FROM ProgInit ";
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        tDBReader = tDBCmd.ExecuteReader();
+                                        if (tDBReader.Read())
+                                        {
+                                            if (TAccessResult == 2)
+                                                if ((tDBReader["LiveAPBInvalid"] as bool? ?? default(bool)) == true)
+                                                    break;
+
+                                            if (TAccessResult == 0)
+                                                if ((tDBReader["LiveDeniedInvalid"] as bool? ?? default(bool)) == true)
+                                                    break;
+
+                                            if (TAccessResult == 4)
+                                                if ((tDBReader["LiveUnknownInvalid"] as bool? ?? default(bool)) == true)
+                                                    break;
+
+                                            if (TAccessResult == 5 || TAccessResult == 6 || TAccessResult == 7 || TAccessResult == 13)
+                                                if ((tDBReader["LiveManuelInvalid"] as bool? ?? default(bool)) == true)
+                                                    break;
+
+                                            if (TAccessResult == 8)
+                                                if ((tDBReader["LiveButtonInvalid"] as bool? ?? default(bool)) == true)
+                                                    break;
+
+                                            if (TAccessResult == 9 || TAccessResult == 10)
+                                                if ((tDBReader["LiveProgrammedInvalid"] as bool? ?? default(bool)) == true)
+                                                    break;
+                                        }
+                                        tDBReader.Close();
+                                    }
+                                }
+
+
+                                if (TAccessResult < 4)
+                                {
+                                    TUserType = 0;
+                                    TUserKayitNo = 0;
+
+                                    lock (TLockObj)
+                                    {
+                                        using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                        {
+                                            mDBConn.Open();
+                                            tDBSQLStr = @"SELECT * FROM Users " +
+                                          "WHERE [ID] = " + TUsersID + " ORDER BY [Kayit No]";
+                                            tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                            tDBReader = tDBCmd.ExecuteReader();
+                                            if (tDBReader.Read())
+                                            {
+                                                TUserType = tDBReader["Kullanici Tipi"] as int? ?? default(int);
+                                                TUserKayitNo = tDBReader["Kayit No"] as int? ?? default(int);
+                                                TmpTelefon = tDBReader["Telefon"].ToString();
+                                                TmpName = tDBReader["Adi"].ToString();
+                                                TmpSurname = tDBReader["Soyadi"].ToString();
+                                            }
+                                            tDBReader.Close();
+                                        }
+                                    }
+
+                                    TVisitorKayitNo = 0;
+                                    if (TUserType == 1)
+                                    {
+                                        lock (TLockObj)
+                                        {
+                                            using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                            {
+                                                mDBConn.Open();
+                                                tDBSQLStr = @"SELECT * FROM Visitors " +
+                                                  "WHERE Visitors.[ID] = '" + TUsersID + "' " +
+                                                  "AND Visitors.Tarih <= CONVERT(SMALLDATETIME,'" + TDate.ToString("MM/dd/yyyy HH:mm:ss") + "',101) " +
+                                                  "ORDER BY [Kayit No] DESC";
+
+                                                tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                                tDBReader = tDBCmd.ExecuteReader();
+                                                if (tDBReader.Read())
+                                                {
+                                                    TVisitorKayitNo = tDBReader["Kayit No"] as int? ?? default(int);
+                                                }
+
+                                                tDBReader.Close();
+                                            }
+                                        }
+                                    }
+
+                                }
+
+                                Snapshot = "BaseUser.jpg";
+                                TLocalBolgeNo = LokalBolgeNo(TMacSerial, TReader);
+                                if (TLocalBolgeNo < 1 && TLocalBolgeNo > 8)
+                                {
+                                    TLocalBolgeNo = 1;
+                                }
+                                TGlobalBolgeNo = GlobalBolgeNo(TMacSerial, TLocalBolgeNo);
+                                if (TGlobalBolgeNo < 1 && TGlobalBolgeNo > 999)
+                                {
+                                    TGlobalBolgeNo = 1;
+                                }
+                            }
+                            lock (TLockObj)
+                            {
+                                try
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        if (TAccessResult == 4)
+                                            TUserKayitNo = 1;
+
+                                        tDBSQLStr = @"INSERT INTO AccessDatas " +
+                                           "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
+                                           "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
+                                           "[User Kayit No],Kontrol,[Canli Resim])" +
+                                           "VALUES " +
+                                           "(" +
+                                           TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
+                                           TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
+                                           (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
+                                           TUserKayitNo + "," + 0 + "," + "'" + Snapshot + "'" + ")";
+
+                                        tDBSQLStr += @"INSERT INTO AccessDatasTemps " +
+                                          "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
+                                          "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
+                                          "[User Kayit No],Kontrol,[Canli Resim])" +
+                                          "VALUES " +
+                                          "(" +
+                                          TPanel + "," + TLocalBolgeNo + "," + TGlobalBolgeNo + "," + TReader + "," +
+                                          TUsersID + "," + TCardID + ",'" + TLPR + "','" + TDate.ToString("yyyy-MM-dd HH:mm:ss") + "'," +
+                                          (TDoorType - 1) + "," + TAccessResult + "," + TUserType + "," + TVisitorKayitNo + "," +
+                                          TUserKayitNo + "," + 0 + "," + "'" + Snapshot + "'" + ")";
+
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        TRetInt = tDBCmd.ExecuteNonQuery();
+                                        if (TRetInt <= 0)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                }
+                                catch (Exception)
+                                {
+
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            break;
+                        }
+                    }
+                    break;
                 case CommandConstants.CMD_RCV_DOORSTATUS:
                     {
                         byte[] DoorStatus = new byte[16];
@@ -1306,6 +1602,37 @@ namespace MaviSoftServerV1._0
                 else
                 {
                     SndQueue.Enqueue(SendStr);
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// OfflineLog - Gelen Kayıtlara Göre Cevap Gönderme Rutini
+        /// </summary>
+        /// <param name="TClient"></param>
+        /// <returns></returns>
+        public bool SendAnswerOldRCVLOGS(TcpClient TClient)
+        {
+            byte[] TSndBytes;
+
+            try
+            {
+                string SendStr = "$OD" + mPanelSerialNo.ToString("X4") + mPanelNo.ToString("D3") + "O*******************************************************************\r";
+                var netStream = TClient.GetStream();
+                if (netStream.CanWrite)
+                {
+                    TSndBytes = Encoding.UTF8.GetBytes(SendStr.ToString());
+                    netStream.Write(TSndBytes, 0, TSndBytes.Length);
+                    return true;
+                }
+                else
+                {
                     return false;
                 }
             }
@@ -1714,6 +2041,8 @@ namespace MaviSoftServerV1._0
                     return "GBA";
                 case (ushort)CommandConstants.CMD_ADD_GLOBALINTERLOCK:
                     return "GID";
+                case (ushort)CommandConstants.CMD_RCV_OLD_LOGS:
+                    return "OD";
                 default:
                     return "ERR";
             }
