@@ -110,7 +110,11 @@ namespace MaviSoftServerV1._0
 
         int mTimeOut = 1;
 
+        /*GEAH İçin Özel*/
+        public DateTime mYemekhaneMailStartTime_GEAH { get; set; }
 
+        public DateTime mYemekhaneMailSendTime_GEAH { get; set; }
+        /*GEAH İçin Özel*/
 
         public SystemManager(List<Panel> panels, List<PanelLog> logPanels, FrmMain frmMain)
         {
@@ -272,6 +276,21 @@ namespace MaviSoftServerV1._0
                                     SendMail("Fora Teknoloji", YemekhaneReport(), true);
                                 }
                             }
+
+
+                            /*GEAH İçin Özel - Günün İkinci Öğününün Mail Göndermesi*/
+                            mYemekhaneMailStartTime_GEAH = DateTime.Now;
+                            mYemekhaneMailSendTime_GEAH = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 20, 15, 0, 0);
+                            if (mYemekhaneMailStartTime_GEAH.ToShortTimeString() == mYemekhaneMailSendTime_GEAH.ToShortTimeString() && mYemekhaneMailStartTime_GEAH.Second == 0)
+                            {
+                                if (CheckMailSendForYemekhane() == true)
+                                {
+                                    SendMail("Fora Teknoloji", YemekhaneReport_GEAH(), true);
+                                }
+                            }
+                            /*GEAH İçin Özel - Günün İkinci Öğününün Mail Göndermesi*/
+
+
 
 
                             /*Her gün saat 03:00' da TaskList Table temizleme kontrolü*/
@@ -837,6 +856,89 @@ namespace MaviSoftServerV1._0
                 return "<!DOCTYPE html><html><head><title>Yemekhane</title></head><body><h1>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h1><p>Kritere Uygun Kayıt Bulunamadı.</p></body></html>";
             }
         }
+        /*GEAH İçin Özel*/
+        public string YemekhaneReport_GEAH()
+        {
+            string tDBSQLStr;
+            SqlCommand tDBCmd;
+            SqlDataReader tDBReader;
+            DateTime Baslangic_Tarihi = DateTime.Now;
+            object TLockObj = new object();
+            StringBuilder builder = new StringBuilder();
+            MailSettings mailSettings = ReceiveMailSettings();
+            List<int> PanelListesi = new List<int>();
+            PanelListesi = DoorGroupsDetailList();
+            if (mailSettings.Kapi_Grup_No != null)
+            {
+                lock (TLockObj)
+                {
+                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                    {
+                        mDBConn.Open();
+                        var baslangic_Saati_GEAH = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 16, 0, 0, 0);
+                        var bitis_Saati_GEAH = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 20, 0, 59, 0);
+                        var BaslangicTarihSaat = DateTime.Now.ToShortDateString() + " " + baslangic_Saati_GEAH.ToLongTimeString();
+                        var BitisTarihSaat = DateTime.Now.ToShortDateString() + " " + bitis_Saati_GEAH.ToLongTimeString();
+                        tDBSQLStr = @"SELECT COUNT(*),PanelSettings.[Panel ID],
+                        PanelSettings.[Panel Name],MIN(AccessDatas.Tarih) AS [İlk Kayıt],MAX(AccessDatas.Tarih) AS [Son Kayıt] FROM AccessDatas
+				        LEFT JOIN PanelSettings ON AccessDatas.[Panel ID]=PanelSettings.[Panel ID]
+				        WHERE AccessDatas.[Gecis Tipi] = 0 AND AccessDatas.[Kart ID]>0";
+                        tDBSQLStr += " AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + BaslangicTarihSaat + "',103) ";
+                        tDBSQLStr += " AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + BitisTarihSaat + "',103) AND AccessDatas.Kod=1";
+                        if (PanelListesi.Count > 0)
+                        {
+                            var sayac = 0;
+                            var count = PanelListesi.Count();
+                            tDBSQLStr += " AND (";
+                            foreach (var item in PanelListesi)
+                            {
+                                sayac++;
+                                if (sayac == count)
+                                {
+                                    tDBSQLStr += " (AccessDatas.[Panel ID]= " + item + " AND AccessDatas.[Kapi ID] IN(SELECT DoorGroupsDetail.[Kapi ID] FROM DoorGroupsDetail WHERE DoorGroupsDetail.[Kapi Grup No]=" + mailSettings.Kapi_Grup_No + " AND DoorGroupsDetail.[Panel ID]=" + item + "))";
+                                    break;
+                                }
+                                else
+                                {
+                                    tDBSQLStr += " (AccessDatas.[Panel ID]= " + item + " AND AccessDatas.[Kapi ID] IN(SELECT DoorGroupsDetail.[Kapi ID] FROM DoorGroupsDetail WHERE DoorGroupsDetail.[Kapi Grup No]=" + mailSettings.Kapi_Grup_No + " AND DoorGroupsDetail.[Panel ID]=" + item + "))";
+                                    tDBSQLStr += " OR ";
+                                }
+                            }
+
+                            tDBSQLStr += ")";
+                        }
+                        tDBSQLStr += " GROUP BY PanelSettings.[Panel ID],PanelSettings.[Panel Name]";
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBReader = tDBCmd.ExecuteReader();
+                        builder.Append("<!DOCTYPE html><html><head><style>.base-table { border: solid 1px #DDEEEE;border-collapse: collapse;border-spacing: 0;font: normal 13px Arial, sans-serif;}.base-table thead th {background-color: #DDEFEF;border: solid 1px #DDEEEE;color: #336B6B;padding: 10px;text-align: left;text-shadow: 1px 1px 1px #fff;}.base-table tbody td {border: solid 1px #DDEEEE;color: #333;padding: 10px;text-shadow: 1px 1px 1px #fff;}</style><title>Gelmeyenler Raporu</title></head><body><h4>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h4></br><h6>" + DateTime.Now.ToLongDateString() + "</h6>");
+                        builder.Append("<table class='base-table'><thead><tr><th>Panel ID</th><th>Panel Adı</th><th>İlk Kayıt</th><th>Son Kayıt</th><th>Onaylı Geçiş Sayısı</th></tr></thead><tbody>");
+                        bool result = false;
+                        int sum = 0;
+                        while (tDBReader.Read())
+                        {
+                            result = true;
+                            sum += (tDBReader[0] as int? ?? default(int));
+                            builder.Append("<tr><td>" + (tDBReader[1] as int? ?? default(int)) + "</td><td>" + (tDBReader[2].ToString()) + "</td><td>" + (tDBReader[3].ToString()) + "</td><td>" + (tDBReader[4].ToString()) + "</td><td>" + (tDBReader[0] as int? ?? default(int)) + "</td></tr>");
+                        }
+                        builder.Append("</tbody><tfoot style='text - align:center'><tr><td></td><td></td><td></td><td><h3><b>Toplam:</b></h3></td><td>" + sum + "</td></tr></tfoot></table></body></html>");
+                        if (result == true)
+                        {
+                            return builder.ToString();
+                        }
+                        else
+                        {
+                            return "<!DOCTYPE html><html><head><title>Yemekhane</title></head><body><h1>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h1><p>Kritere Uygun Kayıt Bulunamadı.</p></body></html>";
+                        }
+                    }
+                }
+            }
+            else
+            {
+                return "<!DOCTYPE html><html><head><title>Yemekhane</title></head><body><h1>Yemekhane Raporu-Geçiş Kontrol Sistemleri</h1><p>Kritere Uygun Kayıt Bulunamadı.</p></body></html>";
+            }
+        }
+        /*GEAH İçin Özel*/
+
 
         /// <summary>
         /// Yemekhane Raporu İçin DoorGroupsDetail Panel Listesi
