@@ -277,21 +277,43 @@ namespace MaviSoftServerV1._0
                                 }
                             }
 
+                            //#region FOR_GEAH
+                            ///*GEAH İçin Özel - Günün İkinci Öğününün Mail Göndermesi*/
+                            //mYemekhaneMailStartTime_GEAH = DateTime.Now;
+                            //mYemekhaneMailSendTime_GEAH = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 20, 15, 0, 0);
+                            //if (mYemekhaneMailStartTime_GEAH.ToShortTimeString() == mYemekhaneMailSendTime_GEAH.ToShortTimeString() && mYemekhaneMailStartTime_GEAH.Second == 0)
+                            //{
+                            //    if (CheckMailSendForYemekhane() == true)
+                            //    {
+                            //        SendMail("Fora Teknoloji", YemekhaneReport_GEAH(), true);
+                            //    }
+                            //}
+                            ///*GEAH İçin Özel - Günün İkinci Öğününün Mail Göndermesi*/
 
-                            /*GEAH İçin Özel - Günün İkinci Öğününün Mail Göndermesi*/
-                            mYemekhaneMailStartTime_GEAH = DateTime.Now;
-                            mYemekhaneMailSendTime_GEAH = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 20, 15, 0, 0);
-                            if (mYemekhaneMailStartTime_GEAH.ToShortTimeString() == mYemekhaneMailSendTime_GEAH.ToShortTimeString() && mYemekhaneMailStartTime_GEAH.Second == 0)
-                            {
-                                if (CheckMailSendForYemekhane() == true)
-                                {
-                                    SendMail("Fora Teknoloji", YemekhaneReport_GEAH(), true);
-                                }
-                            }
-                            /*GEAH İçin Özel - Günün İkinci Öğününün Mail Göndermesi*/
+                            ///*GEAH İçin Özel - Öğle Vakti Tanımsız Silme*/
+                            //var removeTime_Noon = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 12, 0, 0, 0);
+                            //if (DateTime.Now.ToShortTimeString() == removeTime_Noon.ToShortTimeString() && DateTime.Now.Second == 0)
+                            //{
+                            //    DeleteAllUndefinedLog_ForGEAH();
+                            //}
+                            ///*GEAH İçin Özel - Öğle Vakti Tanımsız Silme*/
 
+                            ///*GEAH İçin Özel - Akşam Vakti Tanımsız Silme*/
+                            //var removeTime_Evening = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 18, 0, 0, 0);
+                            //if (DateTime.Now.ToShortTimeString() == removeTime_Evening.ToShortTimeString() && DateTime.Now.Second == 0)
+                            //{
+                            //    DeleteAllUndefinedLog_ForGEAH();
+                            //}
+                            ///*GEAH İçin Özel - Akşam Vakti Tanımsız Silme*/
 
-
+                            ///*GEAH İçin Özel - Gece Vakti Tanımsız Silme*/
+                            //var removeTime_Night = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 5, 0, 0, 0);
+                            //if (DateTime.Now.ToShortTimeString() == removeTime_Night.ToShortTimeString() && DateTime.Now.Second == 0)
+                            //{
+                            //    DeleteAllUndefinedLog_ForGEAH();
+                            //}
+                            ///*GEAH İçin Özel - Gece Vakti Tanımsız Silme*/
+                            //#endregion
 
                             /*Her gün saat 03:00' da TaskList Table temizleme kontrolü*/
                             /*"AccessDatasTemps" veritabanından siliniyor.*/
@@ -1263,6 +1285,33 @@ namespace MaviSoftServerV1._0
                 }
             }
         }
+
+        private void DeleteAllUndefinedLog_ForGEAH()
+        {
+            int TRetInt;
+            string tDBSQLStr;
+            object TLockObj = new object();
+            SqlCommand tDBCmd;
+            lock (TLockObj)
+            {
+                using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                {
+                    try
+                    {
+                        mDBConn.Open();
+                        tDBSQLStr = "DELETE FROM AccessDatas WHERE [Panel ID] IN (1,2,3,12,20,21,23,24,25,26,29,46) AND [Kod] = 4 ";
+                        tDBSQLStr += "DELETE FROM AccessDatasTemps WHERE [Panel ID] IN (1,2,3,12,20,21,23,24,25,26,29,46) AND [Kod] = 4";
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        TRetInt = tDBCmd.ExecuteNonQuery();
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                }
+            }
+        }
+
 
 
     }
