@@ -1310,6 +1310,7 @@ namespace MaviSoftServerV1._0
                     }
                 }
             }
+            /*Coşkun Karakoç 06/07/2020 Added-Gülhane EAH İçin Özel*/
         }
 
 
