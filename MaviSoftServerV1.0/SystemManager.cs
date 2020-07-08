@@ -329,7 +329,7 @@ namespace MaviSoftServerV1._0
                             mVisitorDeleteStartTime = DateTime.Now;
                             if (mVisitorDeleteStartTime.ToShortTimeString() == mVisitorDeleteEndTime.ToShortTimeString() && mVisitorDeleteStartTime.Second == 0)
                             {
-                                DeleteAllVisitor();
+                                //DeleteAllVisitor();//TODO:QR KOD SİSTEMİNİ KULLANAN KULLANICILAR İÇİN BURASI AKTİFLEŞTİRİLECEK 
                                 mVisitorDeleteEndTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0, 0);
                             }
 
