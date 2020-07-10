@@ -7371,7 +7371,7 @@ namespace MaviSoftServerV1._0
 
                                 if (TAccessResult >= 26 && TAccessResult <= 27)
                                 {
-                                    if (int.Parse(TCardID) == 0 || TCardID.Trim() == "")
+                                    if (long.Parse(TCardID) == 0 || TCardID.Trim() == "")
                                     {
                                         TCardID = FindUserCardID(TUsersID);
                                     }

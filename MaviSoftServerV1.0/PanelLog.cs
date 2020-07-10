@@ -714,7 +714,7 @@ namespace MaviSoftServerV1._0
                                 {
                                     if (TLPR.Trim() == "")
                                     {
-                                        if (int.Parse(TCardID) == 0 || TCardID.Trim() == "")
+                                        if (long.Parse(TCardID) == 0 || TCardID.Trim() == "")
                                             break;
                                     }
                                 }
@@ -748,7 +748,7 @@ namespace MaviSoftServerV1._0
 
                                 if (TAccessResult >= 26 && TAccessResult <= 27)
                                 {
-                                    if (int.Parse(TCardID) == 0 || TCardID.Trim() == "")
+                                    if (long.Parse(TCardID) == 0 || TCardID.Trim() == "")
                                     {
                                         TCardID = FindUserCardID(TUsersID);
                                     }
@@ -955,7 +955,7 @@ namespace MaviSoftServerV1._0
 
                             }
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
                             break;
                         }
