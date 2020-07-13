@@ -186,7 +186,7 @@ namespace MaviSoftServerV1._0
                                          WHERE AccessDatas.[Kullanici Tipi] = 0 
                                          AND AccessDatas.Kod = 1";
                         tDBSQLStr += " AND AccessDatas.Tarih >= CONVERT(SMALLDATETIME,'" + DateTime.Now.Date.AddSeconds(1).ToString("dd/MM/yyyy HH:mm:ss") + "',103) ";
-                        tDBSQLStr += " AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + DateTime.Now.Date.AddHours(23).AddMinutes(59).AddSeconds(59).ToString("dd/MM/yyyy HH:mm:ss") + "',103)";
+                        tDBSQLStr += " AND AccessDatas.Tarih <= CONVERT(SMALLDATETIME,'" + DateTime.Now.Date.AddHours(23).AddMinutes(59).AddSeconds(59).ToString("dd/MM/yyyy HH:mm:ss") + "',103))";
                         tDBCmd = new SqlCommand(tDBSQLStr, connection);
                         tDBReader = tDBCmd.ExecuteReader();
                         while (tDBReader.Read())
