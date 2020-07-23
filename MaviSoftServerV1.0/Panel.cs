@@ -3467,7 +3467,7 @@ namespace MaviSoftServerV1._0
                             TSndStr.Append(mPanelNo.ToString("D3"));
                             if ((tDBReader["LocalInterlock G1-1"] as int? ?? default(int)) >= 0)
                             {
-                                TSndStr.Append(((int)tDBReader["LocalInterlock G1-1"]).ToString("D2"));
+                                TSndStr.Append((tDBReader["LocalInterlock G1-1"] as int? ?? default(int)).ToString("D2"));
                             }
                             else
                             {
@@ -3475,7 +3475,7 @@ namespace MaviSoftServerV1._0
                             }
                             if ((tDBReader["LocalInterlock G1-2"] as int? ?? default(int)) >= 0)
                             {
-                                TSndStr.Append(((int)tDBReader["LocalInterlock G1-2"]).ToString("D2"));
+                                TSndStr.Append((tDBReader["LocalInterlock G1-2"] as int? ?? default(int)).ToString("D2"));
                             }
                             else
                             {
