@@ -34,6 +34,7 @@
             this.txtUserName = new System.Windows.Forms.TextBox();
             this.txtSifre = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.chkBoxDefault = new System.Windows.Forms.CheckBox();
             this.lblMessage = new System.Windows.Forms.Label();
             this.txtHostPC = new System.Windows.Forms.TextBox();
             this.txtServer = new System.Windows.Forms.TextBox();
@@ -42,7 +43,6 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.chckDegistir = new System.Windows.Forms.CheckBox();
-            this.chkBoxDefault = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -96,6 +96,17 @@
             this.groupBox1.Size = new System.Drawing.Size(264, 173);
             this.groupBox1.TabIndex = 2;
             this.groupBox1.TabStop = false;
+            // 
+            // chkBoxDefault
+            // 
+            this.chkBoxDefault.AutoSize = true;
+            this.chkBoxDefault.Location = new System.Drawing.Point(140, 19);
+            this.chkBoxDefault.Name = "chkBoxDefault";
+            this.chkBoxDefault.Size = new System.Drawing.Size(104, 17);
+            this.chkBoxDefault.TabIndex = 8;
+            this.chkBoxDefault.Text = "Default Instance";
+            this.chkBoxDefault.UseVisualStyleBackColor = true;
+            this.chkBoxDefault.CheckedChanged += new System.EventHandler(this.chkBoxDefault_CheckedChanged);
             // 
             // lblMessage
             // 
@@ -176,17 +187,6 @@
             this.chckDegistir.Text = "Değiştir";
             this.chckDegistir.UseVisualStyleBackColor = true;
             this.chckDegistir.CheckedChanged += new System.EventHandler(this.chckDegistir_CheckedChanged);
-            // 
-            // chkBoxDefault
-            // 
-            this.chkBoxDefault.AutoSize = true;
-            this.chkBoxDefault.Location = new System.Drawing.Point(140, 19);
-            this.chkBoxDefault.Name = "chkBoxDefault";
-            this.chkBoxDefault.Size = new System.Drawing.Size(104, 17);
-            this.chkBoxDefault.TabIndex = 8;
-            this.chkBoxDefault.Text = "Default Instance";
-            this.chkBoxDefault.UseVisualStyleBackColor = true;
-            this.chkBoxDefault.CheckedChanged += new System.EventHandler(this.chkBoxDefault_CheckedChanged);
             // 
             // FrmGiris
             // 

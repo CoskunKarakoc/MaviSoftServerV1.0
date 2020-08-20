@@ -15,7 +15,7 @@ namespace MaviSoftServerV1._0
         public FrmGiris()
         {
             InitializeComponent();
-
+          
         }
 
         private void btnKapat_Click(object sender, EventArgs e)
@@ -54,6 +54,8 @@ namespace MaviSoftServerV1._0
                             {
                                 AddUpdateAppSettings("Host", HostPC.Trim());
                                 AddUpdateAppSettings("SQLServer", "");
+                                AddUpdateAppSettings("UserID", UserName.Trim());
+                                AddUpdateAppSettings("Password", Password.Trim());
                                 FrmMain form1 = new FrmMain();
                                 form1.Show();
                                 this.Hide();
@@ -104,6 +106,8 @@ namespace MaviSoftServerV1._0
                             {
                                 AddUpdateAppSettings("Host", HostPC.Trim());
                                 AddUpdateAppSettings("SQLServer", SQLServer.Trim());
+                                AddUpdateAppSettings("UserID", UserName.Trim());
+                                AddUpdateAppSettings("Password", Password.Trim());
                                 FrmMain form1 = new FrmMain();
                                 form1.Show();
                                 this.Hide();
@@ -149,6 +153,8 @@ namespace MaviSoftServerV1._0
         {
             txtHostPC.Text = ReadSettings("Host");
             txtServer.Text = ReadSettings("SQLServer");
+            txtUserName.Text = ReadSettings("UserID");
+            txtSifre.Text = ReadSettings("Password");
         }
 
         public static void AddUpdateAppSettings(string key, string value)
