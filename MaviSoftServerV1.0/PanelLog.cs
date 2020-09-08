@@ -916,6 +916,14 @@ namespace MaviSoftServerV1._0
                                         if (TAccessResult == 4)
                                             TUserKayitNo = 1;
 
+                                        if (TAccessResult==4 && TCardID=="91")
+                                        {
+                                            TAccessResult = 28;
+                                            TCardID = "0";
+                                            TUsersID = 0;
+                                        }
+
+
                                         tDBSQLStr = @"INSERT INTO AccessDatas " +
                                            "([Panel ID],[Lokal Bolge No],[Global Bolge No],[Kapi ID],ID,[Kart ID]," +
                                            "Plaka,Tarih,[Gecis Tipi],Kod,[Kullanici Tipi],[Visitor Kayit No]," +
