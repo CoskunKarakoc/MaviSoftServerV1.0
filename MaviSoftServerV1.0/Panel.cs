@@ -901,6 +901,8 @@ namespace MaviSoftServerV1._0
                                 {
                                     //Display Timeout&Retrying Message
                                     SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                    mPanelProc = CommandConstants.CMD_PORT_DISABLED;
+                                    break;
                                 }
                                 else
                                 {

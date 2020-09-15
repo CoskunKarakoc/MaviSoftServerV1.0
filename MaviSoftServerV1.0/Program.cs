@@ -63,6 +63,7 @@ namespace MaviSoftServerV1._0
 
         public static bool ConnectionStatus()
         {
+            //var SqlAdress = "data source = " + ReadSettings("Host").Trim() + "\\" + ReadSettings("SQLServer").Trim() + "; initial catalog = MW301_DB25; User Id=" + ReadSettings("UserID").Trim() + "; Password=" + ReadSettings("Password").Trim() + "; MultipleActiveResultSets = True;";
             var SqlAdress = "data source = " + ReadSettings("Host").Trim() + "\\" + ReadSettings("SQLServer").Trim() + "; initial catalog = MW301_DB25_WEB; User Id=" + ReadSettings("UserID").Trim() + "; Password=" + ReadSettings("Password").Trim() + "; MultipleActiveResultSets = True;";
             SqlServerAdress.SetAdres(SqlAdress);
             try
