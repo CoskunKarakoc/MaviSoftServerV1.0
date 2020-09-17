@@ -424,6 +424,7 @@ namespace MaviSoftServerV1._0
                             if (mPanelProc == CommandConstants.CMD_RCV_LOGS)
                             {
                                 SendGenericDBData(mPanelClient, mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, mTaskStrParam1, (ushort)mTaskType);
+                                mRetryCnt = 0;
                             }
 
                         }
@@ -867,10 +868,11 @@ namespace MaviSoftServerV1._0
                                 SyncUpdateScreen(CurTaskWinStr, System.Drawing.Color.Blue);
                                 PreTaskWinStr = CurTaskWinStr;
                             }
-                            mRetryCnt = 0;
+                            //mRetryCnt = 0;
                             mTransferCompleted = false;
 
-                            while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
+                            //while ((mRetryCnt < RETRY_COUNT) && (mTransferCompleted == false))
+                            while (mTransferCompleted == false)
                             {
                                 mStartTime = DateTime.Now;
                                 mEndTime = mStartTime.AddSeconds(mTaskTimeOut);
@@ -901,7 +903,7 @@ namespace MaviSoftServerV1._0
                                 {
                                     //Display Timeout&Retrying Message
                                     SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
-                                    mPanelProc = CommandConstants.CMD_PORT_DISABLED;
+                                    mPanelProc = CommandConstants.CMD_PORT_CLOSE;
                                     break;
                                 }
                                 else
@@ -910,16 +912,43 @@ namespace MaviSoftServerV1._0
                                     {
                                         if (!ProcessReceivedData(mTaskIntParam1, mTaskIntParam2, mTaskIntParam3, (CommandConstants)mTaskType, mTaskSource, mTaskUpdateTable, mReturnStr))
                                         {
-                                            break;
+                                            if (mPanelProc != CommandConstants.CMD_RCV_LOGS)
+                                                break;
+                                            //$DD geldi, lakin log içeriği hatalı, bir sonraki logu bekle
+                                            mTaskTimeOut = 3;
+                                        }
+                                        else
+                                        {
+                                            // $FD gelmişse ProcessReceivedData rutini mTransferCompleted değişkenini True yapıyor
+                                            if (mPanelProc != CommandConstants.CMD_RCV_LOGS)
+                                                break;
+
+                                            // doğru veri, kaydedildi, diğer logu bekle
+                                            mTaskTimeOut = 3;
                                         }
                                     }
                                     else
                                     {
-                                        break;
+                                        // gelen veri hatalı
+                                        if (mRetryCnt > 3)
+                                        {
+                                            SyncUpdateScreen("ZAMAN AŞIMI", System.Drawing.Color.Red);
+                                            SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, mPanelProc);
+                                            mPanelProc = CommandConstants.CMD_TASK_LIST;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            mRetryCnt++;
+                                            mTaskTimeOut = 3;
+                                            break;
+                                        }
                                     }
                                 }
 
-                                mRetryCnt++;
+
+
+                                //mRetryCnt++;
                             }
                             mTaskTimeOut = 3;
                         }
@@ -5248,12 +5277,14 @@ namespace MaviSoftServerV1._0
                     {
                         SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_ERROR, TmpTaskType);
                         mPanelProc = CommandConstants.CMD_TASK_LIST;
+                        mTransferCompleted = true;
                         return false;
                     }
                     else
                     {
                         SyncUpdateTaskStatus(mTaskNo, (ushort)CTaskStates.TASK_COMPLETED, TmpTaskType);
                         mPanelProc = CommandConstants.CMD_TASK_LIST;
+                        mTransferCompleted = true;
                         return true;
                     }
 
