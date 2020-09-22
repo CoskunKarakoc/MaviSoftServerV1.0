@@ -2989,7 +2989,7 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append("**\r");
                 mTaskTimeOut = 3;
             }
-            /*16 Deneme*/
+            /*16*/
             else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LOGS)
             {
                 TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
