@@ -9432,8 +9432,9 @@ namespace MaviSoftServerV1._0
                 case (ushort)CommandConstants.CMD_SND_LOCALINTERLOCK:
                     return "IW";
                 case (ushort)CommandConstants.CMD_SND_DOORTRIGGER:
-                case (ushort)CommandConstants.CMD_SND_DOORFREE:
                     return "DT";
+                case (ushort)CommandConstants.CMD_SND_DOORFREE:
+                    return "FF";
                 case (ushort)CommandConstants.CMD_SND_DOORFORCEOPEN:
                     return "FO";
                 case (ushort)CommandConstants.CMD_SND_DOORFORCECLOSE:
