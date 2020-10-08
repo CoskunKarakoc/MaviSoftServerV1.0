@@ -178,6 +178,8 @@ namespace MaviSoftServerV1._0
         CMD_ADD_MS1010ACCESSCOUNT = CMD_BASE + 221,
         CMD_SND_FIREANDALARM = CMD_BASE + 222,
         CMD_ADD_FIREANDALARM = CMD_BASE + 223,
+        CMD_SND_LPR = CMD_BASE + 224,
+        CMD_RCV_LPR = CMD_BASE + 225,
 
         //Answer Commands
         CMD_OK = CMD_BASE + 401,
@@ -191,7 +193,7 @@ namespace MaviSoftServerV1._0
         CMD_NO_DATA_PICK = CMD_BASE + 408,
         CMD_NOTPROCESSED = CMD_BASE + 409,
         CMD_ACCESS_DENIED = CMD_BASE + 401,
-
+       
 
 
     }
@@ -249,6 +251,7 @@ namespace MaviSoftServerV1._0
         SIZE_RCV_GENELSETTINGS_1 = 233,
         SIZE_RCV_GENELSETTINGS_2 = 324,
         SIZE_RCV_GENELSETTINGS_3 = 324,
+        SIZE_RCV_LPR = 141,
     }
 
 

@@ -531,7 +531,7 @@ namespace MaviSoftServerV1._0
                     mLogProc = CommandConstants.CMD_PORT_CLOSE;
                     return false;
                 }
-
+               
                 TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_ADD_GLOBALDATAUPDATE));
                 if (TPos > -1)
                 {

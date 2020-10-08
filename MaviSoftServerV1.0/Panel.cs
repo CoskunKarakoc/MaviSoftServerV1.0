@@ -447,6 +447,7 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_RCV_GENERALSETTINGS_1:
                     case CommandConstants.CMD_RCV_GENERALSETTINGS_2:
                     case CommandConstants.CMD_RCV_GENERALSETTINGS_3:
+                    case CommandConstants.CMD_RCV_LPR:
                         {
                             if (!mPanelClient.Client.Connected)
                             {
@@ -609,6 +610,7 @@ namespace MaviSoftServerV1._0
                     case CommandConstants.CMD_SND_GENERALSETTINGS_1:
                     case CommandConstants.CMD_SND_GENERALSETTINGS_2:
                     case CommandConstants.CMD_SND_GENERALSETTINGS_3:
+                    case CommandConstants.CMD_SND_LPR:
                         {
                             if (!mPanelClient.Client.Connected)
                             {
@@ -1558,14 +1560,11 @@ namespace MaviSoftServerV1._0
                                             else
                                                 TSndStr.Append("0");
 
-                                            TSndStr.Append("1");//W5.16W  için ve öncesi Bit32 Sıfırlama İptal
-                                                                //5.50 Otopark Kapısı Seçimli 
-                                                                /*V : V5.15W ve öncesi için Kart ID değeri Bit.32 Sıfırlama İptal
-                                                                (‘0’: İptal)
-                                                                (‘1’: Aktif)
-                                                                : V5.50 için Otopark Kapısı
-                                                                (‘0’: Standart Kapı)
-                                                                (‘1’: Otopark Kapısı) */
+                                            if ((tDBReader2["WKapi Lift Aktif"] as bool? ?? default(bool)))
+                                                TSndStr.Append("1");
+                                            else
+                                                TSndStr.Append("0");
+
                                             TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Acik Sure"] as int? ?? default(int), "D3"));
 
                                             if ((tDBReader2["WKapi Acik Sure Alarmi"] as bool? ?? default(bool)))
@@ -2782,12 +2781,13 @@ namespace MaviSoftServerV1._0
                                         else if (tDBReader["Plaka"].ToString().Length < 10)
                                         {
                                             string plaka = "";
+                                            string temp = "";
                                             for (int i = 0; i < (10 - tDBReader["Plaka"].ToString().Length); i++)
                                             {
-                                                plaka += "0";
+                                                plaka += " ";
                                             }
-                                            plaka += tDBReader["Plaka"].ToString().Trim().Replace(" ", "");
-                                            TSndStr.Append(plaka);
+                                            temp = tDBReader["Plaka"].ToString().Trim().Replace(" ", "") + plaka;
+                                            TSndStr.Append(temp);
                                         }
                                         else
                                         {
@@ -2798,16 +2798,14 @@ namespace MaviSoftServerV1._0
                                     {
                                         TSndStr.Append("0000000000");
                                     }
-                                    TSndStr.Append("0");//TODO:Plaka Firmware eklenince silinecek
-                                                        //TODO: Plaka Firmware eklenince açılacak
-                                                        //if (tDBReader["Gecis Modu"].ToString() != null && tDBReader["Gecis Modu"].ToString() != "")
-                                                        //{
-                                                        //    TSndStr.Append(ConvertToTypeInt(tDBReader["Gecis Modu"] as int? ?? default(int), "D1"));
-                                                        //}
-                                                        //else
-                                                        //{
-                                                        //    TSndStr.Append("0");
-                                                        //}
+                                    if (tDBReader["Gecis Modu"].ToString() != null && tDBReader["Gecis Modu"].ToString() != "")
+                                    {
+                                        TSndStr.Append(ConvertToTypeInt(tDBReader["Gecis Modu"] as int? ?? default(int), "D1"));
+                                    }
+                                    else
+                                    {
+                                        TSndStr.Append("0");
+                                    }
 
                                     if (tDBReader["Grup No 4"].ToString() != null && tDBReader["Grup No 4"].ToString() != "")
                                     {
@@ -4521,7 +4519,10 @@ namespace MaviSoftServerV1._0
                                             else
                                                 TSndStr.Append("0");
 
-                                            TSndStr.Append("0");//Parking Gate
+                                            if ((tDBReader2["WKapi Lift Aktif"] as bool? ?? default(bool)) == true)
+                                                TSndStr.Append("1");
+                                            else
+                                                TSndStr.Append("0");
 
 
                                             TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Acik Sure"] as int? ?? default(int), "D3"));
@@ -4893,8 +4894,10 @@ namespace MaviSoftServerV1._0
                                             else
                                                 TSndStr.Append("0");
 
-                                            TSndStr.Append("0");//Parking Gate
-
+                                            if ((tDBReader2["WKapi Lift Aktif"] as bool? ?? default(bool)))
+                                                TSndStr.Append("1");
+                                            else
+                                                TSndStr.Append("0");
 
                                             TSndStr.Append(ConvertToTypeInt(tDBReader2["WKapi Acik Sure"] as int? ?? default(int), "D3"));
 
@@ -4991,8 +4994,69 @@ namespace MaviSoftServerV1._0
                 TSndStr.Append("**\r");
                 mTaskTimeOut = 3;
             }
+            /*Plaka Tanıma Kamerası Ayar Gönderme*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_SND_LPR)
+            {
+                lock (TLockObj)
+                {
+                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                    {
+                        mDBConn.Open();
+                        tDBSQLStr = @"SELECT [WKapi LPR Kamera Aktif],[WKapi LPR Kamera Model],[WKapi LPR Kamera IP1],
+                                    [WKapi LPR Kamera IP2],[WKapi LPR Kamera IP3],[WKapi LPR Kamera IP4] FROM ReaderSettingsNew
+                                    WHERE [WKapi ID] <= 4 AND [Panel ID] = " + DBIntParam1 + " ORDER BY [WKapi ID]";
+                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                        tDBReader = tDBCmd.ExecuteReader();
+                        TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                        TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                        TSndStr.Append(mPanelNo.ToString("D3"));
+                        while (tDBReader.Read())
+                        {
+                            if ((tDBReader["WKapi LPR Kamera Aktif"] as bool? ?? default(bool)))
+                                TSndStr.Append("1");
+                            else
+                                TSndStr.Append("0");
+                            if ((tDBReader["WKapi LPR Kamera IP1"] as int? ?? default(int)) == 0)
+                                TSndStr.Append("000");
+                            else
+                                TSndStr.Append(ConvertToTypeInt(tDBReader["WKapi LPR Kamera IP1"] as int? ?? default(int), "D3"));
+                            if ((tDBReader["WKapi LPR Kamera IP2"] as int? ?? default(int)) == 0)
+                                TSndStr.Append("000");
+                            else
+                                TSndStr.Append(ConvertToTypeInt(tDBReader["WKapi LPR Kamera IP2"] as int? ?? default(int), "D3"));
+                            if ((tDBReader["WKapi LPR Kamera IP3"] as int? ?? default(int)) == 0)
+                                TSndStr.Append("000");
+                            else
+                                TSndStr.Append(ConvertToTypeInt(tDBReader["WKapi LPR Kamera IP3"] as int? ?? default(int), "D3"));
+                            if ((tDBReader["WKapi LPR Kamera IP4"] as int? ?? default(int)) == 0)
+                                TSndStr.Append("000");
+                            else
+                                TSndStr.Append(ConvertToTypeInt(tDBReader["WKapi LPR Kamera IP4"] as int? ?? default(int), "D3"));
 
-
+                            TSndStr.Append("0000000000000000000");
+                        }
+                        TSndStr.Append("**\r");
+                        mTaskTimeOut = 3;
+                    }
+                }
+            }
+            /*Plaka Tanıma Kamerası Ayar Alma*/
+            else if (DBTaskType == (ushort)CommandConstants.CMD_RCV_LPR)
+            {
+                if (mPanelModel != (int)PanelModel.Panel_1010)
+                {
+                    TSndStr.Append("%" + GetCommandPrefix(DBTaskType));
+                    TSndStr.Append(mPanelSerialNo.ToString("X4"));
+                    TSndStr.Append(mPanelNo.ToString("D3"));
+                    TSndStr.Append("**\r");
+                    mTaskTimeOut = 3;
+                }
+                else
+                {
+                    TSndStr.Clear();
+                    TSndStr.Append("ERR");
+                }
+            }
             return TSndStr.ToString();
         }
 
@@ -9142,6 +9206,47 @@ namespace MaviSoftServerV1._0
                         }
                     }
                     break;
+                case CommandConstants.CMD_RCV_LPR:
+                    {
+                        if (mPanelModel != (int)PanelModel.Panel_1010)
+                        {
+                            if (Convert.ToInt32(TmpReturnStr.Substring(TPos + 7, 3)) == DBIntParam1)
+                            {
+                                lock (TLockObj)
+                                {
+                                    using (mDBConn = new SqlConnection(SqlServerAdress.Adres))
+                                    {
+                                        mDBConn.Open();
+                                        tDBSQLStr = "SELECT * FROM ReaderSettingsNew WHERE [Panel ID] = " + DBIntParam1;
+                                        tDBCmd = new SqlCommand(tDBSQLStr, mDBConn);
+                                        tDBReader = tDBCmd.ExecuteReader();
+                                        if (tDBReader.Read())
+                                        {
+                                            int indis = 10;
+                                            for (int i = 1; i < 5; i++)
+                                            {
+                                                tDBSQLStr2 = @"UPDATE ReaderSettingsNew 
+                                                        SET [WKapi LPR Kamera Aktif]=" + Convert.ToInt32(TmpReturnStr.Substring(TPos + indis, 1).Trim()) + @",
+                                                        [WKapi LPR Kamera IP1]=" + Convert.ToInt32(TmpReturnStr.Substring(TPos + indis + 1, 3).Trim()) + @",
+                                                        [WKapi LPR Kamera IP2]=" + Convert.ToInt32(TmpReturnStr.Substring(TPos + indis + 4, 3).Trim()) + @",
+                                                        [WKapi LPR Kamera IP3]=" + Convert.ToInt32(TmpReturnStr.Substring(TPos + indis + 7, 3).Trim()) + @",
+                                                        [WKapi LPR Kamera IP4]=" + Convert.ToInt32(TmpReturnStr.Substring(TPos + indis + 10, 3).Trim()) + @"
+                                                        WHERE [Panel ID]=" + mPanelNo.ToString() + @" AND [WKapi ID]=" + i;
+                                                tDBCmd2 = new SqlCommand(tDBSQLStr2, mDBConn);
+                                                TRetInt = tDBCmd2.ExecuteNonQuery();
+                                                if (TRetInt > 0)
+                                                    indis += 32;
+                                                else
+                                                    return false;
+                                            }
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
                 default:
                     break;
             }
@@ -9465,6 +9570,10 @@ namespace MaviSoftServerV1._0
                     return "U1";
                 case (ushort)CommandConstants.CMD_RCV_GENERALSETTINGS_3:
                     return "U2";
+                case (ushort)CommandConstants.CMD_SND_LPR:
+                    return "CW";
+                case (ushort)CommandConstants.CMD_RCV_LPR:
+                    return "CR";
                 default:
                     return "ERR";
             }
@@ -9584,6 +9693,10 @@ namespace MaviSoftServerV1._0
                     return (int)SizeConstants.SIZE_RCV_GENELSETTINGS_2;
                 case CommandConstants.CMD_RCV_GENERALSETTINGS_3:
                     return (int)SizeConstants.SIZE_RCV_GENELSETTINGS_3;
+                case CommandConstants.CMD_SND_LPR:
+                    return (int)SizeConstants.SIZE_STANDART_ANSWER;
+                case CommandConstants.CMD_RCV_LPR:
+                    return (int)SizeConstants.SIZE_RCV_LPR;
                 default:
                     return 0;
             }
@@ -9788,6 +9901,10 @@ namespace MaviSoftServerV1._0
                     return "GENEL AYARLARI AL-2";
                 case CommandConstants.CMD_RCV_GENERALSETTINGS_3:
                     return "GENEL AYARLARI AL-3";
+                case CommandConstants.CMD_SND_LPR:
+                    return "PLAKA AYARLARINI GÖNDER";
+                case CommandConstants.CMD_RCV_LPR:
+                    return "PLAKA AYARLARINI AL";
                 default:
                     return "BILINMEYEN İŞLEM";
             }
