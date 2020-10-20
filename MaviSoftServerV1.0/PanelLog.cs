@@ -302,9 +302,9 @@ namespace MaviSoftServerV1._0
                             {
                                 if (mStatusStartTime >= mStatusEndTime)
                                 {
-                                    SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelNo + " <i>Nolu  " + mPanelName + " İsimli Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
+                                    SendMail("Panel Bağlantısı Yok! ", "<b>" + mPanelIPAddress + " IP Adresli </b>" + "<b>" + mPanelNo + " <i>Nolu  " + mPanelName + " İsimli Panel İle Bağlantı Sağlanamıyor.</i></b>", true);
                                     SendSms sendSms = new SendSms(new SmsSettings());
-                                    sendSms.PanelBaglantiDurumu(mPanelNo + " Nolu " + mPanelName + " İsimli Panel İle Bağlantı Sağlanamıyor.");
+                                    sendSms.PanelBaglantiDurumu(mPanelIPAddress + " IP Adresli " + mPanelNo + " Nolu " + mPanelName + " İsimli Panel İle Bağlantı Sağlanamıyor.");
                                     mMailAndSmsRetryCount++;
                                 }
                             }
@@ -531,7 +531,7 @@ namespace MaviSoftServerV1._0
                     mLogProc = CommandConstants.CMD_PORT_CLOSE;
                     return false;
                 }
-               
+
                 TPos = TRcvData.IndexOf("%" + GetCommandPrefix((ushort)CommandConstants.CMD_ADD_GLOBALDATAUPDATE));
                 if (TPos > -1)
                 {
@@ -916,7 +916,7 @@ namespace MaviSoftServerV1._0
                                         if (TAccessResult == 4)
                                             TUserKayitNo = 1;
 
-                                        if (TAccessResult==4 && TCardID=="91")
+                                        if (TAccessResult == 4 && TCardID == "91")
                                         {
                                             TAccessResult = 28;
                                             TCardID = "0";
