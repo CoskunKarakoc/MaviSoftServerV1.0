@@ -3387,17 +3387,20 @@ namespace MaviSoftServerV1._0
                                 {
                                     TSndStr.Append("0001");
                                 }
-
+                                string tempLift = "";
                                 for (int i = 1; i < 65; i++)
                                 {
                                     string column = "Kat " + i;
+
                                     if ((tDBReader[column] as bool? ?? default(bool)))
-                                    {
-                                        TSndStr.Append("1");
-                                    }
+                                        tempLift += "1";
                                     else
+                                        tempLift += "0";
+
+                                    if (i == 8 || i == 16 || i == 24 || i == 32 || i == 64)
                                     {
-                                        TSndStr.Append("0");
+                                        TSndStr.Append(BinaryStringToHexString(tempLift));
+                                        tempLift = "";
                                     }
                                 }
                                 TSndStr.Append("0000000000000000");
@@ -10388,7 +10391,26 @@ namespace MaviSoftServerV1._0
             return karakter;
         }
 
+        public static string BinaryStringToHexString(string binary)
+        {
+            if (string.IsNullOrEmpty(binary))
+                return binary;
 
+            StringBuilder result = new StringBuilder(binary.Length / 8 + 1);
+            int mod4Len = binary.Length % 8;
+            if (mod4Len != 0)
+            {
+                binary = binary.PadLeft(((binary.Length / 8) + 1) * 8, '0');
+            }
+
+            for (int i = 0; i < binary.Length; i += 8)
+            {
+                string eightBits = binary.Substring(i, 8);
+                result.AppendFormat("{0:X2}", Convert.ToByte(eightBits, 2));
+            }
+
+            return result.ToString();
+        }
 
     }
 }
