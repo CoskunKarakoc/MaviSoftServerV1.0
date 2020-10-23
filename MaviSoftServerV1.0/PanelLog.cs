@@ -888,6 +888,18 @@ namespace MaviSoftServerV1._0
                                                 Snapshot = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2").Substring(2, 2) + "-" +
                                                     snapShotTime.Hour.ToString("D2") + "" + snapShotTime.Minute.ToString("D2") + "" + snapShotTime.Second.ToString("D2") + ".jpeg";
                                             }
+                                            else if (cameraSettings.Kamera_Tipi == 2 || cameraSettings.Kamera_Tipi == 3)
+                                            {
+                                                if (cameraSettings.Kamera_Admin == null || cameraSettings.Kamera_Admin == "")
+                                                    cameraSettings.Kamera_Admin = "admin";
+                                                if (cameraSettings.Kamera_Password == null || cameraSettings.Kamera_Password == "")
+                                                    cameraSettings.Kamera_Password = "admin";
+                                                snapShotTime = DateTime.Now;
+                                                snapShotCardID = TCardID;
+                                                Capture(cameraSettings);
+                                                Snapshot = "A" + snapShotCardID + "-" + snapShotTime.Day.ToString("D2") + "" + snapShotTime.Month.ToString("D2") + "" + snapShotTime.Year.ToString("D2").Substring(2, 2) + "-" +
+                                                    snapShotTime.Hour.ToString("D2") + "" + snapShotTime.Minute.ToString("D2") + "" + snapShotTime.Second.ToString("D2") + ".jpeg";
+                                            }
                                         }
                                     }
                                 }
@@ -2522,9 +2534,18 @@ namespace MaviSoftServerV1._0
             DateTime timeStart = DateTime.Now;
             DateTime timeEnd = timeStart.AddSeconds(3);
             StringBuilder url = new StringBuilder();
-            url.Append("http://");
-            url.Append(cameras.IP_Adres);
-            url.Append("/jpg/image.jpg");
+            if (cameras.Kamera_Tipi != 1)
+            {
+                url.Append("http://");
+                url.Append(cameras.IP_Adres);
+                url.Append(":80/ISAPI/Streaming/channels/101/picture");
+            }
+            else
+            {
+                url.Append("http://");
+                url.Append(cameras.IP_Adres);
+                url.Append("/jpg/image.jpg");
+            }
             Uri uri = new Uri(url.ToString());
             Thread thread = new Thread(delegate ()
             {
